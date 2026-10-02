@@ -9,9 +9,22 @@ type Props = TextInputProps & {
   error?: string | null;
   /** Elemento a la derecha dentro del campo, p. ej. el botón de mostrar/ocultar contraseña. */
   right?: ReactNode;
+  /** Muestra «n/máximo» debajo del campo (requiere maxLength). */
+  showCounter?: boolean;
 };
 
-export function TextField({ label, error, right, style, multiline, accessibilityLabel, ...rest }: Props) {
+export function TextField({
+  label,
+  error,
+  right,
+  showCounter,
+  style,
+  multiline,
+  accessibilityLabel,
+  ...rest
+}: Props) {
+  const counter = showCounter && rest.maxLength ? `${rest.value?.length ?? 0}/${rest.maxLength}` : null;
+
   return (
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -25,10 +38,13 @@ export function TextField({ label, error, right, style, multiline, accessibility
         />
         {right}
       </View>
-      {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {error}
-        </Text>
+      {error || counter ? (
+        <View style={styles.footer}>
+          <Text accessibilityRole={error ? 'alert' : undefined} style={styles.error}>
+            {error ?? ''}
+          </Text>
+          {counter ? <Text style={styles.counter}>{counter}</Text> : null}
+        </View>
       ) : null}
     </View>
   );
@@ -63,8 +79,17 @@ const styles = StyleSheet.create({
     minHeight: 64,
     textAlignVertical: 'top',
   },
+  footer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
   error: {
+    flex: 1,
     fontSize: 12,
     color: colors.danger,
+  },
+  counter: {
+    fontSize: 12,
+    color: colors.textMuted,
   },
 });
