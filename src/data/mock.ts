@@ -1,14 +1,5 @@
 // Datos de ejemplo para la maqueta. Se reemplazarán por llamadas al backend.
 
-export const currentUser = {
-  name: 'Monica Galvis',
-  initials: 'MG',
-  address: 'Casa # 56 Cali - Valle',
-  email: 'monica@gmail.com',
-  phone: '311 123 4567',
-  house: '56',
-};
-
 export const accountBalance = 45678.9;
 
 export const paymentHistory = [

@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 
 import { colors, radius, spacing } from '@/constants/theme';
-import { currentUser } from '@/data/mock';
+import { useSession } from '@/context/SessionContext';
 
 type LeftAction = 'menu' | 'cancel' | 'back' | 'none';
 
@@ -15,6 +15,8 @@ type Props = {
 };
 
 export function AppHeader({ title = 'Convive', left = 'menu', showAvatar = true, onMenuPress }: Props) {
+  const { user } = useSession();
+
   return (
     <View style={styles.header}>
       <View style={styles.side}>
@@ -51,7 +53,7 @@ export function AppHeader({ title = 'Convive', left = 'menu', showAvatar = true,
             onPress={() => router.navigate('/perfil')}
             style={styles.avatar}
           >
-            <Text style={styles.avatarText}>{currentUser.initials}</Text>
+            <Text style={styles.avatarText}>{user?.initials}</Text>
           </Pressable>
         )}
       </View>

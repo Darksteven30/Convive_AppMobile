@@ -7,10 +7,14 @@ import { SegmentedTabs } from '@/components/layout/SegmentedTabs';
 import { BalanceCard } from '@/components/ui/BalanceCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { hasPermission } from '@/constants/permissions';
 import { spacing, typography } from '@/constants/theme';
+import { useSession } from '@/context/SessionContext';
 import { accountBalance, news } from '@/data/mock';
 
 export default function InicioScreen() {
+  const { role } = useSession();
+
   return (
     <Screen
       header={
@@ -20,9 +24,11 @@ export default function InicioScreen() {
         </>
       }
     >
-      <BalanceCard amount={accountBalance}>
-        <Button label="Abonar" variant="outline" pill onPress={() => router.push('/pago/seleccion')} />
-      </BalanceCard>
+      {hasPermission(role, 'pagos') && (
+        <BalanceCard amount={accountBalance}>
+          <Button label="Abonar" variant="outline" pill onPress={() => router.push('/pago/seleccion')} />
+        </BalanceCard>
+      )}
 
       <Card title="Acceso rápido">
         <View style={styles.row}>
