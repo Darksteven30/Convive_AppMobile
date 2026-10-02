@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { FeedbackProvider } from '@/context/FeedbackContext';
 import { SessionProvider, useSession } from '@/context/SessionContext';
 
 export default function RootLayout() {
   return (
     <SessionProvider>
-      <StatusBar style="dark" />
-      <RootNavigator />
+      <FeedbackProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </FeedbackProvider>
     </SessionProvider>
   );
 }
