@@ -51,6 +51,8 @@ Otros casos del inicio de sesión (RF01):
 - **Bloqueo:** 5 contraseñas incorrectas bloquean la cuenta 15 minutos.
 - **Recuperar contraseña:** el código de verificación del servicio simulado es siempre `123456` (vence a los 10 minutos).
 
+**Finanzas (RF03):** con el administrador, Panel → «Registrar movimiento» o «Ver movimientos». El soporte adjunto acepta PDF, JPG o PNG de máximo 5 MB (en Expo Go se usa la cámara, la galería o los archivos del celular).
+
 Los datos simulados se reinician al recargar la app.
 
 ## Estructura
