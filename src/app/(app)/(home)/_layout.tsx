@@ -1,5 +1,8 @@
 import { Stack } from 'expo-router';
 
+import { hasPermission } from '@/constants/permissions';
+import { useSession } from '@/context/SessionContext';
+
 export const unstable_settings = {
   initialRouteName: 'inicio',
 };
@@ -9,12 +12,23 @@ export const unstable_settings = {
 const sectionOptions = { animation: 'none' } as const;
 
 export default function HomeLayout() {
+  const { role } = useSession();
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="inicio" options={sectionOptions} />
-      <Stack.Screen name="pagos" options={sectionOptions} />
       <Stack.Screen name="reservas" options={sectionOptions} />
-      <Stack.Screen name="general" options={sectionOptions} />
+
+      {/* Guards por rol: ver src/constants/permissions.ts */}
+      <Stack.Protected guard={hasPermission(role, 'pagos')}>
+        <Stack.Screen name="pagos" options={sectionOptions} />
+        <Stack.Screen name="pago/seleccion" />
+        <Stack.Screen name="pago/aplicar" />
+        <Stack.Screen name="pago/confirmacion" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'general')}>
+        <Stack.Screen name="general" options={sectionOptions} />
+      </Stack.Protected>
     </Stack>
   );
 }

@@ -1,6 +1,9 @@
 import { Redirect } from 'expo-router';
 
-// Sin autenticación real todavía: siempre se inicia en el registro.
+import { useSession } from '@/context/SessionContext';
+
+// Punto de entrada: envía al inicio o al login según haya sesión.
 export default function Index() {
-  return <Redirect href="/sign-in" />;
+  const { user } = useSession();
+  return <Redirect href={user ? '/inicio' : '/sign-in'} />;
 }
