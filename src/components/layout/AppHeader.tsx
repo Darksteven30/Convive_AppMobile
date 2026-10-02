@@ -12,9 +12,17 @@ type Props = {
   left?: LeftAction;
   showAvatar?: boolean;
   onMenuPress?: () => void;
+  /** Acción de «Cancelar»; por defecto vuelve a Inicio (flujo de pago). */
+  onCancel?: () => void;
 };
 
-export function AppHeader({ title = 'Convive', left = 'menu', showAvatar = true, onMenuPress }: Props) {
+export function AppHeader({
+  title = 'Convive',
+  left = 'menu',
+  showAvatar = true,
+  onMenuPress,
+  onCancel = () => router.dismissTo('/inicio'),
+}: Props) {
   const { user } = useSession();
 
   return (
@@ -33,7 +41,7 @@ export function AppHeader({ title = 'Convive', left = 'menu', showAvatar = true,
         {left === 'cancel' && (
           <Pressable
             accessibilityLabel="Cancelar"
-            onPress={() => router.dismissTo('/inicio')}
+            onPress={onCancel}
             style={styles.cancel}
           >
             <Ionicons name="close" size={16} color={colors.text} />

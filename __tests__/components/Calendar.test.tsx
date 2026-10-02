@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 
 import { Calendar, type DateRange } from '@/components/ui/Calendar';
 
@@ -12,10 +12,10 @@ afterEach(() => jest.useRealTimers());
 
 let lastRange: DateRange = { start: null, end: null };
 
-function Harness() {
+function Harness(props: Pick<ComponentProps<typeof Calendar>, 'mode' | 'isDateDisabled'>) {
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   lastRange = range;
-  return <Calendar value={range} onChange={setRange} />;
+  return <Calendar value={range} onChange={setRange} {...props} />;
 }
 
 const day = (n: number) => screen.getByText(String(n));
@@ -88,5 +88,26 @@ describe('Calendar', () => {
     // Septiembre de 2025 empieza en lunes: el domingo 31 de agosto aparece deshabilitado.
     await fireEvent.press(day(31));
     expect(lastRange.start).toBeNull();
+  });
+
+  it('en modo «single» cada toque elige un solo día', async () => {
+    await render(<Harness mode="single" />);
+
+    await fireEvent.press(day(9));
+    await fireEvent.press(day(13));
+
+    expect(lastRange.start).toEqual(new Date(2025, 8, 13));
+    expect(lastRange.end).toBeNull();
+  });
+
+  it('no permite elegir los días que isDateDisabled marca (p. ej. fechas futuras)', async () => {
+    const today = new Date(2025, 8, 15);
+    await render(<Harness mode="single" isDateDisabled={(date) => date > today} />);
+
+    await fireEvent.press(day(20));
+    expect(lastRange.start).toBeNull();
+
+    await fireEvent.press(day(15));
+    expect(lastRange.start).toEqual(today);
   });
 });

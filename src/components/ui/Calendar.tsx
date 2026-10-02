@@ -12,6 +12,10 @@ export type DateRange = { start: Date | null; end: Date | null };
 type Props = {
   value: DateRange;
   onChange: (range: DateRange) => void;
+  /** «range» (por defecto): inicio y fin. «single»: un solo día, siempre en value.start. */
+  mode?: 'range' | 'single';
+  /** Días que no se pueden elegir (p. ej. fechas futuras); se muestran en gris. */
+  isDateDisabled?: (date: Date) => boolean;
 };
 
 type Cell = { date: Date; inMonth: boolean };
@@ -19,8 +23,8 @@ type Cell = { date: Date; inMonth: boolean };
 const sameDay = (a: Date | null, b: Date) =>
   !!a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
-/** Calendario mensual con selección de rango (primer toque: inicio, segundo: fin). */
-export function Calendar({ value, onChange }: Props) {
+/** Calendario mensual. En modo rango, el primer toque marca el inicio y el segundo el fin. */
+export function Calendar({ value, onChange, mode = 'range', isDateDisabled }: Props) {
   const [visible, setVisible] = useState(() => {
     const base = value.start ?? new Date();
     return new Date(base.getFullYear(), base.getMonth(), 1);
@@ -33,7 +37,7 @@ export function Calendar({ value, onChange }: Props) {
 
   const handlePress = (date: Date) => {
     const { start, end } = value;
-    if (!start || end || date < start) {
+    if (mode === 'single' || !start || end || date < start) {
       onChange({ start: date, end: null });
     } else {
       onChange({ start, end: date });
@@ -66,19 +70,23 @@ export function Calendar({ value, onChange }: Props) {
       {weeks.map((week, index) => (
         <View key={index} style={styles.week}>
           {week.map(({ date, inMonth }) => {
+            const disabled = !inMonth || !!isDateDisabled?.(date);
             const isEdge = sameDay(value.start, date) || sameDay(value.end, date);
             const inRange = !!value.start && !!value.end && date > value.start && date < value.end;
             return (
               <Pressable
                 key={date.toISOString()}
-                disabled={!inMonth}
+                accessibilityRole="button"
+                accessibilityLabel={`${date.getDate()} de ${MONTHS[date.getMonth()]} de ${date.getFullYear()}`}
+                accessibilityState={{ disabled, selected: isEdge }}
+                disabled={disabled}
                 onPress={() => handlePress(date)}
                 style={[styles.cell, styles.day, inRange && styles.inRange, isEdge && styles.edge]}
               >
                 <Text
                   style={[
                     styles.dayLabel,
-                    !inMonth && styles.outside,
+                    disabled && styles.outside,
                     isEdge && styles.edgeLabel,
                   ]}
                 >

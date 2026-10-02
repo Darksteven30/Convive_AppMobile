@@ -2,6 +2,7 @@
 // manteniendo la misma interfaz. Las reglas que aquí se simulan (bloqueo por intentos,
 // códigos de recuperación) en producción deben vivir en el servidor.
 
+import { simulateNetwork } from '@/services/mockNetwork';
 import { normalizeEmail } from '@/utils/validation';
 
 export type Role = 'administrador' | 'junta_directiva' | 'residente' | 'vigilancia';
@@ -99,12 +100,6 @@ export function resetMockAuthState() {
 }
 resetMockAuthState();
 
-/** Latencia simulada de red. Las pruebas de integración la ponen en 0. */
-export const authConfig = { networkDelayMs: 600 };
-
-const delay = (ms: number) =>
-  ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
-
 export type AuthErrorCode =
   | 'not_found'
   | 'invalid_credentials'
@@ -139,7 +134,7 @@ function isLocked(email: string) {
 
 /** Paso 1 del inicio de sesión: indica si el correo tiene cuenta, está pre-registrado o no existe. */
 export async function lookupEmail(email: string): Promise<EmailStatus> {
-  await delay(authConfig.networkDelayMs);
+  await simulateNetwork();
   const account = findAccount(email);
   if (!account) return 'not_found';
   return account.password === null ? 'pending' : 'registered';
@@ -147,7 +142,7 @@ export async function lookupEmail(email: string): Promise<EmailStatus> {
 
 /** Paso 2: verifica la contraseña. Tras 5 intentos fallidos bloquea la cuenta 15 minutos. */
 export async function signIn(email: string, password: string): Promise<User> {
-  await delay(authConfig.networkDelayMs);
+  await simulateNetwork();
   const key = normalizeEmail(email);
   if (isLocked(key)) {
     throw new AuthError('locked');
@@ -170,7 +165,7 @@ export async function signIn(email: string, password: string): Promise<User> {
 
 /** Primera contraseña de una cuenta pre-registrada. Deja la sesión iniciada. */
 export async function createPassword(email: string, password: string): Promise<User> {
-  await delay(authConfig.networkDelayMs);
+  await simulateNetwork();
   const account = findAccount(email);
   if (!account) throw new AuthError('not_found');
   if (account.password !== null) throw new AuthError('password_already_set');
@@ -180,7 +175,7 @@ export async function createPassword(email: string, password: string): Promise<U
 
 /** Envía (simula enviar) al correo un código de 6 dígitos válido por 10 minutos. */
 export async function requestPasswordReset(email: string): Promise<void> {
-  await delay(authConfig.networkDelayMs);
+  await simulateNetwork();
   const account = findAccount(email);
   if (!account) throw new AuthError('not_found');
   resetCodes.set(account.email, { code: MOCK_RESET_CODE, expiresAt: Date.now() + RESET_CODE_TTL_MS });
@@ -188,7 +183,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 /** Define una nueva contraseña con el código recibido. También desbloquea la cuenta. */
 export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
-  await delay(authConfig.networkDelayMs);
+  await simulateNetwork();
   const key = normalizeEmail(email);
   const entry = resetCodes.get(key);
   const account = findAccount(key);
@@ -201,5 +196,5 @@ export async function resetPassword(email: string, code: string, newPassword: st
 }
 
 export async function signOut(): Promise<void> {
-  await delay(authConfig.networkDelayMs / 2);
+  await simulateNetwork(0.5);
 }
