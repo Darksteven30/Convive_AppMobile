@@ -2,15 +2,17 @@ import { ScrollView, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 
 import { Chip } from '@/components/ui/Chip';
+import { hasPermission, type Permission } from '@/constants/permissions';
 import { spacing } from '@/constants/theme';
+import { useSession } from '@/context/SessionContext';
 
 export type SectionKey = 'inicio' | 'pagos' | 'reservas' | 'general';
 
-const sections: { key: SectionKey; label: string; href: Href }[] = [
+const sections: { key: SectionKey; label: string; href: Href; permission?: Permission }[] = [
   { key: 'inicio', label: 'Inicio', href: '/inicio' },
-  { key: 'pagos', label: 'Pagos', href: '/pagos' },
+  { key: 'pagos', label: 'Pagos', href: '/pagos', permission: 'pagos' },
   { key: 'reservas', label: 'Reservas', href: '/reservas' },
-  { key: 'general', label: 'General', href: '/general' },
+  { key: 'general', label: 'General', href: '/general', permission: 'general' },
 ];
 
 type Props = {
@@ -20,6 +22,9 @@ type Props = {
 
 /** Pestañas superiores de la sección principal (Inicio, Pagos, Reservas, General). */
 export function SegmentedTabs({ active }: Props) {
+  const { role } = useSession();
+  const visible = sections.filter((section) => !section.permission || hasPermission(role, section.permission));
+
   return (
     <ScrollView
       horizontal
@@ -27,7 +32,7 @@ export function SegmentedTabs({ active }: Props) {
       contentContainerStyle={styles.row}
       style={styles.container}
     >
-      {sections.map((section) => (
+      {visible.map((section) => (
         <Chip
           key={section.key}
           label={section.label}
