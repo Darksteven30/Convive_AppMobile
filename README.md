@@ -15,6 +15,23 @@ npm start          # abre Expo; escanea el QR con Expo Go
 npm run typecheck  # verificación de tipos
 ```
 
+## Pruebas
+
+Pruebas automatizadas con Jest, React Native Testing Library y `expo-router/testing-library`:
+
+```bash
+npm test               # ejecuta todas las pruebas
+npm run test:watch     # vuelve a ejecutarlas al guardar cambios
+npm run test:coverage  # genera el reporte de cobertura
+```
+
+| Carpeta | Qué prueba |
+|---|---|
+| `__tests__/unit` | Servicio de autenticación, permisos por rol, contexto de sesión y formato de moneda |
+| `__tests__/components` | Calendario de reservas |
+| `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
+| `__tests__/screens` | Pagos, PQRS, Reservas, General, Perfil y cambio de contraseña |
+
 ## Usuarios de prueba
 
 La autenticación usa un servicio simulado (`src/services/auth.service.ts`) y los permisos por rol están en `src/constants/permissions.ts`:
