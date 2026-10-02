@@ -55,6 +55,12 @@ Otros casos del inicio de sesión (RF01):
 
 Los datos simulados se reinician al recargar la app.
 
+## Versiones
+
+El historial de cambios está en [CHANGELOG.md](CHANGELOG.md). Se trabaja con gitflow: `develop` integra las ramas `feature/` y `bugfix/`; cada versión sale de una rama `release/x.y.z` que se fusiona en `main` y se etiqueta `vx.y.z`. Las correcciones urgentes sobre una versión publicada van en ramas `hotfix/` desde `main`.
+
+La versión se actualiza en `package.json` (`npm version x.y.z --no-git-tag-version`) y en `expo.version` de `app.json`.
+
 ## Estructura
 
 ```
