@@ -16,13 +16,12 @@ export function DonutChart({ data, size = 140, strokeWidth = 22 }: Props) {
   const circumference = 2 * Math.PI * radius;
   const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
 
-  let offset = 0;
-  const segments = data.map((item) => {
-    const length = (item.value / total) * circumference;
-    const segment = { ...item, length, offset };
-    offset += length;
-    return segment;
-  });
+  // Cada segmento empieza donde termina el anterior (sin variables mutables durante el render).
+  const segments = data.reduce<(Category & { length: number; offset: number })[]>((acc, item) => {
+    const previous = acc[acc.length - 1];
+    const offset = previous ? previous.offset + previous.length : 0;
+    return [...acc, { ...item, length: (item.value / total) * circumference, offset }];
+  }, []);
 
   return (
     <View style={styles.container}>

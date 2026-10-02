@@ -13,11 +13,12 @@ const DEFAULT_LANDING = '/inicio';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const tabIcon =
-  (active: IconName, inactive: IconName) =>
-  ({ color, focused }: { color: ColorValue; focused: boolean }) => (
-    <Ionicons name={focused ? active : inactive} size={24} color={color} />
-  );
+const tabIcon = (active: IconName, inactive: IconName) => {
+  function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} size={24} color={color} />;
+  }
+  return TabIcon;
+};
 
 /**
  * RF01: al entrar, cada rol va a su pantalla principal (Admin → Panel, Vigilancia → Visitantes…).
