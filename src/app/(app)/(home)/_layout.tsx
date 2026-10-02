@@ -29,6 +29,12 @@ export default function HomeLayout() {
       <Stack.Protected guard={hasPermission(role, 'general')}>
         <Stack.Screen name="general" options={sectionOptions} />
       </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'panel')}>
+        <Stack.Screen name="panel" options={sectionOptions} />
+      </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'visitantes')}>
+        <Stack.Screen name="visitantes" options={sectionOptions} />
+      </Stack.Protected>
     </Stack>
   );
 }

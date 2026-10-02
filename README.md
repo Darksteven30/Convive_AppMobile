@@ -36,12 +36,21 @@ npm run test:coverage  # genera el reporte de cobertura
 
 La autenticación usa un servicio simulado (`src/services/auth.service.ts`) y los permisos por rol están en `src/constants/permissions.ts`:
 
-| Rol | Correo | Contraseña | Acceso |
-|---|---|---|---|
-| Administrador | admin@convive.com | Admin123 | Todas las secciones |
-| Junta directiva | junta@convive.com | Junta123 | Todas las secciones |
-| Residente | monica@gmail.com | Residente123 | Inicio, Pagos, Reservas, PQRS y Perfil |
-| Vigilancia | vigilancia@convive.com | Vigilancia123 | Inicio (sin estado de cuenta), Reservas, PQRS y Perfil |
+| Rol | Correo | Contraseña | Pantalla inicial | Acceso |
+|---|---|---|---|---|
+| Administrador | admin@convive.com | Admin123 | Panel | Todas las secciones |
+| Junta directiva | junta@convive.com | Junta123 | General | Todas las secciones excepto Panel |
+| Residente | monica@gmail.com | Residente123 | Inicio | Inicio, Pagos, Reservas, PQRS y Perfil |
+| Vigilancia | vigilancia@convive.com | Vigilancia123 | Visitantes | Visitantes, Inicio (sin estado de cuenta), Reservas, PQRS y Perfil |
+
+Otros casos del inicio de sesión (RF01):
+
+- **Cuenta pre-registrada sin contraseña:** `nuevo@convive.com` → pantalla «Crea tu contraseña».
+- **Correo no registrado:** cualquier otro correo → diálogo «Este correo no está registrado…».
+- **Bloqueo:** 5 contraseñas incorrectas bloquean la cuenta 15 minutos.
+- **Recuperar contraseña:** el código de verificación del servicio simulado es siempre `123456` (vence a los 10 minutos).
+
+Los datos simulados se reinician al recargar la app.
 
 ## Estructura
 

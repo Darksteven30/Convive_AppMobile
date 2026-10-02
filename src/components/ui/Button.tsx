@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { colors, radius, spacing } from '@/constants/theme';
@@ -11,6 +11,8 @@ type Props = {
   variant?: Variant;
   icon?: ReactNode;
   disabled?: boolean;
+  /** Esperando al servidor: muestra «Procesando…» con indicador y evita dobles envíos. */
+  loading?: boolean;
   /** Ocupa todo el ancho disponible. */
   block?: boolean;
   /** Bordes completamente redondeados. */
@@ -32,16 +34,19 @@ export function Button({
   variant = 'primary',
   icon,
   disabled,
+  loading,
   block,
   pill,
   style,
 }: Props) {
   const v = variantStyles[variant];
+  const inactive = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: inactive, busy: loading }}
       onPress={onPress}
-      disabled={disabled}
+      disabled={inactive}
       style={({ pressed }) => [
         styles.base,
         {
@@ -49,13 +54,13 @@ export function Button({
           borderColor: v.border ?? v.bg,
           borderRadius: pill ? radius.pill : radius.md,
           alignSelf: block ? 'stretch' : 'flex-start',
-          opacity: disabled ? 0.5 : pressed ? 0.8 : 1,
+          opacity: disabled && !loading ? 0.5 : pressed ? 0.8 : 1,
         },
         style,
       ]}
     >
-      {icon}
-      <Text style={[styles.label, { color: v.fg }]}>{label}</Text>
+      {loading ? <ActivityIndicator size="small" color={v.fg} /> : icon}
+      <Text style={[styles.label, { color: v.fg }]}>{loading ? 'Procesando…' : label}</Text>
     </Pressable>
   );
 }

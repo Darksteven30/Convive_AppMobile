@@ -2,8 +2,12 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { SessionProvider, useSession } from '@/context/SessionContext';
+import { resetMockAuthState } from '@/services/auth.service';
 
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => {
+  jest.useFakeTimers();
+  resetMockAuthState();
+});
 afterEach(() => jest.useRealTimers());
 
 const wrapper = ({ children }: { children: ReactNode }) => <SessionProvider>{children}</SessionProvider>;
@@ -38,6 +42,19 @@ describe('SessionContext', () => {
     });
 
     expect(result.current.user).toBeNull();
+  });
+
+  it('crea la contraseña de una cuenta pre-registrada y deja la sesión iniciada', async () => {
+    const { result } = await renderHook(() => useSession(), { wrapper });
+
+    await act(async () => {
+      const pending = result.current.createPassword('nuevo@convive.com', 'NuevaClave1');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+
+    expect(result.current.user?.name).toBe('Laura Gómez');
+    expect(result.current.role).toBe('residente');
   });
 
   it('limpia el usuario al cerrar sesión', async () => {

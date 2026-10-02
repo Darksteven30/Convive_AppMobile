@@ -1,12 +1,12 @@
-import { hasPermission, roleLabels, type Permission } from '@/constants/permissions';
+import { hasPermission, homeRouteFor, roleLabels, type Permission } from '@/constants/permissions';
 import type { Role } from '@/services/auth.service';
 
 // Matriz de acceso esperada según el RF01.
 const expected: Record<Role, Record<Permission, boolean>> = {
-  administrador: { pagos: true, general: true },
-  junta_directiva: { pagos: true, general: true },
-  residente: { pagos: true, general: false },
-  vigilancia: { pagos: false, general: false },
+  administrador: { pagos: true, general: true, panel: true, visitantes: false },
+  junta_directiva: { pagos: true, general: true, panel: false, visitantes: false },
+  residente: { pagos: true, general: false, panel: false, visitantes: false },
+  vigilancia: { pagos: false, general: false, panel: false, visitantes: true },
 };
 
 describe('hasPermission', () => {
@@ -21,6 +21,17 @@ describe('hasPermission', () => {
   it('niega todo cuando no hay sesión', () => {
     expect(hasPermission(null, 'pagos')).toBe(false);
     expect(hasPermission(null, 'general')).toBe(false);
+  });
+});
+
+describe('homeRouteFor', () => {
+  it.each<[Role, string]>([
+    ['administrador', '/panel'],
+    ['junta_directiva', '/general'],
+    ['residente', '/inicio'],
+    ['vigilancia', '/visitantes'],
+  ])('%s → %s', (role, route) => {
+    expect(homeRouteFor(role)).toBe(route);
   });
 });
 
