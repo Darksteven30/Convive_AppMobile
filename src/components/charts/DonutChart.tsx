@@ -27,7 +27,9 @@ export function DonutChart({ data, size = 140, strokeWidth = 22 }: Props) {
   return (
     <View style={styles.container}>
       <Svg width={size} height={size}>
-        <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
+        {/* Rota -90° para que el primer segmento empiece arriba. Se usa el transform SVG estándar
+            porque las props rotation/origin generan un atributo inválido en la web. */}
+        <G transform={`rotate(-90 ${size / 2} ${size / 2})`}>
           {segments.map((segment) => (
             <Circle
               key={segment.label}
