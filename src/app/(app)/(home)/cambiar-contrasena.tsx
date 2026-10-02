@@ -59,7 +59,13 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
   return (
     <View style={styles.field}>
       <SectionTitle title={label} />
-      <TextField value={value} onChangeText={onChange} secureTextEntry autoCapitalize="none" />
+      <TextField
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={onChange}
+        secureTextEntry
+        autoCapitalize="none"
+      />
     </View>
   );
 }

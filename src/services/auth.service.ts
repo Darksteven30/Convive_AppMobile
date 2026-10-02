@@ -63,14 +63,16 @@ const accounts: MockAccount[] = [
   },
 ];
 
-const NETWORK_DELAY_MS = 600;
+/** Latencia simulada de red. Las pruebas de integración la ponen en 0. */
+export const authConfig = { networkDelayMs: 600 };
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) =>
+  ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 
 export class AuthError extends Error {}
 
 export async function signIn(email: string, password: string): Promise<User> {
-  await delay(NETWORK_DELAY_MS);
+  await delay(authConfig.networkDelayMs);
   const account = accounts.find(
     (item) => item.email.toLowerCase() === email.trim().toLowerCase() && item.password === password,
   );
@@ -82,5 +84,5 @@ export async function signIn(email: string, password: string): Promise<User> {
 }
 
 export async function signOut(): Promise<void> {
-  await delay(NETWORK_DELAY_MS / 2);
+  await delay(authConfig.networkDelayMs / 2);
 }

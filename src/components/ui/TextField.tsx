@@ -11,6 +11,7 @@ export function TextField({ label, style, multiline, ...rest }: Props) {
     <View style={styles.wrapper}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
+        accessibilityLabel={label}
         placeholderTextColor={colors.placeholder}
         multiline={multiline}
         style={[styles.input, multiline && styles.multiline, style]}
