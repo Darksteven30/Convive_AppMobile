@@ -47,6 +47,7 @@ export function SegmentedTabs({ active }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 0,
+    flexShrink: 0,
   },
   row: {
     gap: spacing.sm,

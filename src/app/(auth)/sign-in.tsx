@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, layout, spacing, typography } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
 import { AuthError } from '@/services/auth.service';
 
@@ -109,6 +109,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
     gap: spacing.lg,

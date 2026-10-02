@@ -30,6 +30,11 @@ export const radius = {
   pill: 999,
 } as const;
 
+export const layout = {
+  /** Ancho máximo del contenido: en tablets y navegador la app se centra con proporciones de celular. */
+  maxContentWidth: 520,
+} as const;
+
 export const typography = {
   title: { fontSize: 20, fontWeight: '600' },
   subtitle: { fontSize: 16, fontWeight: '600' },
