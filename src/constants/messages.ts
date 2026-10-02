@@ -20,6 +20,21 @@ export const MSG = {
     passwordsDontMatch: 'Las contraseñas no coinciden.',
     socialUnavailable: 'El inicio de sesión con Google y Apple estará disponible próximamente.',
   },
+  RF03: {
+    saved: 'Movimiento registrado correctamente.', // MSG-RF03-01
+    amountInvalid: 'Ingresa un monto mayor a $ 0.', // MSG-RF03-02
+    categoryRequired: 'Selecciona una categoría.', // MSG-RF03-03
+    futureDate: 'La fecha no puede ser posterior a hoy.', // MSG-RF03-04
+    descriptionShort: 'La descripción debe tener al menos 5 caracteres.', // MSG-RF03-05
+    discardTitle: '¿Descartar el movimiento?', // MSG-RF03-06
+    discardMessage: 'Los datos ingresados se perderán.', // MSG-RF03-06
+    forbidden: 'No tienes permisos para realizar esta acción.', // MSG-RF03-07
+    invalidFile: 'Solo se permiten archivos PDF, JPG o PNG de máximo 5 MB.', // MSG-RF03-08
+    // Propuestos (no están en el documento):
+    amountTooHigh: 'El monto máximo es $ 999.999.999,99.',
+    mediaPermissionDenied:
+      'Convive necesita acceso a la cámara o a tus fotos para adjuntar el soporte.',
+  },
   general: {
     unexpected: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
   },
