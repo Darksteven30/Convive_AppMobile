@@ -2,14 +2,16 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 import { router, type Href } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { authConfig, resetMockAuthState } from '@/services/auth.service';
+import { resetMockAuthState } from '@/services/auth.service';
+import { resetMockFinanceState } from '@/services/finance.service';
+import { mockNetwork } from '@/services/mockNetwork';
 
 type Element = Parameters<typeof fireEvent.press>[0];
 
 /**
  * Renderiza la app real (src/app) con Expo Router en la ruta indicada.
  *
- * - Restaura los datos del servicio simulado y desactiva su latencia, para que inicio y
+ * - Restaura los datos de los servicios simulados y desactiva su latencia, para que inicio y
  *   cierre de sesión se resuelvan dentro del act() de cada evento.
  * - Con Testing Library v14, renderRouter devuelve la promesa de render con los helpers
  *   del router adjuntos; se guarda la referencia antes de esperarla porque al resolverla
@@ -17,7 +19,8 @@ type Element = Parameters<typeof fireEvent.press>[0];
  */
 export async function renderApp(initialUrl = '/') {
   resetMockAuthState();
-  authConfig.networkDelayMs = 0;
+  resetMockFinanceState();
+  mockNetwork.delayMs = 0;
   const rendered = renderRouter('./src/app', { initialUrl });
   await rendered;
   return {

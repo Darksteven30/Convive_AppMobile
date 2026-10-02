@@ -3,10 +3,10 @@ import type { Role } from '@/services/auth.service';
 
 // Matriz de acceso esperada según el RF01.
 const expected: Record<Role, Record<Permission, boolean>> = {
-  administrador: { pagos: true, general: true, panel: true, visitantes: false },
-  junta_directiva: { pagos: true, general: true, panel: false, visitantes: false },
-  residente: { pagos: true, general: false, panel: false, visitantes: false },
-  vigilancia: { pagos: false, general: false, panel: false, visitantes: true },
+  administrador: { pagos: true, general: true, panel: true, finanzas: true, visitantes: false },
+  junta_directiva: { pagos: true, general: true, panel: false, finanzas: false, visitantes: false },
+  residente: { pagos: true, general: false, panel: false, finanzas: false, visitantes: false },
+  vigilancia: { pagos: false, general: false, panel: false, finanzas: false, visitantes: true },
 };
 
 describe('hasPermission', () => {
