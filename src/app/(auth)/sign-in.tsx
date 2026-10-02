@@ -1,18 +1,40 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 
 import { BrandLogo } from '@/components/layout/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useSession } from '@/context/SessionContext';
+import { AuthError } from '@/services/auth.service';
 
 export default function SignInScreen() {
+  const { signIn } = useSession();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const enterApp = () => router.replace('/inicio');
+  // Al iniciar sesión no se navega a mano: los guards de _layout.tsx redirigen según el rol.
+  const submit = async () => {
+    if (!email.trim() || !password) {
+      setError('Ingresa tu correo y contraseña.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      await signIn(email, password);
+    } catch (e) {
+      setError(e instanceof AuthError ? e.message : 'No se pudo iniciar sesión. Intenta de nuevo.');
+      setLoading(false);
+    }
+  };
+
+  const socialNotAvailable = () =>
+    Alert.alert('Próximamente', 'El inicio de sesión con redes sociales estará disponible pronto.');
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -23,9 +45,9 @@ export default function SignInScreen() {
         </View>
 
         <View style={styles.intro}>
-          <Text style={typography.subtitle}>Crea una cuenta</Text>
+          <Text style={typography.subtitle}>Inicia sesión</Text>
           <Text style={styles.centerText}>
-            Ingresa tu correo electrónico{'\n'}para registrarte en esta aplicación
+            Ingresa tu correo electrónico y contraseña{'\n'}para acceder a esta aplicación
           </Text>
         </View>
 
@@ -37,7 +59,17 @@ export default function SignInScreen() {
           autoCapitalize="none"
           autoComplete="email"
         />
-        <Button label="Continuar" onPress={enterApp} block />
+        <TextField
+          placeholder="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="password"
+          onSubmitEditing={submit}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Button label={loading ? 'Ingresando…' : 'Continuar'} onPress={submit} disabled={loading} block />
 
         <View style={styles.divider}>
           <View style={styles.line} />
@@ -49,14 +81,14 @@ export default function SignInScreen() {
           label="Continuar con Google"
           variant="secondary"
           icon={<Ionicons name="logo-google" size={18} color="#EA4335" />}
-          onPress={enterApp}
+          onPress={socialNotAvailable}
           block
         />
         <Button
           label="Continuar con Apple"
           variant="secondary"
           icon={<Ionicons name="logo-apple" size={18} color={colors.text} />}
-          onPress={enterApp}
+          onPress={socialNotAvailable}
           block
         />
 
@@ -99,6 +131,10 @@ const styles = StyleSheet.create({
     ...typography.body,
     textAlign: 'center',
     color: colors.text,
+  },
+  error: {
+    ...typography.caption,
+    color: colors.danger,
   },
   divider: {
     flexDirection: 'row',
