@@ -7,6 +7,8 @@ type SessionContextValue = {
   user: User | null;
   role: Role | null;
   signIn: (email: string, password: string) => Promise<User>;
+  /** Crea la primera contraseña de una cuenta pre-registrada e inicia sesión. */
+  createPassword: (email: string, password: string) => Promise<User>;
   signOut: () => Promise<void>;
 };
 
@@ -22,14 +24,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return authenticated;
   }, []);
 
+  const createPassword = useCallback(async (email: string, password: string) => {
+    const authenticated = await authService.createPassword(email, password);
+    setUser(authenticated);
+    return authenticated;
+  }, []);
+
   const signOut = useCallback(async () => {
     await authService.signOut();
     setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, role: user?.role ?? null, signIn, signOut }),
-    [user, signIn, signOut],
+    () => ({ user, role: user?.role ?? null, signIn, createPassword, signOut }),
+    [user, signIn, createPassword, signOut],
   );
 
   return <SessionContext value={value}>{children}</SessionContext>;
