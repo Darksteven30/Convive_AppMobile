@@ -69,3 +69,16 @@ export const bookingCategories: Category[] = [
   { label: 'Cancha', value: 30, color: '#38BDF8' },
   { label: 'BBQ', value: 20, color: '#16A34A' },
 ];
+
+// Indicadores del panel de administración.
+export const adminSummary = {
+  portfolioDue: 12450000,
+  unitsInArrears: 8,
+  totalUnits: 120,
+  pendingPqrs: 3,
+};
+
+export type ExpectedVisitor = { id: string; name: string; unit: string; time: string };
+
+// Visitantes esperados hoy (el registro de entradas y salidas es RF10).
+export const expectedVisitors: ExpectedVisitor[] = [];
