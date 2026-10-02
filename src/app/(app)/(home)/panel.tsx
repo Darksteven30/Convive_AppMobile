@@ -12,7 +12,7 @@ import { formatCurrency } from '@/utils/format';
 
 /**
  * Pantalla principal del administrador (RF01): indicadores de cartera y PQRS pendientes.
- * Las acciones de administración (RF03, RF04, RF08) se agregarán cuando tengan mockup.
+ * Desde aquí se accede a Finanzas (RF03); RF04 y RF08 se agregarán cuando tengan mockup.
  */
 export default function PanelScreen() {
   const { portfolioDue, unitsInArrears, totalUnits, pendingPqrs } = adminSummary;
@@ -45,6 +45,14 @@ export default function PanelScreen() {
         <Button label="Ver PQRS" variant="outline" pill onPress={() => router.push('/pqrs')} />
       </Card>
 
+      <Card title="Finanzas">
+        <Text style={styles.muted}>Registra ingresos y egresos con su categoría y soporte.</Text>
+        <View style={styles.actions}>
+          <Button label="Registrar movimiento" variant="success" pill onPress={() => router.push('/finanzas/nuevo')} />
+          <Button label="Ver movimientos" variant="outline" pill onPress={() => router.push('/finanzas')} />
+        </View>
+      </Card>
+
       <Button label="Ver resumen financiero" variant="outline" pill onPress={() => router.replace('/general')} />
     </Screen>
   );
@@ -58,6 +66,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   count: {

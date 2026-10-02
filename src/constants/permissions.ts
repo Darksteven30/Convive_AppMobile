@@ -17,6 +17,8 @@ const permissions = {
   general: ['administrador', 'junta_directiva'],
   // Panel de administración con indicadores de cartera y PQRS pendientes.
   panel: ['administrador'],
+  // Registro de ingresos y egresos (RF03).
+  finanzas: ['administrador'],
   // Registro de visitantes (RF10).
   visitantes: ['vigilancia'],
 } satisfies Record<string, Role[]>;
