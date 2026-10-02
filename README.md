@@ -13,6 +13,7 @@ Aplicacion movil para la gestion y administracion de propiedad horizontal. Cread
 npm install
 npm start          # abre Expo; escanea el QR con Expo Go
 npm run typecheck  # verificación de tipos
+npm run lint       # revisión de estilo y errores comunes (ESLint)
 ```
 
 ## Pruebas
