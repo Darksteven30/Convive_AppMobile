@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
-import { press, renderSignedIn } from '../helpers/app';
+import { navigate, press, renderSignedIn } from '../helpers/app';
 
 let alertSpy: jest.SpyInstance;
 
@@ -51,7 +51,9 @@ describe('PQRS', () => {
   });
 
   it('"Informar novedad" en Inicio también abre PQRS', async () => {
+    // Vigilancia entra a Visitantes; «Informar novedad» está en Inicio.
     const app = await renderSignedIn('vigilancia@convive.com', 'Vigilancia123');
+    await navigate('/inicio');
 
     await press(screen.getByText('Informar novedad'));
     expect(app.getPathname()).toBe('/pqrs');

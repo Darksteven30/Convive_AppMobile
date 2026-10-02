@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react-native';
 
-import { press, renderSignedIn } from '../helpers/app';
+import { navigate, press, renderSignedIn } from '../helpers/app';
 
 const continuar = () => screen.getByRole('button', { name: 'Continuar' });
 
@@ -38,7 +38,9 @@ describe('Flujo de pago', () => {
   });
 
   it('"Cancelar" abandona el pago y vuelve al inicio', async () => {
+    // El administrador entra al Panel; el pago se inicia desde Inicio.
     const app = await renderSignedIn('admin@convive.com', 'Admin123');
+    await navigate('/inicio');
 
     await press(screen.getByText('Abonar'));
     await press(screen.getByText('Cuota administración'));
