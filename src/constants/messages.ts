@@ -45,7 +45,25 @@ export const MSG = {
     endAfterToday: 'La fecha final no puede ser posterior a hoy.',
     forbidden: 'No tienes permisos para consultar los reportes financieros.',
   },
+  RF16: {
+    phoneUpdated: 'Tus datos se actualizaron correctamente.', // MSG-RF16-01
+    phoneInvalid: 'Ingresa un número de celular válido de 10 dígitos.', // MSG-RF16-02
+    signOutTitle: '¿Quieres cerrar sesión?', // MSG-RF16-03
+    // Propuesto (no está en el documento):
+    readOnlyData: 'El correo y la unidad solo los puede cambiar la administración.',
+  },
+  RF17: {
+    updated: 'Tu contraseña se actualizó correctamente.', // MSG-RF17-01
+    wrongCurrent: 'La contraseña actual no es correcta.', // MSG-RF17-02
+    mismatch: 'Las contraseñas no coinciden.', // MSG-RF17-03
+    sameAsCurrent: 'La nueva contraseña debe ser diferente a la actual.', // MSG-RF17-04
+    weak: 'La contraseña no cumple con los requisitos de seguridad.', // MSG-RF17-05
+    leaveTitle: '¿Salir sin guardar?', // MSG-RF17-06
+    leaveMessage: 'Los cambios se perderán.', // MSG-RF17-06
+  },
   general: {
     unexpected: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
+    // Propuesto (no está en el documento): opciones del menú que aún no existen.
+    comingSoon: 'Esta sección estará disponible próximamente.',
   },
 } as const;
