@@ -1,14 +1,20 @@
 import { MSG } from '@/constants/messages';
 import type { User } from '@/services/auth.service';
 import {
+  ALL_CATEGORIES,
   ATTACHMENT_MAX_BYTES,
+  computeTotals,
   createMovement,
+  getFinancialReport,
   isAllowedAttachment,
   listCategories,
   listMovements,
+  listReportCategories,
   resetMockFinanceState,
   validateMovement,
+  validateReportFilters,
   type MovementInput,
+  type ReportFilters,
 } from '@/services/finance.service';
 
 const admin: User = {
@@ -148,5 +154,121 @@ describe('listMovements', () => {
     await run(createMovement({ ...valid, date: '2026-08-01', description: 'Movimiento antiguo' }, admin));
     const dates = (await run(listMovements())).map((movement) => movement.date);
     expect(dates).toEqual([...dates].sort().reverse());
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// RF04 · Reportes financieros
+// ---------------------------------------------------------------------------------------------
+
+const october: ReportFilters = { from: '2026-10-01', to: TODAY, categoryId: ALL_CATEGORIES };
+
+describe('validateReportFilters (reglas de RF04)', () => {
+  it('acepta un rango válido', () => {
+    expect(validateReportFilters(october, TODAY)).toEqual({});
+  });
+
+  it('MSG-RF04-02: la fecha inicial no puede ser mayor que la final', () => {
+    expect(validateReportFilters({ ...october, from: '2026-10-02', to: '2026-10-01' }, TODAY).from).toBe(
+      MSG.RF04.startAfterEnd,
+    );
+  });
+
+  it('acepta un solo día (fecha inicial igual a la final)', () => {
+    expect(validateReportFilters({ ...october, from: TODAY, to: TODAY }, TODAY)).toEqual({});
+  });
+
+  it('MSG-RF04-03: el rango máximo es de 12 meses', () => {
+    expect(validateReportFilters({ ...october, from: '2025-10-02', to: TODAY }, TODAY)).toEqual({});
+    expect(validateReportFilters({ ...october, from: '2025-10-01', to: TODAY }, TODAY).to).toBe(MSG.RF04.rangeTooLong);
+  });
+
+  it('la fecha final no puede ser posterior a hoy', () => {
+    expect(validateReportFilters({ ...october, to: '2026-10-03' }, TODAY).to).toBe(MSG.RF04.endAfterToday);
+  });
+});
+
+describe('computeTotals', () => {
+  it('suma ingresos y egresos y calcula el saldo', () => {
+    const base = { categoryId: 'x', date: TODAY, description: 'xxxxx', createdBy: { id: 'u2', name: 'D' }, createdAt: '' };
+    const totals = computeTotals([
+      { ...base, id: 'a', type: 'ingreso', amount: 1000 },
+      { ...base, id: 'b', type: 'egreso', amount: 300.5 },
+      { ...base, id: 'c', type: 'ingreso', amount: 200 },
+    ]);
+    expect(totals).toEqual({ income: 1200, expenses: 300.5, balance: 899.5 });
+  });
+
+  it('sin movimientos todo queda en 0', () => {
+    expect(computeTotals([])).toEqual({ income: 0, expenses: 0, balance: 0 });
+  });
+});
+
+describe('listReportCategories', () => {
+  it('incluye todas las categorías, también las inactivas, primero egresos y luego ingresos', async () => {
+    const categories = await run(listReportCategories());
+    expect(categories.map((category) => category.name)).toEqual(expect.arrayContaining(['Eventos', 'Donaciones']));
+    expect(categories[0].type).toBe('egreso');
+    expect(categories[categories.length - 1].type).toBe('ingreso');
+  });
+});
+
+describe('getFinancialReport', () => {
+  it('filtra por rango de fechas, ordena cronológicamente y calcula los totales', async () => {
+    const report = await run(getFinancialReport(october, admin));
+
+    expect(report.movements.map((movement) => movement.date)).toEqual(['2026-10-01', '2026-10-01']);
+    expect(report.totals).toEqual({ income: 2_150_000, expenses: 320_000, balance: 1_830_000 });
+    expect(report.generatedBy).toEqual({ id: 'u2', name: 'David Muñoz' });
+  });
+
+  it('incluye los extremos del rango', async () => {
+    const report = await run(getFinancialReport({ ...october, from: '2026-09-05', to: '2026-09-12' }, admin));
+    expect(report.movements.map((movement) => movement.date)).toEqual(['2026-09-05', '2026-09-12']);
+  });
+
+  it('filtra por categoría', async () => {
+    const report = await run(
+      getFinancialReport({ from: '2026-07-01', to: TODAY, categoryId: 'egr-nomina' }, admin),
+    );
+    expect(report.movements).toHaveLength(3);
+    expect(report.movements.every((movement) => movement.categoryId === 'egr-nomina')).toBe(true);
+    expect(report.totals).toEqual({ income: 0, expenses: 9_600_000, balance: -9_600_000 });
+  });
+
+  it('incluye los movimientos registrados después (RF03)', async () => {
+    await run(createMovement(valid, admin));
+    const report = await run(getFinancialReport({ ...october, categoryId: 'egr-aseo' }, admin));
+    expect(report.movements.map((movement) => movement.description)).toContain('Compra de insumos de aseo');
+  });
+
+  it('MSG-RF04-01: sin datos devuelve una lista vacía (la pantalla muestra el estado vacío)', async () => {
+    const report = await run(getFinancialReport({ ...october, categoryId: 'ing-zonas' }, admin));
+    expect(report.movements).toEqual([]);
+    expect(report.totals).toEqual({ income: 0, expenses: 0, balance: 0 });
+  });
+
+  it('la junta directiva puede consultar los reportes (solo lectura)', async () => {
+    const report = await run(getFinancialReport(october, { ...admin, role: 'junta_directiva' }));
+    expect(report.movements).toHaveLength(2);
+  });
+
+  it('propietario y vigilancia no pueden consultar los reportes', async () => {
+    for (const role of ['residente', 'vigilancia'] as const) {
+      const assertion = expect(getFinancialReport(october, { ...admin, role })).rejects.toMatchObject({
+        name: 'FinanceError',
+        code: 'forbidden',
+      });
+      await jest.runAllTimersAsync();
+      await assertion;
+    }
+  });
+
+  it('el servicio también valida el rango (no confía en la pantalla)', async () => {
+    const assertion = expect(
+      getFinancialReport({ ...october, from: '2026-10-02', to: '2026-10-01' }, admin),
+    ).rejects.toMatchObject({ code: 'validation', fieldErrors: { from: MSG.RF04.startAfterEnd } });
+    await jest.runAllTimersAsync();
+    await assertion;
   });
 });
