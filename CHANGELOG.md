@@ -8,6 +8,16 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Agregado
+
+- **RF04 – Reportes financieros filtrables**:
+  - Pantalla Reportes para el administrador (desde el Panel) y la junta directiva en solo lectura (desde General).
+  - Filtros de fecha inicial (primer día del mes), fecha final (hoy) y categoría con la opción «Todas».
+  - Validaciones: fecha inicial ≤ final, rango máximo de 12 meses y fecha final no posterior a hoy.
+  - Tabla de movimientos con totales de ingresos, egresos y saldo del periodo, y estado vacío sin datos.
+  - Exportación a PDF (expo-print) y Excel (SheetJS), compartida con expo-sharing.
+- Movimientos de ejemplo de julio a octubre de 2026 para probar los reportes.
+
 ## [0.1.0] - 2026-10-02
 
 Primera versión de la app: todas las pantallas de los mockups, autenticación por rol (RF01) y
