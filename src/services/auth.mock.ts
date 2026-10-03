@@ -1,25 +1,11 @@
-// Servicio de autenticación simulado (mock). Se reemplazará por llamadas al backend
-// manteniendo la misma interfaz. Las reglas que aquí se simulan (bloqueo por intentos,
-// códigos de recuperación) en producción deben vivir en el servidor.
+// Servicio de autenticación simulado (mock). Se usa cuando la app no tiene configurado Supabase
+// (y siempre en las pruebas). Cumple el mismo contrato que auth.supabase.ts (ver auth.types.ts).
+// Las reglas que aquí se simulan (bloqueo por intentos, códigos de recuperación) en Supabase
+// viven en el servidor.
 
+import { AuthError, type AuthBackend, type EmailStatus, type User } from '@/services/auth.types';
 import { simulateNetwork } from '@/services/mockNetwork';
 import { formatPhone, isValidPhone, meetsPasswordRules, normalizeEmail } from '@/utils/validation';
-
-export type Role = 'administrador' | 'junta_directiva' | 'residente' | 'vigilancia';
-
-export type User = {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  phone: string;
-  house: string;
-  address: string;
-  role: Role;
-};
-
-/** Estado de un correo: con contraseña, pre-registrado por la administración sin contraseña, o inexistente. */
-export type EmailStatus = 'registered' | 'pending' | 'not_found';
 
 type MockAccount = User & { password: string | null };
 
@@ -99,30 +85,6 @@ export function resetMockAuthState() {
   resetCodes = new Map();
 }
 resetMockAuthState();
-
-export type AuthErrorCode =
-  | 'not_found'
-  | 'invalid_credentials'
-  | 'locked'
-  | 'password_already_set'
-  | 'invalid_code'
-  // RF17: contraseña actual incorrecta, nueva igual a la actual o sin las reglas de seguridad.
-  | 'wrong_password'
-  | 'same_password'
-  | 'weak_password'
-  // RF16: teléfono que no es un celular de 10 dígitos que empiece por 3.
-  | 'invalid_phone';
-
-export class AuthError extends Error {
-  constructor(
-    public readonly code: AuthErrorCode,
-    /** Intentos que quedan antes del bloqueo (solo con invalid_credentials). */
-    public readonly remainingAttempts?: number,
-  ) {
-    super(code);
-    this.name = 'AuthError';
-  }
-}
 
 const findAccount = (email: string) => accounts.find((item) => item.email === normalizeEmail(email));
 
@@ -228,3 +190,27 @@ export async function updatePhone(email: string, phone: string): Promise<User> {
 export async function signOut(): Promise<void> {
   await simulateNetwork(0.5);
 }
+
+/** El mock no guarda la sesión: al recargar la app hay que volver a iniciar sesión. */
+export async function getCurrentUser(): Promise<User | null> {
+  return null;
+}
+
+/** En el mock la sesión nunca vence sola. */
+export function subscribeToSessionEnd(_listener: () => void): () => void {
+  return () => {};
+}
+
+/** Implementación del contrato AuthBackend que usa auth.service.ts. */
+export const authBackend = {
+  lookupEmail,
+  signIn,
+  createPassword,
+  requestPasswordReset,
+  resetPassword,
+  changePassword,
+  updatePhone,
+  signOut,
+  getCurrentUser,
+  subscribeToSessionEnd,
+} satisfies AuthBackend;
