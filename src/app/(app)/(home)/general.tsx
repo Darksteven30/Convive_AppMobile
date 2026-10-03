@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 
 import { BarChart } from '@/components/charts/BarChart';
 import { DonutChart } from '@/components/charts/DonutChart';
@@ -7,13 +8,18 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { SegmentedTabs } from '@/components/layout/SegmentedTabs';
 import { BalanceCard } from '@/components/ui/BalanceCard';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SectionTitle } from '@/components/ui/SectionTitle';
+import { hasPermission } from '@/constants/permissions';
 import { colors, spacing } from '@/constants/theme';
+import { useSession } from '@/context/SessionContext';
 import { bookingCategories, expenseCategories, financialSummary, pqrsCategories } from '@/data/mock';
 import { formatCurrency } from '@/utils/format';
 
 export default function GeneralScreen() {
+  const { role } = useSession();
+
   return (
     <Screen
       header={
@@ -61,6 +67,17 @@ export default function GeneralScreen() {
       <Card title="Categorías de reservas">
         <DonutChart data={bookingCategories} />
       </Card>
+
+      {/* RF04: la junta directiva consulta los reportes desde aquí (no tiene Panel). */}
+      {hasPermission(role, 'reportes') && (
+        <Button
+          label="Ver reportes financieros"
+          variant="outline"
+          pill
+          icon={<Ionicons name="document-text-outline" size={16} color={colors.text} />}
+          onPress={() => router.push('/reportes')}
+        />
+      )}
     </Screen>
   );
 }

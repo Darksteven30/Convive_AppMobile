@@ -19,6 +19,8 @@ const permissions = {
   panel: ['administrador'],
   // Registro de ingresos y egresos (RF03).
   finanzas: ['administrador'],
+  // Reportes financieros filtrables (RF04); la junta directiva los consulta en solo lectura.
+  reportes: ['administrador', 'junta_directiva'],
   // Registro de visitantes (RF10).
   visitantes: ['vigilancia'],
 } satisfies Record<string, Role[]>;

@@ -1,4 +1,13 @@
-import { formatDate, fromISODate, isFutureDate, toISODate, todayISO } from '@/utils/date';
+import {
+  addMonthsISO,
+  formatDate,
+  formatDateTime,
+  fromISODate,
+  isFutureDate,
+  startOfMonthISO,
+  toISODate,
+  todayISO,
+} from '@/utils/date';
 
 describe('utilidades de fecha', () => {
   it('convierte entre Date y «aaaa-mm-dd» en hora local', () => {
@@ -21,5 +30,22 @@ describe('utilidades de fecha', () => {
     jest.setSystemTime(new Date(2026, 9, 2, 23, 30));
     expect(todayISO()).toBe('2026-10-02');
     jest.useRealTimers();
+  });
+
+  it('primer día del mes (fecha inicial por defecto de RF04)', () => {
+    expect(startOfMonthISO('2026-10-15')).toBe('2026-10-01');
+    expect(startOfMonthISO('2026-02-28')).toBe('2026-02-01');
+  });
+
+  it('suma meses, también cambiando de año', () => {
+    expect(addMonthsISO('2026-01-15', 12)).toBe('2027-01-15');
+    expect(addMonthsISO('2026-11-30', 2)).toBe('2027-01-30');
+    expect(addMonthsISO('2026-10-15', -3)).toBe('2026-07-15');
+  });
+
+  it('formatea fecha y hora como en los comprobantes («09 sep 2026 - 06:19 p. m.»)', () => {
+    expect(formatDateTime(new Date(2026, 8, 9, 18, 19))).toBe('09 sep 2026 - 06:19 p. m.');
+    expect(formatDateTime(new Date(2026, 0, 1, 0, 5))).toBe('01 ene 2026 - 12:05 a. m.');
+    expect(formatDateTime(new Date(2026, 0, 1, 12, 0))).toBe('01 ene 2026 - 12:00 p. m.');
   });
 });
