@@ -31,7 +31,7 @@ npm run test:coverage  # genera el reporte de cobertura
 | `__tests__/unit` | Servicios de autenticación, finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
 | `__tests__/components` | Calendario de reservas |
 | `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
-| `__tests__/screens` | Pagos, PQRS, Reservas, General, Perfil, cambio de contraseña, Finanzas (RF03) y Reportes (RF04) |
+| `__tests__/screens` | Pagos, PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
 
 ## Usuarios de prueba
 
@@ -54,6 +54,8 @@ Otros casos del inicio de sesión (RF01):
 **Finanzas (RF03):** con el administrador, Panel → «Registrar movimiento» o «Ver movimientos». El soporte adjunto acepta PDF, JPG o PNG de máximo 5 MB (en Expo Go se usa la cámara, la galería o los archivos del celular).
 
 **Reportes (RF04):** con el administrador, Panel → «Reportes»; con la junta directiva, General → «Ver reportes financieros». Filtra por fecha inicial, fecha final (máximo 12 meses) y categoría, muestra los totales del periodo y exporta a PDF o Excel. Los datos de ejemplo tienen movimientos de julio a octubre de 2026. En el celular el archivo se abre en la hoja de compartir; en web el PDF abre el diálogo de impresión («Guardar como PDF») y el Excel se descarga.
+
+**Perfil y contraseña (RF16 y RF17):** el avatar o el menú ☰ → «Perfil». Solo el teléfono se puede editar (10 dígitos que empiecen por 3); correo y unidad son de solo lectura. «Cambiar contraseña» verifica la contraseña actual y exige una nueva distinta que cumpla las reglas. Cerrar sesión (desde el Perfil o el menú) pide confirmación.
 
 Los datos simulados se reinician al recargar la app.
 
