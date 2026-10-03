@@ -30,7 +30,8 @@
           "cameraPermission": "Convive necesita acceso a la cámara para fotografiar soportes e imágenes.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "convive"
   }
