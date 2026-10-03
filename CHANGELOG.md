@@ -10,6 +10,12 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF11 – Selección del concepto de pago**:
+  - Saldo pendiente debajo de cada concepto y «Estado de la cuenta» calculado desde la cartera de la unidad (Supabase o datos simulados), también en Inicio y Pagos.
+  - Campo «Valor a pagar» con el saldo del concepto por defecto, abono parcial y formato COP; «Otros conceptos» pide una descripción de 5 a 100 caracteres.
+  - Validaciones MSG-RF11-01 a 03 y estado vacío MSG-RF11-05 («¡Estás al día!»). Los conceptos sin saldo se pueden pagar con cualquier valor mayor a $0 (reemplaza MSG-RF11-04).
+  - «Aplicar» y la confirmación muestran el concepto y el valor elegidos; «Cancelar» en Selección vuelve a Inicio o Pagos, según desde dónde se abrió, y en Aplicar lleva a Pagos.
+  - Migración `20261004000000_seleccion_concepto_pago.sql`: catálogo `conceptos_pago`, `cartera` con Row Level Security y función `mi_estado_cuenta()`.
 - **RF04 – Reportes financieros filtrables**:
   - Pantalla Reportes para el administrador (desde el Panel) y la junta directiva en solo lectura (desde General).
   - Filtros de fecha inicial (primer día del mes), fecha final (hoy) y categoría con la opción «Todas».
