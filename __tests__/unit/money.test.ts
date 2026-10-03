@@ -1,4 +1,4 @@
-import { formatAmount, formatAmountInput } from '@/utils/money';
+import { amountInputFrom, formatAmount, formatAmountInput } from '@/utils/money';
 
 describe('formatAmountInput', () => {
   it.each([
@@ -25,6 +25,13 @@ describe('formatAmountInput', () => {
 
   it('limita a 9 dígitos enteros (máximo $ 999.999.999,99)', () => {
     expect(formatAmountInput('99999999999,99')).toEqual({ text: '$ 999.999.999,99', value: 999999999.99 });
+  });
+});
+
+describe('amountInputFrom', () => {
+  it('prepara el valor inicial de un campo de monto con dos decimales', () => {
+    expect(amountInputFrom(10678.9)).toEqual({ text: '$ 10.678,90', value: 10678.9 });
+    expect(amountInputFrom(35000)).toEqual({ text: '$ 35.000,00', value: 35000 });
   });
 });
 

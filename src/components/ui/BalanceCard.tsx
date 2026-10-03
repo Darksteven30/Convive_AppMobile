@@ -1,20 +1,27 @@
-import { StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { Card } from '@/components/ui/Card';
-import { typography } from '@/constants/theme';
+import { colors, typography } from '@/constants/theme';
 import { formatCurrency } from '@/utils/format';
 
 type Props = {
   title?: string;
-  amount: number;
+  /** Saldo en pesos; null si no se pudo consultar. */
+  amount: number | null;
+  /** Consultando el saldo: muestra un indicador en lugar del valor. */
+  loading?: boolean;
   children?: ReactNode;
 };
 
-export function BalanceCard({ title = 'Estado de la cuenta', amount, children }: Props) {
+export function BalanceCard({ title = 'Estado de la cuenta', amount, loading, children }: Props) {
   return (
     <Card title={title}>
-      <Text style={styles.amount}>{formatCurrency(amount)}</Text>
+      {loading ? (
+        <ActivityIndicator accessibilityLabel="Cargando saldo" color={colors.brandDark} style={styles.loading} />
+      ) : (
+        <Text style={styles.amount}>{amount === null ? '—' : formatCurrency(amount)}</Text>
+      )}
       {children}
     </Card>
   );
@@ -22,4 +29,8 @@ export function BalanceCard({ title = 'Estado de la cuenta', amount, children }:
 
 const styles = StyleSheet.create({
   amount: typography.amount,
+  loading: {
+    alignSelf: 'flex-start',
+    height: 34,
+  },
 });

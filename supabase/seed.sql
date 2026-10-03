@@ -39,3 +39,23 @@ select un.conjunto_id, un.id, p.email, p.nombre, p.telefono, p.rol::public.rol
          ('78', 'nuevo@convive.com', 'Laura Gómez', '3129876543', 'residente')
        ) as p (unidad, email, nombre, telefono, rol)
   join unidades un on un.nombre = p.unidad;
+
+-- ---------------------------------------------------------------------------------------------
+-- RF11 · Saldos pendientes por concepto (requiere 20261004000000_seleccion_concepto_pago.sql)
+-- Si ya aplicaron lo de arriba, basta con ejecutar este bloque; se puede repetir sin duplicar.
+--   Casa 56 (monica) → $ 45.678,90: administración, otros y la extraordinaria sin saldo.
+--   Casa 12 (junta) y Casa 78 (nuevo) → solo administración. Administración y Portería → al día.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.cartera (unidad_id, concepto_id, saldo)
+select u.id, s.concepto_id, s.saldo
+  from (values
+         ('56', 'administracion', 35000.00),
+         ('56', 'extraordinaria', 0.00),
+         ('56', 'otros', 10678.90),
+         ('12', 'administracion', 35000.00),
+         ('78', 'administracion', 70000.00)
+       ) as s (unidad, concepto_id, saldo)
+  join public.unidades u on u.nombre = s.unidad
+  join public.conjuntos c on c.id = u.conjunto_id and c.nombre = 'Conjunto Residencial Convive'
+on conflict (unidad_id, concepto_id) do update set saldo = excluded.saldo, updated_at = now();

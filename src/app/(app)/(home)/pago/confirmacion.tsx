@@ -8,23 +8,23 @@ import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { colors, spacing } from '@/constants/theme';
-import { accountBalance, paymentConcepts, paymentMethods } from '@/data/mock';
+import { paymentMethods } from '@/data/mock';
 import { formatCurrency } from '@/utils/format';
 
 /** Paso 3 del pago: comprobante de pago exitoso. */
 export default function PagoConfirmacionScreen() {
-  const { concept, method } = useLocalSearchParams<{ concept: string; method: string }>();
+  const { conceptName, amount, method } = useLocalSearchParams<{ conceptName: string; amount: string; method: string }>();
 
   const details = useMemo(() => {
     const now = new Date();
     return [
-      ['Concepto', paymentConcepts.find((item) => item.id === concept)?.label ?? '—'],
-      ['Valor pagado', formatCurrency(accountBalance)],
+      ['Concepto', conceptName ?? '—'],
+      ['Valor pagado', formatCurrency(Number(amount) || 0)],
       ['Fecha', `${now.toLocaleDateString('es-CO')} - ${now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`],
       ['Medio de pago', paymentMethods.find((item) => item.id === method)?.label ?? '—'],
       ['Referencia', `#${now.getTime().toString().slice(-8)}`],
     ];
-  }, [concept, method]);
+  }, [conceptName, amount, method]);
 
   return (
     <Screen header={<AppHeader left="none" />}>

@@ -10,10 +10,13 @@ import { Card } from '@/components/ui/Card';
 import { hasPermission } from '@/constants/permissions';
 import { spacing, typography } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
-import { accountBalance, news } from '@/data/mock';
+import { news } from '@/data/mock';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 
 export default function InicioScreen() {
   const { role } = useSession();
+  const canPay = hasPermission(role, 'pagos');
+  const { status, loading } = useAccountStatus(canPay);
 
   return (
     <Screen
@@ -24,8 +27,8 @@ export default function InicioScreen() {
         </>
       }
     >
-      {hasPermission(role, 'pagos') && (
-        <BalanceCard amount={accountBalance}>
+      {canPay && (
+        <BalanceCard amount={status?.total ?? null} loading={loading}>
           <Button label="Abonar" variant="outline" pill onPress={() => router.push('/pago/seleccion')} />
         </BalanceCard>
       )}

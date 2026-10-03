@@ -8,9 +8,12 @@ import { BalanceCard } from '@/components/ui/BalanceCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { typography } from '@/constants/theme';
-import { accountBalance, paymentHistory } from '@/data/mock';
+import { paymentHistory } from '@/data/mock';
+import { useAccountStatus } from '@/hooks/useAccountStatus';
 
 export default function PagosScreen() {
+  const { status, loading } = useAccountStatus();
+
   return (
     <Screen
       header={
@@ -20,7 +23,7 @@ export default function PagosScreen() {
         </>
       }
     >
-      <BalanceCard amount={accountBalance}>
+      <BalanceCard amount={status?.total ?? null} loading={loading}>
         <Button label="Abonar" variant="outline" pill onPress={() => router.push('/pago/seleccion')} />
       </BalanceCard>
 

@@ -5,6 +5,7 @@ import { renderRouter } from 'expo-router/testing-library';
 import { resetMockAuthState } from '@/services/auth.service';
 import { resetMockFinanceState } from '@/services/finance.service';
 import { mockNetwork } from '@/services/mockNetwork';
+import { resetMockPaymentsState } from '@/services/payments.service';
 
 type Element = Parameters<typeof fireEvent.press>[0];
 
@@ -20,6 +21,7 @@ type Element = Parameters<typeof fireEvent.press>[0];
 export async function renderApp(initialUrl = '/') {
   resetMockAuthState();
   resetMockFinanceState();
+  resetMockPaymentsState();
   mockNetwork.delayMs = 0;
   const rendered = renderRouter('./src/app', { initialUrl });
   await rendered;

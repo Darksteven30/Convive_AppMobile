@@ -45,6 +45,19 @@ export const MSG = {
     endAfterToday: 'La fecha final no puede ser posterior a hoy.',
     forbidden: 'No tienes permisos para consultar los reportes financieros.',
   },
+  RF11: {
+    conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
+    amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
+    amountAboveBalance: (balance: string) =>
+      `El valor no puede superar el saldo pendiente de este concepto (${balance}).`, // MSG-RF11-03
+    upToDateTitle: '¡Estás al día!', // MSG-RF11-05
+    upToDateMessage: 'No tienes pagos pendientes.', // MSG-RF11-05
+    // Propuestos (no están en el documento). Los conceptos sin saldo se pueden pagar (p. ej. una
+    // cuota extra), así que en lugar del toast MSG-RF11-04 se muestra esta indicación:
+    noBalanceHint: 'Este concepto no tiene saldo pendiente. Ingresa el valor que deseas pagar.',
+    partialHint: 'Puedes disminuir el valor para hacer un abono parcial.',
+    descriptionLength: 'La descripción debe tener entre 5 y 100 caracteres.',
+  },
   RF16: {
     phoneUpdated: 'Tus datos se actualizaron correctamente.', // MSG-RF16-01
     phoneInvalid: 'Ingresa un número de celular válido de 10 dígitos.', // MSG-RF16-02
