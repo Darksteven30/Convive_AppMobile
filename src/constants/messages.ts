@@ -35,6 +35,16 @@ export const MSG = {
     mediaPermissionDenied:
       'Convive necesita acceso a la cámara o a tus fotos para adjuntar el soporte.',
   },
+  RF04: {
+    noData: 'No existe información para el rango seleccionado.', // MSG-RF04-01
+    startAfterEnd: 'La fecha inicial no puede ser mayor que la fecha final.', // MSG-RF04-02
+    rangeTooLong: 'El rango máximo de consulta es de 12 meses.', // MSG-RF04-03
+    exported: 'Reporte exportado correctamente.', // MSG-RF04-04
+    exportFailed: 'No pudimos exportar el reporte. Intenta de nuevo.', // MSG-RF04-05
+    // Propuestos (no están en el documento):
+    endAfterToday: 'La fecha final no puede ser posterior a hoy.',
+    forbidden: 'No tienes permisos para consultar los reportes financieros.',
+  },
   general: {
     unexpected: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
   },
