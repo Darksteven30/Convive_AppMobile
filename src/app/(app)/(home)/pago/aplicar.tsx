@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { OptionRow } from '@/components/ui/OptionRow';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { colors, typography } from '@/constants/theme';
-import { accountBalance, paymentConcepts, paymentMethods } from '@/data/mock';
+import { paymentMethods } from '@/data/mock';
 import { formatCurrency } from '@/utils/format';
 
 const methodIcons: Record<string, ComponentProps<typeof Ionicons>['name']> = {
@@ -20,15 +20,26 @@ const methodIcons: Record<string, ComponentProps<typeof Ionicons>['name']> = {
   nequi: 'phone-portrait-outline',
 };
 
-/** Paso 2 del pago: resumen del concepto y selección del medio de pago. */
+/** Paso 2 del pago: resumen del concepto y del valor elegidos en RF11, y selección del medio de pago. */
 export default function PagoAplicarScreen() {
-  const { concept } = useLocalSearchParams<{ concept: string }>();
+  const { concept, conceptName, amount, description } = useLocalSearchParams<{
+    concept: string;
+    conceptName: string;
+    amount: string;
+    description?: string;
+  }>();
   const [method, setMethod] = useState<string | null>(null);
-  const conceptLabel = paymentConcepts.find((item) => item.id === concept)?.label ?? 'Pago';
+
+  // Abandona el pago y lleva a Pagos aunque se haya abierto desde Inicio: se cierra el flujo
+  // (queda la sección desde donde se abrió) y esa sección se reemplaza por Pagos.
+  const cancel = () => {
+    router.dismissAll();
+    router.replace('/pagos');
+  };
 
   return (
     <Screen
-      header={<AppHeader left="cancel" />}
+      header={<AppHeader left="cancel" onCancel={cancel} />}
       footer={
         <Button
           label="Continuar"
@@ -37,7 +48,7 @@ export default function PagoAplicarScreen() {
           block
           disabled={!method}
           onPress={() =>
-            method && router.replace({ pathname: '/pago/confirmacion', params: { concept, method } })
+            method && router.replace({ pathname: '/pago/confirmacion', params: { concept, conceptName, amount, method } })
           }
         />
       }
@@ -45,9 +56,10 @@ export default function PagoAplicarScreen() {
       <SectionTitle title="Realizar pago" centered />
       <Card>
         <Text style={styles.label}>Concepto</Text>
-        <Text style={styles.concept}>{conceptLabel}</Text>
+        <Text style={styles.concept}>{conceptName ?? 'Pago'}</Text>
+        {description ? <Text style={styles.label}>{description}</Text> : null}
         <Text style={styles.label}>Valor a pagar</Text>
-        <Text style={typography.amount}>{formatCurrency(accountBalance)}</Text>
+        <Text style={typography.amount}>{formatCurrency(Number(amount) || 0)}</Text>
       </Card>
 
       <SectionTitle title="Seleccione el medio de pago" />
