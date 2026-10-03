@@ -20,6 +20,8 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 - **RF16 – Perfil**: edición del teléfono (10 dígitos que empiezan por 3) con correo y unidad de solo lectura, confirmación al cerrar sesión y menú lateral ☰ (Perfil, Notificaciones, Ayuda, Cerrar sesión).
 - **RF17 – Cambio de contraseña**: verificación de la contraseña actual, nueva contraseña distinta y segura, mensajes del documento (MSG-RF17-01 a 06), mostrar/ocultar contraseña y confirmación al salir con cambios.
 
+- **Backend con Supabase – autenticación y perfiles**: esquema PostgreSQL con conjuntos, unidades y perfiles pre-registrados, Row Level Security, bloqueo por intentos y recuperación con código en el servidor; sesión guardada en el dispositivo y aviso «Tu sesión expiró». Sin configuración la app sigue usando los datos simulados.
+
 ### Corregido
 
 - «Cambiar contraseña» aceptaba cualquier contraseña actual y usaba `Alert`, que no funciona en web.

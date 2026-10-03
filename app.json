@@ -31,7 +31,8 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-sqlite"
     ],
     "scheme": "convive"
   }

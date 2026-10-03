@@ -1,4 +1,4 @@
-import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import * as authService from '@/services/auth.service';
 import type { Role, User } from '@/services/auth.service';
@@ -6,6 +6,11 @@ import type { Role, User } from '@/services/auth.service';
 type SessionContextValue = {
   user: User | null;
   role: Role | null;
+  /** true mientras se restaura la sesión guardada en el dispositivo al abrir la app. */
+  restoring: boolean;
+  /** true cuando la sesión terminó sola (venció o se cerró desde otro dispositivo). */
+  sessionExpired: boolean;
+  dismissSessionExpired: () => void;
   signIn: (email: string, password: string) => Promise<User>;
   /** Crea la primera contraseña de una cuenta pre-registrada e inicia sesión. */
   createPassword: (email: string, password: string) => Promise<User>;
@@ -21,7 +26,41 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 /** Guarda el usuario autenticado y lo expone a toda la app. */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [restoring, setRestoring] = useState(authService.restoresSession);
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const userRef = useRef(user);
   const sessionEmail = user?.email;
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Con Supabase la sesión queda guardada: al abrir la app se recupera el usuario.
+  useEffect(() => {
+    if (!authService.restoresSession) return;
+    let active = true;
+    authService
+      .getCurrentUser()
+      .then((restored) => active && setUser(restored))
+      .catch(() => active && setUser(null))
+      .finally(() => active && setRestoring(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Convenciones 7.2: si la sesión termina sin que el usuario la cierre, se avisa «Tu sesión expiró».
+  useEffect(
+    () =>
+      authService.subscribeToSessionEnd(() => {
+        if (!userRef.current) return;
+        setUser(null);
+        setSessionExpired(true);
+      }),
+    [],
+  );
+
+  const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const authenticated = await authService.signIn(email, password);
@@ -59,8 +98,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, role: user?.role ?? null, signIn, createPassword, changePassword, updatePhone, signOut }),
-    [user, signIn, createPassword, changePassword, updatePhone, signOut],
+    () => ({
+      user,
+      role: user?.role ?? null,
+      restoring,
+      sessionExpired,
+      dismissSessionExpired,
+      signIn,
+      createPassword,
+      changePassword,
+      updatePhone,
+      signOut,
+    }),
+    [user, restoring, sessionExpired, dismissSessionExpired, signIn, createPassword, changePassword, updatePhone, signOut],
   );
 
   return <SessionContext value={value}>{children}</SessionContext>;

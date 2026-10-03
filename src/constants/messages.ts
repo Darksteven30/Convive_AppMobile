@@ -63,6 +63,7 @@ export const MSG = {
   },
   general: {
     unexpected: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
+    sessionExpired: 'Tu sesión expiró. Vuelve a iniciar sesión para continuar.',
     // Propuesto (no está en el documento): opciones del menú que aún no existen.
     comingSoon: 'Esta sección estará disponible próximamente.',
   },
