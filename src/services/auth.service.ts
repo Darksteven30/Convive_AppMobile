@@ -3,7 +3,7 @@
 // códigos de recuperación) en producción deben vivir en el servidor.
 
 import { simulateNetwork } from '@/services/mockNetwork';
-import { normalizeEmail } from '@/utils/validation';
+import { formatPhone, isValidPhone, meetsPasswordRules, normalizeEmail } from '@/utils/validation';
 
 export type Role = 'administrador' | 'junta_directiva' | 'residente' | 'vigilancia';
 
@@ -105,7 +105,13 @@ export type AuthErrorCode =
   | 'invalid_credentials'
   | 'locked'
   | 'password_already_set'
-  | 'invalid_code';
+  | 'invalid_code'
+  // RF17: contraseña actual incorrecta, nueva igual a la actual o sin las reglas de seguridad.
+  | 'wrong_password'
+  | 'same_password'
+  | 'weak_password'
+  // RF16: teléfono que no es un celular de 10 dígitos que empiece por 3.
+  | 'invalid_phone';
 
 export class AuthError extends Error {
   constructor(
@@ -193,6 +199,30 @@ export async function resetPassword(email: string, code: string, newPassword: st
   account.password = newPassword;
   resetCodes.delete(key);
   failedAttempts.delete(key);
+}
+
+/**
+ * RF17: cambia la contraseña de una cuenta con sesión iniciada. Verifica la actual y que la nueva
+ * cumpla las reglas y sea distinta. (El backend además cerrará la sesión en los demás dispositivos.)
+ */
+export async function changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
+  await simulateNetwork();
+  const account = findAccount(email);
+  if (!account) throw new AuthError('not_found');
+  if (account.password !== currentPassword) throw new AuthError('wrong_password');
+  if (newPassword === currentPassword) throw new AuthError('same_password');
+  if (!meetsPasswordRules(newPassword)) throw new AuthError('weak_password');
+  account.password = newPassword;
+}
+
+/** RF16: el usuario solo puede cambiar su teléfono; correo y unidad los cambia la administración. */
+export async function updatePhone(email: string, phone: string): Promise<User> {
+  await simulateNetwork();
+  const account = findAccount(email);
+  if (!account) throw new AuthError('not_found');
+  if (!isValidPhone(phone)) throw new AuthError('invalid_phone');
+  account.phone = formatPhone(phone);
+  return toUser(account);
 }
 
 export async function signOut(): Promise<void> {

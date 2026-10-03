@@ -1,5 +1,6 @@
 import {
   AuthError,
+  changePassword,
   MOCK_RESET_CODE,
   createPassword,
   lookupEmail,
@@ -8,6 +9,7 @@ import {
   resetPassword,
   signIn,
   signOut,
+  updatePhone,
   type Role,
 } from '@/services/auth.service';
 
@@ -160,6 +162,38 @@ describe('recuperación de contraseña', () => {
 
   it('no envía códigos a correos inexistentes', async () => {
     await expectAuthError(requestPasswordReset('nadie@convive.com'), 'not_found');
+  });
+});
+
+describe('changePassword (RF17)', () => {
+  it('cambia la contraseña: la nueva sirve para entrar y la anterior ya no', async () => {
+    await run(changePassword('monica@gmail.com', 'Residente123', 'NuevaClave1'));
+    expect((await run(signIn('monica@gmail.com', 'NuevaClave1'))).role).toBe('residente');
+    await expectAuthError(signIn('monica@gmail.com', 'Residente123'), 'invalid_credentials');
+  });
+
+  it('MSG-RF17-02: rechaza una contraseña actual incorrecta', async () => {
+    await expectAuthError(changePassword('monica@gmail.com', 'Equivocada1', 'NuevaClave1'), 'wrong_password');
+  });
+
+  it('MSG-RF17-04: rechaza una nueva contraseña igual a la actual', async () => {
+    await expectAuthError(changePassword('monica@gmail.com', 'Residente123', 'Residente123'), 'same_password');
+  });
+
+  it('MSG-RF17-05: rechaza una contraseña que no cumple las reglas (el servicio no confía en la pantalla)', async () => {
+    await expectAuthError(changePassword('monica@gmail.com', 'Residente123', 'corta'), 'weak_password');
+  });
+});
+
+describe('updatePhone (RF16)', () => {
+  it('guarda el teléfono con formato y devuelve el usuario actualizado', async () => {
+    const user = await run(updatePhone('monica@gmail.com', '3001112233'));
+    expect(user.phone).toBe('300 111 2233');
+    expect((await run(signIn('monica@gmail.com', 'Residente123'))).phone).toBe('300 111 2233');
+  });
+
+  it('MSG-RF16-02: rechaza un teléfono que no es un celular de 10 dígitos que empiece por 3', async () => {
+    await expectAuthError(updatePhone('monica@gmail.com', '2111234567'), 'invalid_phone');
   });
 });
 

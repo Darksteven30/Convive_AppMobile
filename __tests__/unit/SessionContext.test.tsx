@@ -75,6 +75,48 @@ describe('SessionContext', () => {
     expect(result.current.role).toBeNull();
   });
 
+  it('updatePhone actualiza el teléfono del usuario en sesión', async () => {
+    const { result } = await renderHook(() => useSession(), { wrapper });
+    await act(async () => {
+      const pending = result.current.signIn('monica@gmail.com', 'Residente123');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+    await act(async () => {
+      const pending = result.current.updatePhone('3001112233');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+
+    expect(result.current.user?.phone).toBe('300 111 2233');
+  });
+
+  it('changePassword usa el correo del usuario en sesión', async () => {
+    const { result } = await renderHook(() => useSession(), { wrapper });
+    await act(async () => {
+      const pending = result.current.signIn('monica@gmail.com', 'Residente123');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+    await act(async () => {
+      const pending = result.current.changePassword('Residente123', 'NuevaClave1');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+    await act(async () => {
+      const pending = result.current.signOut();
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+    await act(async () => {
+      const pending = result.current.signIn('monica@gmail.com', 'NuevaClave1');
+      await jest.runAllTimersAsync();
+      await pending;
+    });
+
+    expect(result.current.user?.name).toBe('Monica Galvis');
+  });
+
   it('lanza un error si se usa fuera del SessionProvider', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     await expect(renderHook(() => useSession())).rejects.toThrow(
