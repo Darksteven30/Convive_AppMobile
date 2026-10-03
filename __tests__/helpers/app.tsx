@@ -66,3 +66,13 @@ export async function renderSignedIn(email: string, password: string) {
   await signInAs(email, password);
   return app;
 }
+
+/**
+ * Pulsa un botón del diálogo modal abierto (FeedbackContext). Sus botones pueden llamarse igual
+ * que una opción de la pantalla (p. ej. «Cerrar sesión»); el diálogo se dibuja después del contenido
+ * de la app, así que su botón es la última coincidencia.
+ */
+export async function pressDialogButton(name: string) {
+  const buttons = screen.getAllByRole('button', { name });
+  await press(buttons[buttons.length - 1]);
+}
