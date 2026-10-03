@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 
+import { AppMenu } from '@/components/layout/AppMenu';
 import { colors, radius, spacing } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
 
@@ -11,7 +13,10 @@ type Props = {
   title?: string;
   left?: LeftAction;
   showAvatar?: boolean;
+  /** Acción del ícono ☰; por defecto abre el menú lateral (RF16). */
   onMenuPress?: () => void;
+  /** Acción de la flecha ←; por defecto vuelve a la pantalla anterior (p. ej. confirmar antes de salir). */
+  onBack?: () => void;
   /** Acción de «Cancelar»; por defecto vuelve a Inicio (flujo de pago). */
   onCancel?: () => void;
 };
@@ -21,20 +26,22 @@ export function AppHeader({
   left = 'menu',
   showAvatar = true,
   onMenuPress,
+  onBack = () => router.back(),
   onCancel = () => router.dismissTo('/inicio'),
 }: Props) {
   const { user } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <View style={styles.header}>
       <View style={styles.side}>
         {left === 'menu' && (
-          <Pressable accessibilityLabel="Abrir menú" onPress={onMenuPress} hitSlop={8}>
+          <Pressable accessibilityLabel="Abrir menú" onPress={onMenuPress ?? (() => setMenuOpen(true))} hitSlop={8}>
             <Ionicons name="menu" size={24} color={colors.text} />
           </Pressable>
         )}
         {left === 'back' && (
-          <Pressable accessibilityLabel="Volver" onPress={() => router.back()} hitSlop={8}>
+          <Pressable accessibilityLabel="Volver" onPress={onBack} hitSlop={8}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
         )}
@@ -65,6 +72,8 @@ export function AppHeader({
           </Pressable>
         )}
       </View>
+
+      {left === 'menu' && !onMenuPress ? <AppMenu visible={menuOpen} onClose={() => setMenuOpen(false)} /> : null}
     </View>
   );
 }
