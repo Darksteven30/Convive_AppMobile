@@ -59,3 +59,15 @@ select u.id, s.concepto_id, s.saldo
   join public.unidades u on u.nombre = s.unidad
   join public.conjuntos c on c.id = u.conjunto_id and c.nombre = 'Conjunto Residencial Convive'
 on conflict (unidad_id, concepto_id) do update set saldo = excluded.saldo, updated_at = now();
+
+-- ---------------------------------------------------------------------------------------------
+-- RF12 · Cuenta Wompi del conjunto (requiere 20261005000000_pago_wompi.sql)
+-- Deja los medios habilitados. Para pagar falta poner la llave pública de Sandbox y guardar el
+-- secreto de integridad en el Vault (ver README → «Wompi»); sin eso el pago muestra MSG-RF12-04.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.wompi_conjuntos (conjunto_id, ambiente, medios_habilitados)
+select c.id, 'sandbox', array['CARD', 'PSE', 'NEQUI', 'BANCOLOMBIA_TRANSFER', 'DAVIPLATA']
+  from public.conjuntos c
+ where c.nombre = 'Conjunto Residencial Convive'
+on conflict (conjunto_id) do nothing;

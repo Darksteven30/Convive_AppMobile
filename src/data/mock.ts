@@ -22,12 +22,6 @@ export const pqrsList: Pqrs[] = [
   { id: 'p198', code: '#0198', title: 'Fuga de agua' },
 ];
 
-export const paymentMethods = [
-  { id: 'pse', label: 'PSE', description: 'Pagos seguros en línea' },
-  { id: 'tarjeta', label: 'Tarjeta de crédito / débito' },
-  { id: 'nequi', label: 'Nequi / Daviplata' },
-];
-
 export const financialSummary = {
   balance: 10000000,
   income: 10000000,

@@ -58,6 +58,15 @@ export const MSG = {
     partialHint: 'Puedes disminuir el valor para hacer un abono parcial.',
     descriptionLength: 'La descripción debe tener entre 5 y 100 caracteres.',
   },
+  RF12: {
+    startFailed: 'No pudimos iniciar el pago. Intenta de nuevo en unos minutos.', // MSG-RF12-01
+    cancelled: 'Cancelaste el pago. No se realizó ningún cobro.', // MSG-RF12-02
+    pendingPayment:
+      'Tienes un pago en proceso para este concepto. Espera su confirmación antes de intentar de nuevo.', // MSG-RF12-03
+    unavailable: 'El servicio de pagos no está disponible en este momento. Intenta más tarde.', // MSG-RF12-04
+    securityNote:
+      'Al continuar se abrirá la ventana de pago de Wompi. Convive no almacena los datos de tu tarjeta ni de tu cuenta bancaria.',
+  },
   RF16: {
     phoneUpdated: 'Tus datos se actualizaron correctamente.', // MSG-RF16-01
     phoneInvalid: 'Ingresa un número de celular válido de 10 dígitos.', // MSG-RF16-02

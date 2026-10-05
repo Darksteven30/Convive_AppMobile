@@ -8,12 +8,18 @@ import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { colors, spacing } from '@/constants/theme';
-import { paymentMethods } from '@/data/mock';
+import { WOMPI_METHOD_LABELS, type WompiMethod } from '@/services/payments.service';
 import { formatCurrency } from '@/utils/format';
 
 /** Paso 3 del pago: comprobante de pago exitoso. */
 export default function PagoConfirmacionScreen() {
-  const { conceptName, amount, method } = useLocalSearchParams<{ conceptName: string; amount: string; method: string }>();
+  const { conceptName, amount, method, reference, wompiId } = useLocalSearchParams<{
+    conceptName: string;
+    amount: string;
+    method: WompiMethod;
+    reference: string;
+    wompiId: string;
+  }>();
 
   const details = useMemo(() => {
     const now = new Date();
@@ -21,10 +27,11 @@ export default function PagoConfirmacionScreen() {
       ['Concepto', conceptName ?? '—'],
       ['Valor pagado', formatCurrency(Number(amount) || 0)],
       ['Fecha', `${now.toLocaleDateString('es-CO')} - ${now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`],
-      ['Medio de pago', paymentMethods.find((item) => item.id === method)?.label ?? '—'],
-      ['Referencia', `#${now.getTime().toString().slice(-8)}`],
+      ['Medio de pago', WOMPI_METHOD_LABELS[method] ? `${WOMPI_METHOD_LABELS[method]} (vía Wompi)` : '—'],
+      ['Referencia', reference ?? '—'],
+      ['ID Wompi', wompiId ?? '—'],
     ];
-  }, [conceptName, amount, method]);
+  }, [conceptName, amount, method, reference, wompiId]);
 
   return (
     <Screen header={<AppHeader left="none" />}>
