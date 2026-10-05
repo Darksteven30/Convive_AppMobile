@@ -1,57 +1,50 @@
 // Punto de entrada de los pagos: las pantallas importan desde aquí.
 // Si la app tiene configurado Supabase (.env.local) usa payments.supabase.ts; si no, el servicio simulado.
 
-import { MSG } from '@/constants/messages';
 import { isSupabaseEnabled } from '@/lib/supabase';
 import { paymentsBackend as mockBackend } from '@/services/payments.mock';
 import { paymentsBackend as supabaseBackend } from '@/services/payments.supabase';
-import { toCents, type PaymentConcept, type PaymentsBackend } from '@/services/payments.types';
-import { formatAmount } from '@/utils/money';
+import type { PaymentsBackend, WompiMethod } from '@/services/payments.types';
 
-export { toCents, type AccountStatus, type PaymentConcept } from '@/services/payments.types';
+export {
+  PaymentError,
+  toCents,
+  type AccountStatus,
+  type PaymentCheckout,
+  type PaymentConcept,
+  type PaymentErrorCode,
+  type PaymentGateway,
+  type PaymentInput,
+  type WompiMethod,
+} from '@/services/payments.types';
+export {
+  DESCRIPTION_MAX,
+  DESCRIPTION_MIN,
+  validatePaymentSelection,
+  type PaymentSelection,
+  type SelectionErrors,
+} from '@/services/payments.validation';
 // Solo para las pruebas y el modo simulado.
-export { resetMockPaymentsState, setMockBalance } from '@/services/payments.mock';
+export {
+  getMockTransactions,
+  resetMockPaymentsState,
+  setMockBalance,
+  setMockGateway,
+} from '@/services/payments.mock';
 
 const backend: PaymentsBackend = isSupabaseEnabled ? supabaseBackend : mockBackend;
 
 export const getAccountStatus: PaymentsBackend['getAccountStatus'] = (...args) => backend.getAccountStatus(...args);
+export const getPaymentGateway: PaymentsBackend['getPaymentGateway'] = (...args) =>
+  backend.getPaymentGateway(...args);
+export const startPayment: PaymentsBackend['startPayment'] = (...args) => backend.startPayment(...args);
+export const cancelPayment: PaymentsBackend['cancelPayment'] = (...args) => backend.cancelPayment(...args);
 
-// ---------------------------------------------------------------------------------------------
-// RF11 · Validaciones de la selección
-// ---------------------------------------------------------------------------------------------
-
-export const DESCRIPTION_MIN = 5;
-export const DESCRIPTION_MAX = 100;
-
-export type PaymentSelection = {
-  conceptId: string | null;
-  /** Valor a pagar, o null si el campo está vacío. */
-  amount: number | null;
-  /** Solo se valida en los conceptos que la piden («Otros conceptos»). */
-  description: string;
+/** Nombre de cada medio de Wompi para los chips y el comprobante. */
+export const WOMPI_METHOD_LABELS: Record<WompiMethod, string> = {
+  CARD: 'Tarjeta crédito/débito',
+  PSE: 'PSE',
+  NEQUI: 'Nequi',
+  BANCOLOMBIA_TRANSFER: 'Botón Bancolombia',
+  DAVIPLATA: 'Daviplata',
 };
-
-export type SelectionErrors = Partial<Record<'concept' | 'amount' | 'description', string>>;
-
-/**
- * Reglas de RF11: concepto obligatorio y del catálogo; valor > 0 y, si el concepto tiene saldo
- * pendiente, ≤ saldo. Un concepto sin saldo acepta cualquier valor > 0 (p. ej. una cuota extra).
- */
-export function validatePaymentSelection(input: PaymentSelection, concepts: PaymentConcept[]): SelectionErrors {
-  const concept = concepts.find((item) => item.id === input.conceptId);
-  if (!concept) {
-    return { concept: MSG.RF11.conceptRequired };
-  }
-
-  const errors: SelectionErrors = {};
-  if (input.amount == null || !(input.amount > 0)) {
-    errors.amount = MSG.RF11.amountInvalid;
-  } else if (concept.balance > 0 && toCents(input.amount) > toCents(concept.balance)) {
-    errors.amount = MSG.RF11.amountAboveBalance(formatAmount(concept.balance));
-  }
-  const description = input.description.trim();
-  if (concept.requiresDescription && (description.length < DESCRIPTION_MIN || description.length > DESCRIPTION_MAX)) {
-    errors.description = MSG.RF11.descriptionLength;
-  }
-  return errors;
-}

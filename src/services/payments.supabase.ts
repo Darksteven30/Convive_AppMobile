@@ -1,9 +1,20 @@
-// Pagos con Supabase (RF11). Cumple el mismo contrato que el servicio simulado (payments.types.ts).
-// El catálogo, la cartera y la función mi_estado_cuenta() están en
-// supabase/migrations/20261004000000_seleccion_concepto_pago.sql.
+// Pagos con Supabase (RF11 y RF12). Cumple el mismo contrato que el servicio simulado
+// (payments.types.ts). El esquema y las funciones están en supabase/migrations:
+// 20261004000000_seleccion_concepto_pago.sql (estado de la cuenta) y 20261005000000_pago_wompi.sql
+// (transacciones, referencia y firma). La unidad sale de la sesión en el servidor (auth.uid()),
+// no del usuario que envía la app.
 
 import { getSupabase } from '@/lib/supabase';
-import { buildAccountStatus, type AccountStatus, type PaymentsBackend } from '@/services/payments.types';
+import {
+  PaymentError,
+  buildAccountStatus,
+  type AccountStatus,
+  type PaymentCheckout,
+  type PaymentGateway,
+  type PaymentInput,
+  type PaymentsBackend,
+  type WompiMethod,
+} from '@/services/payments.types';
 
 /** Fila que devuelve la función mi_estado_cuenta() de la base de datos. */
 type AccountRow = {
@@ -14,7 +25,34 @@ type AccountRow = {
   saldo: number | string;
 };
 
-/** La unidad sale de la sesión en el servidor (auth.uid()), no del usuario que envía la app. */
+/** Fila que devuelve pasarela_pagos(). */
+type GatewayRow = { disponible: boolean; medios: string[] | null };
+
+/** Fila que devuelve iniciar_pago(). */
+type CheckoutRow = {
+  transaccion_id: string;
+  referencia: string;
+  monto_centavos: number | string;
+  moneda: 'COP';
+  firma: string;
+  llave_publica: string;
+};
+
+type RpcError = { message?: string; details?: string | null };
+
+const WOMPI_METHODS: WompiMethod[] = ['CARD', 'PSE', 'NEQUI', 'BANCOLOMBIA_TRANSFER', 'DAVIPLATA'];
+
+/** Traduce los errores de iniciar_pago() al contrato de la app. */
+function toPaymentError(error: RpcError): PaymentError {
+  const message = error.message ?? '';
+  if (message.includes('pago_pendiente')) return new PaymentError('pending', error.details || undefined);
+  if (message.includes('wompi_no_disponible')) return new PaymentError('unavailable');
+  if (/concepto_invalido|valor_invalido|descripcion_invalida|sin_unidad/.test(message)) {
+    return new PaymentError('invalid');
+  }
+  return new PaymentError('failed');
+}
+
 export async function getAccountStatus(): Promise<AccountStatus> {
   const { data, error } = await getSupabase().rpc('mi_estado_cuenta');
   if (error) throw error;
@@ -28,5 +66,46 @@ export async function getAccountStatus(): Promise<AccountStatus> {
   );
 }
 
+export async function getPaymentGateway(): Promise<PaymentGateway> {
+  const { data, error } = await getSupabase().rpc('pasarela_pagos').maybeSingle<GatewayRow>();
+  if (error) throw error;
+  return {
+    available: Boolean(data?.disponible),
+    methods: (data?.medios ?? []).filter((method): method is WompiMethod =>
+      WOMPI_METHODS.includes(method as WompiMethod),
+    ),
+  };
+}
+
+export async function startPayment(_user: unknown, input: PaymentInput): Promise<PaymentCheckout> {
+  const { data, error } = await getSupabase()
+    .rpc('iniciar_pago', {
+      p_concepto_id: input.conceptId,
+      p_valor: input.amount,
+      p_descripcion: input.description ?? null,
+    })
+    .maybeSingle<CheckoutRow>();
+  if (error) throw toPaymentError(error);
+  if (!data) throw new PaymentError('failed');
+  return {
+    transactionId: data.transaccion_id,
+    reference: data.referencia,
+    amountInCents: Number(data.monto_centavos),
+    currency: 'COP',
+    signature: data.firma,
+    publicKey: data.llave_publica,
+  };
+}
+
+export async function cancelPayment(_user: unknown, reference: string): Promise<void> {
+  const { error } = await getSupabase().rpc('cancelar_pago', { p_referencia: reference });
+  if (error) throw error;
+}
+
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
-export const paymentsBackend = { getAccountStatus } satisfies PaymentsBackend;
+export const paymentsBackend = {
+  getAccountStatus,
+  getPaymentGateway,
+  startPayment,
+  cancelPayment,
+} satisfies PaymentsBackend;
