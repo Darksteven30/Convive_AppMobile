@@ -10,6 +10,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF12 – Pago a través de la pasarela Wompi**:
+  - «Aplicar» rediseñada: se quitan las opciones PSE / Tarjeta / Nequi y se agrega el botón «Pagar con Wompi» (teal #0F766E) con «Procesando…», chips con los medios habilitados del conjunto y texto de seguridad 🔒.
+  - El servidor crea la transacción PENDIENTE con referencia única (CNV-{unidad}-{fecha}-{código}), valor en centavos COP y firma SHA-256 con el secreto de integridad guardado en el Vault de Supabase; la app solo recibe la llave pública.
+  - Un solo pago PENDIENTE por unidad y concepto (MSG-RF12-03 con «Ver estado» y «Aceptar»), también garantizado por un índice único en la base de datos.
+  - Mensajes MSG-RF12-01 (no se pudo iniciar), MSG-RF12-02 (cerró Wompi sin pagar: la transacción queda CANCELADA) y MSG-RF12-04 (Wompi no disponible).
+  - Ventana de Wompi simulada mientras el conjunto no tenga llaves; «Volver» regresa a Selección y «Cancelar» a Pagos sin crear transacción.
+  - Migración `20261005000000_pago_wompi.sql`: `wompi_conjuntos`, `transacciones_pago` con RLS y funciones `pasarela_pagos()`, `iniciar_pago()` y `cancelar_pago()`.
 - **RF11 – Selección del concepto de pago**:
   - Saldo pendiente debajo de cada concepto y «Estado de la cuenta» calculado desde la cartera de la unidad (Supabase o datos simulados), también en Inicio y Pagos.
   - Campo «Valor a pagar» con el saldo del concepto por defecto, abono parcial y formato COP; «Otros conceptos» pide una descripción de 5 a 100 caracteres.
