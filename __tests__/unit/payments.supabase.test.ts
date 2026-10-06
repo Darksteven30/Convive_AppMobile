@@ -1,5 +1,5 @@
 import { PaymentError } from '@/services/payments.types';
-import { paymentsBackend as supabasePayments } from '@/services/payments.supabase';
+import { buildCheckoutUrl, paymentsBackend as supabasePayments } from '@/services/payments.supabase';
 
 // Cliente de Supabase simulado: se verifica cómo el servicio traduce las respuestas y los errores
 // de las funciones de la base de datos al contrato de la app, sin conectarse a un proyecto real.
@@ -17,9 +17,12 @@ const mockRpc = jest.fn((name: string, _args?: unknown) => {
   });
 });
 
+let invokeResult: RpcResult = { data: null, error: null };
+const mockInvoke = jest.fn(async (_name: string, _options?: unknown) => invokeResult);
+
 jest.mock('@/lib/supabase', () => ({
   isSupabaseEnabled: true,
-  getSupabase: () => ({ rpc: mockRpc }),
+  getSupabase: () => ({ rpc: mockRpc, functions: { invoke: mockInvoke } }),
 }));
 
 const user = {
@@ -114,6 +117,7 @@ describe('Pagos con Supabase · pago con Wompi (RF12)', () => {
       currency: 'COP',
       signature: 'a'.repeat(64),
       publicKey: 'pub_test_abc',
+      checkoutUrl: expect.stringContaining('https://checkout.wompi.co/p/?'),
     });
   });
 
@@ -138,5 +142,52 @@ describe('Pagos con Supabase · pago con Wompi (RF12)', () => {
     await supabasePayments.cancelPayment(user, 'CNV-56-20261005103000-A1B2C3');
 
     expect(mockRpc).toHaveBeenCalledWith('cancelar_pago', { p_referencia: 'CNV-56-20261005103000-A1B2C3' });
+  });
+});
+
+describe('Pagos con Supabase · integración con Wompi (RF15)', () => {
+  it('arma la URL del Web Checkout con los datos que generó el servidor', () => {
+    const url = buildCheckoutUrl({
+      reference: 'CNV-56-20261006103000-A1B2C3',
+      amountInCents: 3500000,
+      currency: 'COP',
+      signature: 'f'.repeat(64),
+      publicKey: 'pub_test_abc',
+    });
+
+    expect(url).toBe(
+      'https://checkout.wompi.co/p/?public-key=pub_test_abc&currency=COP&amount-in-cents=3500000' +
+        `&reference=CNV-56-20261006103000-A1B2C3&signature:integrity=${'f'.repeat(64)}`,
+    );
+  });
+
+  it('consulta el estado con la Edge Function wompi-estado', async () => {
+    invokeResult = {
+      data: { estado: 'APROBADA', enWompi: true, wompiId: '1234-1610641025-49201', medio: 'NEQUI' },
+      error: null,
+    };
+
+    const status = await supabasePayments.checkPaymentStatus(user, 'CNV-56-1');
+
+    expect(mockInvoke).toHaveBeenCalledWith('wompi-estado', { body: { referencia: 'CNV-56-1' } });
+    expect(status).toEqual({ inWompi: true, status: 'APROBADA', method: 'NEQUI', wompiId: '1234-1610641025-49201' });
+  });
+
+  it('informa cuando Wompi aún no tiene la transacción', async () => {
+    invokeResult = { data: { estado: null, enWompi: false }, error: null };
+
+    expect(await supabasePayments.checkPaymentStatus(user, 'CNV-56-1')).toEqual({
+      inWompi: false,
+      status: null,
+      method: undefined,
+      wompiId: undefined,
+    });
+  });
+
+  it('propaga el error si la función no responde', async () => {
+    const error = new Error('FunctionsFetchError');
+    invokeResult = { data: null, error };
+
+    await expect(supabasePayments.checkPaymentStatus(user, 'CNV-56-1')).rejects.toBe(error);
   });
 });
