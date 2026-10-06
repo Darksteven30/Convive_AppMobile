@@ -1,4 +1,5 @@
-// RF15 · Consultar el estado de un pago en el API de Wompi (GET /transactions?reference=…).
+// RF13/RF15 · Consultar el estado de un pago en el API de Wompi: GET /transactions/{id} si ya se
+// conoce el ID de Wompi; si no, GET /transactions?reference=… con la referencia de Convive.
 // La llama la app con la sesión de la persona; solo puede consultar pagos de su unidad (RLS).
 // Si Wompi no tiene ninguna transacción con esa referencia, la persona no terminó el pago.
 
@@ -34,7 +35,7 @@ Deno.serve(async (request) => {
   // Con la sesión de la persona: si el pago no es de su unidad, RLS no lo devuelve.
   const { data: pago } = await clienteDelUsuario(authorization)
     .from('transacciones_pago')
-    .select('referencia')
+    .select('referencia, wompi_id')
     .eq('referencia', referencia)
     .maybeSingle();
   if (!pago) {
@@ -42,7 +43,7 @@ Deno.serve(async (request) => {
   }
 
   try {
-    return responder(await sincronizarPago(clienteAdmin(), referencia));
+    return responder(await sincronizarPago(clienteAdmin(), referencia, fetch, pago.wompi_id));
   } catch (error) {
     console.error('wompi-estado', referencia, error);
     return responder({ error: 'wompi_no_disponible' }, 503);

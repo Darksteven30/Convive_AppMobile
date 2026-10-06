@@ -87,6 +87,23 @@ export function latestTransaction(transactions: WompiTransaction[]): WompiTransa
   return [...transactions].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))[0];
 }
 
+/** Una transacción de Wompi por su ID (GET /transactions/{id}); null si Wompi no la tiene. */
+export async function fetchTransactionById(
+  ambiente: Ambiente,
+  privateKey: string,
+  wompiId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<WompiTransaction | null> {
+  const url = `${WOMPI_API[ambiente]}/transactions/${encodeURIComponent(wompiId)}`;
+  const response = await fetcher(url, { headers: { Authorization: `Bearer ${privateKey}` } });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`wompi_${response.status}`);
+  }
+  const body = (await response.json()) as { data?: WompiTransaction };
+  return body.data ?? null;
+}
+
 /** Transacciones de Wompi con esa referencia. Requiere la llave privada del conjunto. */
 export async function fetchTransactionsByReference(
   ambiente: Ambiente,

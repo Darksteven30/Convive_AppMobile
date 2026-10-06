@@ -2,7 +2,7 @@
 // Lo usan wompi-estado (cuando la app pregunta) y wompi-conciliar (tarea cada 15 minutos).
 // Recibe la base de datos como dependencia para poder probarlo sin Supabase (Jest).
 
-import { fetchTransactionsByReference, latestTransaction, type Ambiente } from './wompi.ts';
+import { fetchTransactionById, fetchTransactionsByReference, latestTransaction, type Ambiente } from './wompi.ts';
 
 /** Lo mínimo que se usa del cliente de Supabase (service_role): llamar funciones de la base de datos. */
 export type BaseDeDatos = {
@@ -28,19 +28,26 @@ export async function credencialesDelPago(db: BaseDeDatos, referencia: string): 
   return filas[0] ?? null;
 }
 
+/**
+ * wompiId: si ya se conoce (lo guardó el webhook), se consulta GET /transactions/{id}; si no (la persona
+ * acaba de volver del checkout), se busca por la referencia de Convive.
+ */
 export async function sincronizarPago(
   db: BaseDeDatos,
   referencia: string,
   fetcher: typeof fetch = fetch,
+  wompiId?: string | null,
 ): Promise<Sincronizacion> {
   const credenciales = await credencialesDelPago(db, referencia);
   if (!credenciales?.llave_privada) {
     throw new Error('wompi_no_configurado');
   }
 
-  const transaccion = latestTransaction(
-    await fetchTransactionsByReference(credenciales.ambiente, credenciales.llave_privada, referencia, fetcher),
-  );
+  const transaccion = wompiId
+    ? await fetchTransactionById(credenciales.ambiente, credenciales.llave_privada, wompiId, fetcher)
+    : latestTransaction(
+        await fetchTransactionsByReference(credenciales.ambiente, credenciales.llave_privada, referencia, fetcher),
+      );
   if (!transaccion) {
     return { estado: null, enWompi: false };
   }
