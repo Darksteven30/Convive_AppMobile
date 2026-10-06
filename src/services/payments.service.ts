@@ -15,6 +15,7 @@ export {
   type PaymentErrorCode,
   type PaymentGateway,
   type PaymentInput,
+  type PaymentResult,
   type PaymentStatus,
   type PaymentStatusCode,
   type WompiMethod,
@@ -32,6 +33,9 @@ export {
   resetMockPaymentsState,
   setMockBalance,
   setMockGateway,
+  setMockWompiStatus,
+  simulateWompiPayment,
+  type MockWompiStatus,
 } from '@/services/payments.mock';
 
 const backend: PaymentsBackend = isSupabaseEnabled ? supabaseBackend : mockBackend;
@@ -46,6 +50,7 @@ export const startPayment: PaymentsBackend['startPayment'] = (...args) => backen
 export const cancelPayment: PaymentsBackend['cancelPayment'] = (...args) => backend.cancelPayment(...args);
 export const checkPaymentStatus: PaymentsBackend['checkPaymentStatus'] = (...args) =>
   backend.checkPaymentStatus(...args);
+export const getPaymentResult: PaymentsBackend['getPaymentResult'] = (...args) => backend.getPaymentResult(...args);
 
 /** Nombre de cada medio de Wompi para los chips y el comprobante. */
 export const WOMPI_METHOD_LABELS: Record<WompiMethod, string> = {

@@ -12,6 +12,7 @@ import {
   type PaymentCheckout,
   type PaymentGateway,
   type PaymentInput,
+  type PaymentResult,
   type PaymentStatus,
   type PaymentsBackend,
   type WompiMethod,
@@ -130,6 +131,41 @@ export async function checkPaymentStatus(_user: unknown, reference: string): Pro
   return { inWompi: data.enWompi, status: data.estado, method: data.medio, wompiId: data.wompiId };
 }
 
+/** Fila de transacciones_pago con el nombre del concepto (RLS: solo pagos de la propia unidad). */
+type ResultRow = {
+  referencia: string;
+  estado: PaymentResult['status'];
+  concepto_id: string;
+  descripcion: string | null;
+  monto: number | string;
+  medio_pago: string | null;
+  wompi_id: string | null;
+  created_at: string;
+  conceptos_pago: { nombre: string } | { nombre: string }[] | null;
+};
+
+export async function getPaymentResult(_user: unknown, reference: string): Promise<PaymentResult | null> {
+  const { data, error } = await getSupabase()
+    .from('transacciones_pago')
+    .select('referencia, estado, concepto_id, descripcion, monto, medio_pago, wompi_id, created_at, conceptos_pago(nombre)')
+    .eq('referencia', reference)
+    .maybeSingle<ResultRow>();
+  if (error) throw error;
+  if (!data) return null;
+  const concept = Array.isArray(data.conceptos_pago) ? data.conceptos_pago[0] : data.conceptos_pago;
+  return {
+    reference: data.referencia,
+    status: data.estado,
+    conceptId: data.concepto_id,
+    conceptName: concept?.nombre ?? data.concepto_id,
+    description: data.descripcion,
+    amount: Number(data.monto),
+    method: data.medio_pago,
+    wompiId: data.wompi_id,
+    date: data.created_at,
+  };
+}
+
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
 export const paymentsBackend = {
   getAccountStatus,
@@ -137,4 +173,5 @@ export const paymentsBackend = {
   startPayment,
   cancelPayment,
   checkPaymentStatus,
+  getPaymentResult,
 } satisfies PaymentsBackend;

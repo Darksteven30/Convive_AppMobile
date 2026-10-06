@@ -4,15 +4,20 @@ import { mockNetwork } from '@/services/mockNetwork';
 import {
   PaymentError,
   cancelPayment,
+  checkPaymentStatus,
   getAccountStatus,
+  getPaymentResult,
   getMockTransactions,
   getPaymentGateway,
   resetMockPaymentsState,
   setMockBalance,
   setMockGateway,
+  setMockWompiStatus,
+  simulateWompiPayment,
   startPayment,
   toCents,
   validatePaymentSelection,
+  type MockWompiStatus,
   type PaymentConcept,
 } from '@/services/payments.service';
 
@@ -204,5 +209,121 @@ describe('RF12 · Pago con Wompi (simulado)', () => {
       code: 'invalid',
     });
     expect(getMockTransactions()).toHaveLength(0);
+  });
+});
+
+describe('RF13 · Estado del pago y saldo (simulado)', () => {
+  const monica = resident('56');
+
+  /** Crea un pago de administración y Wompi lo registra con el estado indicado. */
+  async function payAndReport(status: MockWompiStatus, amount = 20000) {
+    const checkout = await startPayment(monica, { conceptId: 'administracion', amount });
+    simulateWompiPayment(checkout.reference, { id: 'w-1', status, method: 'NEQUI' });
+    return checkout.reference;
+  }
+
+  const adminBalance = async () =>
+    (await getAccountStatus(monica)).concepts.find((item) => item.id === 'administracion')!.balance;
+
+  it('el saldo solo se descuenta cuando el pago queda APROBADO', async () => {
+    const reference = await payAndReport('APPROVED');
+    expect(await adminBalance()).toBe(35000); // aún no se ha consultado el estado
+
+    expect(await checkPaymentStatus(monica, reference)).toEqual({
+      inWompi: true,
+      status: 'APROBADA',
+      method: 'NEQUI',
+      wompiId: 'w-1',
+    });
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it('consultar varias veces un pago aprobado no lo descuenta dos veces', async () => {
+    const reference = await payAndReport('APPROVED');
+
+    await checkPaymentStatus(monica, reference);
+    await checkPaymentStatus(monica, reference);
+
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it.each([
+    ['DECLINED', 'RECHAZADA'],
+    ['ERROR', 'ERROR'],
+    ['PENDING', 'PENDIENTE'],
+  ] as const)('%s queda %s y no toca el saldo', async (wompiStatus, status) => {
+    const reference = await payAndReport(wompiStatus);
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe(status);
+    expect(await adminBalance()).toBe(35000);
+  });
+
+  it('un pendiente que Wompi aprueba después descuenta el saldo al consultarlo de nuevo', async () => {
+    const reference = await payAndReport('PENDING');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'APPROVED');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('APROBADA');
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it('VOIDED devuelve exactamente lo descontado', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'VOIDED');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('ANULADA');
+    expect(await adminBalance()).toBe(35000);
+  });
+
+  it('un pago terminado no vuelve a PENDIENTE aunque llegue un estado tardío', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'PENDING');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('APROBADA');
+  });
+
+  it('un pago aprobado sin saldo pendiente no deja el saldo en negativo', async () => {
+    const checkout = await startPayment(monica, { conceptId: 'extraordinaria', amount: 50000 });
+    simulateWompiPayment(checkout.reference, { id: 'w-2', status: 'APPROVED', method: 'CARD' });
+
+    await checkPaymentStatus(monica, checkout.reference);
+
+    const status = await getAccountStatus(monica);
+    expect(status.concepts.find((item) => item.id === 'extraordinaria')!.balance).toBe(0);
+  });
+
+  it('si Wompi no tiene el pago, informa que no está en Wompi', async () => {
+    const checkout = await startPayment(monica, { conceptId: 'administracion', amount: 1000 });
+
+    expect(await checkPaymentStatus(monica, checkout.reference)).toEqual({ inWompi: false, status: 'PENDIENTE' });
+  });
+
+  it('getPaymentResult devuelve el pago guardado con los datos de Wompi', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    expect(await getPaymentResult(monica, reference)).toEqual({
+      reference,
+      status: 'APROBADA',
+      conceptId: 'administracion',
+      conceptName: 'Cuota administración',
+      description: null,
+      amount: 20000,
+      method: 'NEQUI',
+      wompiId: 'w-1',
+      date: expect.any(String),
+    });
+  });
+
+  it('getPaymentResult no devuelve pagos de otra unidad ni referencias inexistentes', async () => {
+    const reference = await payAndReport('APPROVED');
+
+    expect(await getPaymentResult(resident('12'), reference)).toBeNull();
+    expect(await getPaymentResult(monica, 'CNV-NO-EXISTE')).toBeNull();
   });
 });

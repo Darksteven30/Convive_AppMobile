@@ -69,6 +69,22 @@ export type PaymentStatus = {
   wompiId?: string;
 };
 
+/** RF13: un pago tal como lo tiene el servidor, para la pantalla de resultado y el comprobante. */
+export type PaymentResult = {
+  reference: string;
+  status: PaymentStatusCode;
+  conceptId: string;
+  conceptName: string;
+  /** Solo en «Otros conceptos». */
+  description: string | null;
+  amount: number;
+  /** Medio que informó Wompi (payment_method_type); null si aún no lo informa. */
+  method: string | null;
+  wompiId: string | null;
+  /** Fecha del pago (ISO). */
+  date: string;
+};
+
 /**
  * - pending: ya hay un pago PENDIENTE del mismo concepto (MSG-RF12-03).
  * - unavailable: Wompi no está disponible para el conjunto (MSG-RF12-04).
@@ -100,6 +116,8 @@ export type PaymentsBackend = {
   cancelPayment(user: User, reference: string): Promise<void>;
   /** RF15: consulta en Wompi el estado del pago y lo aplica en el servidor. */
   checkPaymentStatus(user: User, reference: string): Promise<PaymentStatus>;
+  /** RF13: el pago guardado en el servidor (null si no existe o no es de la unidad). */
+  getPaymentResult(user: User, reference: string): Promise<PaymentResult | null>;
 };
 
 /** Suma en centavos para no acumular errores de punto flotante (0,1 + 0,2). */
