@@ -10,6 +10,15 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF15 – Integración y conciliación con Wompi**:
+  - Llaves de Wompi por conjunto: la pública en `wompi_conjuntos` y la privada, el secreto de eventos y el de integridad cifrados en el Vault de Supabase. `configurar_wompi()` exige que las cuatro sean del mismo ambiente (Sandbox o Producción), así que pasar a producción no requiere cambiar código.
+  - Edge Function `wompi-webhook`: recibe `transaction.updated`, valida el checksum con el secreto de eventos y descarta los eventos que no coinciden; es idempotente (cada evento se procesa una sola vez).
+  - El saldo se descuenta una sola vez cuando el pago queda APROBADO y se devuelve si Wompi lo anula (VOIDED); un pago terminado no vuelve a PENDIENTE.
+  - Edge Function `wompi-estado`: consulta el estado en el API de Wompi (`GET /transactions?reference=`) para pagos de la propia unidad.
+  - Edge Function `wompi-conciliar` y tarea pg_cron cada 15 minutos: revisa los pagos PENDIENTES de más de 30 minutos y cancela los abandonados para que no bloqueen nuevos pagos.
+  - Con Supabase, «Pagar con Wompi» abre el checkout real de Wompi (expo-web-browser) y al volver consulta el estado en el servidor; sin Supabase sigue la ventana simulada.
+  - La notificación push del resultado queda pendiente para el RF09.
+  - Pruebas: lógica del webhook, la conciliación, la consulta de estado y la firma (Jest, con el ejemplo oficial de Wompi) y pruebas de base de datos en `supabase/tests/rf15_wompi_test.sql`.
 - **RF12 – Pago a través de la pasarela Wompi**:
   - «Aplicar» rediseñada: se quitan las opciones PSE / Tarjeta / Nequi y se agrega el botón «Pagar con Wompi» (teal #0F766E) con «Procesando…», chips con los medios habilitados del conjunto y texto de seguridad 🔒.
   - El servidor crea la transacción PENDIENTE con referencia única (CNV-{unidad}-{fecha}-{código}), valor en centavos COP y firma SHA-256 con el secreto de integridad guardado en el Vault de Supabase; la app solo recibe la llave pública.
