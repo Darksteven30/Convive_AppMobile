@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -16,8 +17,10 @@ import {
   PaymentError,
   WOMPI_METHOD_LABELS,
   cancelPayment,
+  checkPaymentStatus,
   getPaymentGateway,
   startPayment,
+  usesRealCheckout,
   type PaymentCheckout,
   type WompiMethod,
 } from '@/services/payments.service';
@@ -33,6 +36,8 @@ function goToPayments() {
  * RF12 · Paso 2 del pago: resumen del concepto y del valor elegidos en RF11 y pago con Wompi.
  * El servidor crea la transacción PENDIENTE con referencia y firma; la ventana de Wompi recibe el
  * valor en centavos (no editable) y en ella se elige el medio. Convive no captura datos de pago.
+ * RF15: con Supabase se abre el checkout real de Wompi y, al volver, se consulta el estado en el
+ * servidor; sin Supabase se usa la ventana simulada.
  */
 export default function PagoAplicarScreen() {
   const { concept, conceptName, amount, description } = useLocalSearchParams<{
@@ -61,12 +66,78 @@ export default function PagoAplicarScreen() {
     };
   }, [user]);
 
-  const pay = async () => {
+  const goToConfirmation = (params: { method: string; reference: string; wompiId: string }) =>
+    router.replace({ pathname: '/pago/confirmacion', params: { conceptName, amount: String(value), ...params } });
+
+  // RF15: al volver de Wompi se pregunta al servidor qué pasó (el estado nunca se toma del navegador).
+  const verifyRealPayment = async (created: PaymentCheckout) => {
     if (!user) return;
     setStarting(true);
     try {
-      setCheckout(await startPayment(user, { conceptId: concept, amount: value, description }));
+      const result = await checkPaymentStatus(user, created.reference);
+      if (!result.inWompi) {
+        // No hay transacción en Wompi: cerró el checkout sin pagar.
+        await cancelPayment(user, created.reference).catch(() => undefined);
+        showToast('info', MSG.RF12.cancelled);
+        return;
+      }
+      goToConfirmation({ method: result.method ?? '', reference: created.reference, wompiId: result.wompiId ?? '' });
+    } catch {
+      // La conciliación automática (cada 15 min) lo resolverá aunque ahora no se pueda consultar.
+      showToast('info', MSG.RF15.statusUnknown);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const openRealCheckout = async (created: PaymentCheckout, url: string, tab: Window | null) => {
+    if (Platform.OS !== 'web') {
+      // Navegador dentro de la app: la promesa termina cuando la persona lo cierra.
+      await WebBrowser.openBrowserAsync(url);
+      await verifyRealPayment(created);
+      return;
+    }
+    const askWhenFinished = () =>
+      showDialog({
+        message: MSG.RF15.finishInWompi,
+        actions: [{ label: 'Ya terminé', primary: true, onPress: () => verifyRealPayment(created) }],
+      });
+    if (tab) {
+      tab.location.href = url;
+      askWhenFinished();
+    } else {
+      showDialog({
+        message: MSG.RF15.popupBlocked,
+        actions: [
+          {
+            label: 'Ir a Wompi',
+            primary: true,
+            onPress: () => {
+              window.open(url, '_blank');
+              askWhenFinished();
+            },
+          },
+        ],
+      });
+    }
+  };
+
+  const pay = async () => {
+    if (!user) return;
+    // En web la pestaña de Wompi se abre en el mismo toque; si se abriera después de esperar al
+    // servidor, el navegador la bloquearía.
+    const tab = Platform.OS === 'web' && usesRealCheckout ? window.open('', '_blank') : null;
+    setStarting(true);
+    try {
+      const created = await startPayment(user, { conceptId: concept, amount: value, description });
+      setStarting(false);
+      if (created.checkoutUrl) {
+        await openRealCheckout(created, created.checkoutUrl, tab);
+      } else {
+        setCheckout(created);
+      }
     } catch (error) {
+      tab?.close();
       if (error instanceof PaymentError && error.code === 'pending') {
         showDialog({
           message: MSG.RF12.pendingPayment,
@@ -99,10 +170,7 @@ export default function PagoAplicarScreen() {
   const completeCheckout = ({ method, wompiId }: WompiResult) => {
     const reference = checkout?.reference ?? '';
     setCheckout(null);
-    router.replace({
-      pathname: '/pago/confirmacion',
-      params: { conceptName, amount: String(value), method, reference, wompiId },
-    });
+    goToConfirmation({ method, reference, wompiId });
   };
 
   return (
