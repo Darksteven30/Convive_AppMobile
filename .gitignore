@@ -42,3 +42,7 @@ yarn-error.*
 
 # tests
 coverage/
+
+# Supabase CLI (archivos locales de la conexión con el proyecto)
+supabase/.temp/
+supabase/.branches/
