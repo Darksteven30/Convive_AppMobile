@@ -128,11 +128,12 @@ export function buildReportWorkbook(report: FinancialReport): WorkBook {
   return workbook;
 }
 
-async function shareFile(uri: string, mimeType: string, UTI: string) {
+/** Abre la hoja de compartir del sistema con el archivo (guardar, enviar por correo…). */
+export async function shareFile(uri: string, mimeType: string, UTI: string, dialogTitle = 'Reporte financiero') {
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error('sharing_unavailable');
   }
-  await Sharing.shareAsync(uri, { mimeType, UTI, dialogTitle: 'Reporte financiero' });
+  await Sharing.shareAsync(uri, { mimeType, UTI, dialogTitle });
 }
 
 /** Genera el PDF del reporte y lo comparte (en web abre el diálogo de impresión). */
