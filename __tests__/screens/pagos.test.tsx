@@ -6,6 +6,9 @@ import { PaymentError, getMockTransactions, setMockBalance, setMockGateway } fro
 
 import { navigate, press, pressDialogButton, renderSignedIn } from '../helpers/app';
 
+// RF15: el checkout real de Wompi se abre en el navegador; en las pruebas no se abre nada.
+jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(async () => ({ type: 'cancel' })) }));
+
 const continuar = () => screen.getByRole('button', { name: 'Continuar' });
 const valor = () => screen.getByLabelText('Valor a pagar');
 const pagarConWompi = () => screen.getByRole('button', { name: 'Pagar con Wompi' });
@@ -407,5 +410,71 @@ describe('RF12 · Pago a través de la pasarela Wompi', () => {
       description: 'Parqueadero de visitantes',
       amount: 10678.9,
     });
+  });
+});
+
+describe('RF15 · Checkout real de Wompi', () => {
+  const WebBrowser = jest.requireMock('expo-web-browser') as { openBrowserAsync: jest.Mock };
+  const CHECKOUT_URL = 'https://checkout.wompi.co/p/?public-key=pub_test_abc&reference=CNV-56-REAL';
+
+  /** Abre «Aplicar» y hace que el servidor responda como con Supabase: con la URL del checkout real. */
+  async function payWithRealCheckout() {
+    const app = await openSelectionAsResident();
+    await press(screen.getByText('Cuota administración'));
+    await press(continuar());
+    const realStart = paymentsBackend.startPayment;
+    jest
+      .spyOn(paymentsBackend, 'startPayment')
+      .mockImplementation(async (user, input) => ({ ...(await realStart(user, input)), checkoutUrl: CHECKOUT_URL }));
+    return app;
+  }
+
+  beforeEach(() => {
+    WebBrowser.openBrowserAsync.mockClear();
+  });
+
+  it('abre el checkout de Wompi y, si el pago existe en Wompi, va a la confirmación', async () => {
+    const app = await payWithRealCheckout();
+    jest.spyOn(paymentsBackend, 'checkPaymentStatus').mockResolvedValue({
+      inWompi: true,
+      status: 'PENDIENTE',
+      method: 'BANCOLOMBIA_TRANSFER',
+      wompiId: '12345-1759750000-67890',
+    });
+
+    await press(pagarConWompi());
+
+    expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(CHECKOUT_URL);
+    // No se abre la ventana simulada.
+    expect(screen.queryByText('Elige el medio de pago')).toBeNull();
+    expect(paymentsBackend.checkPaymentStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'monica@gmail.com' }),
+      getMockTransactions()[0].reference,
+    );
+    expect(app.getPathname()).toBe('/pago/confirmacion');
+    expect(screen.getByText('Botón Bancolombia (vía Wompi)')).toBeTruthy();
+    expect(screen.getByText('12345-1759750000-67890')).toBeTruthy();
+  });
+
+  it('si Wompi no tiene la transacción, la persona cerró sin pagar: se cancela (MSG-RF12-02)', async () => {
+    const app = await payWithRealCheckout();
+    jest.spyOn(paymentsBackend, 'checkPaymentStatus').mockResolvedValue({ inWompi: false, status: 'PENDIENTE' });
+
+    await press(pagarConWompi());
+
+    expect(screen.getByText(MSG.RF12.cancelled)).toBeTruthy();
+    expect(getMockTransactions()[0].status).toBe('CANCELADA');
+    expect(app.getPathname()).toBe('/pago/aplicar');
+  });
+
+  it('si no se puede consultar el estado, avisa que se revisará automáticamente y no cancela', async () => {
+    const app = await payWithRealCheckout();
+    jest.spyOn(paymentsBackend, 'checkPaymentStatus').mockRejectedValue(new Error('sin conexión'));
+
+    await press(pagarConWompi());
+
+    expect(screen.getByText(MSG.RF15.statusUnknown)).toBeTruthy();
+    expect(getMockTransactions()[0].status).toBe('PENDIENTE');
+    expect(app.getPathname()).toBe('/pago/aplicar');
   });
 });

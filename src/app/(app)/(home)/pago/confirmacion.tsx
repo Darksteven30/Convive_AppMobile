@@ -27,7 +27,7 @@ export default function PagoConfirmacionScreen() {
       ['Concepto', conceptName ?? '—'],
       ['Valor pagado', formatCurrency(Number(amount) || 0)],
       ['Fecha', `${now.toLocaleDateString('es-CO')} - ${now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`],
-      ['Medio de pago', WOMPI_METHOD_LABELS[method] ? `${WOMPI_METHOD_LABELS[method]} (vía Wompi)` : '—'],
+      ['Medio de pago', method ? `${WOMPI_METHOD_LABELS[method] ?? method} (vía Wompi)` : '—'],
       ['Referencia', reference ?? '—'],
       ['ID Wompi', wompiId ?? '—'],
     ];

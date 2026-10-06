@@ -29,7 +29,7 @@ npm run test:coverage  # genera el reporte de cobertura
 
 | Carpeta | Qué prueba |
 |---|---|
-| `__tests__/unit` | Servicios de autenticación, pagos, finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
+| `__tests__/unit` | Servicios de autenticación, pagos, funciones de Wompi (checksum y API), finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
 | `__tests__/components` | Calendario de reservas |
 | `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
 | `__tests__/screens` | Pagos (RF11 y RF12), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
@@ -39,18 +39,52 @@ npm run test:coverage  # genera el reporte de cobertura
 La app funciona en dos modos:
 
 - **Sin configurar** (por defecto y en las pruebas): usa servicios simulados en memoria; los datos se reinician al recargar.
-- **Con Supabase**: la autenticación y los perfiles viven en el proyecto de Supabase y la sesión se guarda en el dispositivo. Por ahora usan Supabase la autenticación, el estado de la cuenta con el saldo por concepto (RF11) y la creación del pago con Wompi (RF12); finanzas sigue simulada.
+- **Con Supabase**: la autenticación y los perfiles viven en el proyecto de Supabase y la sesión se guarda en el dispositivo. Por ahora usan Supabase la autenticación, el estado de la cuenta con el saldo por concepto (RF11) la creación del pago (RF12) y la integración con Wompi: checkout, webhook, consulta de estado y conciliación (RF15); finanzas sigue simulada.
 
 Para conectar un proyecto:
 
 1. Crear una cuenta en [supabase.com](https://supabase.com) → **New project** (región *South America (São Paulo)*). Guardar la contraseña de la base de datos.
-2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto»).
+2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto»).
 3. **Authentication → Sign In / Providers → Email**: desactivar **Confirm email** (las cuentas ya las registra la administración) y dejar el código (OTP) de 6 dígitos con vencimiento de **600** segundos.
 4. **Authentication → Emails → Reset Password**: cambiar la plantilla para que envíe el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos).
 5. **Project Settings → API Keys**: copiar la *Project URL* y la *publishable key* en un archivo `.env.local` (ver `.env.example`). Nunca usar la *secret key* en la app.
 6. Reiniciar Expo limpiando la caché: `npx expo start --clear`.
 
 Con Supabase, las cuentas de prueba empiezan **pre-registradas**: la primera vez, cada persona escribe su correo y la app le pide crear su contraseña (usen las de la tabla de abajo). `nuevo@convive.com` se deja sin crear para probar ese flujo.
+
+### Wompi (RF15)
+
+El pago se hace en el **checkout real de Wompi**. Las llaves son **por conjunto**: la pública vive en `wompi_conjuntos` y la privada, el secreto de eventos y el de integridad se guardan **cifrados en el Vault** de Supabase. Nunca van en la app, en el código, en `.env.local` ni en GitHub.
+
+1. **SQL Editor** → ejecutar `supabase/migrations/20261006000000_integracion_wompi.sql`. Si responde que no puede crear `pg_cron` o `pg_net`, actívalas en **Database → Extensions** y vuelve a ejecutarla.
+2. **SQL Editor** → cargar las llaves del conjunto (panel de Wompi → *Desarrolladores*). La función exige que las cuatro sean del mismo ambiente, así que no se pueden mezclar llaves de Sandbox y de Producción:
+   ```sql
+   select public.configurar_wompi(
+     (select id from public.conjuntos where nombre = 'Conjunto Residencial Convive'),
+     'sandbox',            -- o 'produccion'
+     'pub_test_…', 'prv_test_…', 'test_events_…', 'test_integrity_…'
+   );
+   ```
+   Para **pasar a producción** se ejecuta lo mismo con `'produccion'` y las llaves `pub_prod_…`, `prv_prod_…`, `prod_events_…` y `prod_integrity_…`. No hay que cambiar código.
+3. **SQL Editor** → datos para la conciliación automática cada 15 minutos (el token es cualquier texto largo y aleatorio):
+   ```sql
+   select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+   select vault.create_secret('<texto-aleatorio-largo>', 'conciliacion_token');
+   ```
+4. **Publicar las Edge Functions** (`supabase/functions`) desde la terminal:
+   ```powershell
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   npx supabase functions deploy --use-api
+   ```
+   - `wompi-webhook` recibe los eventos de Wompi.
+   - `wompi-estado` consulta el estado de un pago.
+   - `wompi-conciliar` revisa los pagos pendientes de más de 30 minutos.
+5. **Panel de Wompi → Desarrolladores → URL de eventos** (en Sandbox y luego en Producción): `https://<project-ref>.supabase.co/functions/v1/wompi-webhook`.
+
+**Pruebas de base de datos del RF15:** en el SQL Editor, ejecutar `supabase/tests/rf15_wompi_test.sql`. Prueba las llaves por ambiente, el saldo aplicado una sola vez, la devolución si se anula, los eventos repetidos y la conciliación, y deshace sus datos al final. Si todo pasa, responde con el mensaje «RF15 OK: 16 pruebas pasaron».
+
+Pruebas en Sandbox: Wompi tiene datos de prueba para cada medio (p. ej. la tarjeta `4242 4242 4242 4242` es aprobada y la `4111 1111 1111 1111` es rechazada). El saldo baja solo cuando Wompi confirma el pago como **APROBADO**.
 
 > En el plan gratuito, Supabase pausa el proyecto tras una semana sin uso (se reactiva desde el panel) y el servidor de correo incluido envía pocos correos por hora.
 
@@ -78,7 +112,7 @@ Otros casos del inicio de sesión (RF01):
 
 **Pagos (RF11):** con la residente, Inicio o Pagos → «Abonar». Cada concepto muestra su saldo pendiente (casa 56: administración $35.000, extraordinaria sin saldo, otros $10.678,90). Al elegir uno aparece «Valor a pagar» con el saldo por defecto; se puede bajar para un abono parcial, pero no superar el saldo. Los conceptos sin saldo también se pueden pagar con cualquier valor mayor a $0, y «Otros conceptos» pide una descripción de 5 a 100 caracteres. El administrador (unidad sin saldo) ve «¡Estás al día!».
 
-**Pago con Wompi (RF12):** después de elegir el concepto, «Aplicar» muestra el botón «Pagar con Wompi», los medios habilitados del conjunto y el texto de seguridad. Al pulsarlo se crea la transacción PENDIENTE con referencia única y firma, y se abre la ventana de Wompi con el valor en centavos (no editable). Mientras no haya llaves de Wompi, la ventana es **simulada**: se elige el medio y «Pagar» lleva a la confirmación; cerrarla con ✕ cancela el pago. Un segundo pago del mismo concepto mientras el primero sigue PENDIENTE muestra «Tienes un pago en proceso…».
+**Pago con Wompi (RF12):** después de elegir el concepto, «Aplicar» muestra el botón «Pagar con Wompi», los medios habilitados del conjunto y el texto de seguridad. Al pulsarlo se crea la transacción PENDIENTE con referencia única y firma, y se abre la ventana de Wompi con el valor en centavos (no editable). Con Supabase y las llaves configuradas (ver «Wompi (RF15)») se abre el checkout real de Wompi Sandbox; sin Supabase, la ventana es **simulada**: se elige el medio y «Pagar» lleva a la confirmación; cerrarla con ✕ cancela el pago. Un segundo pago del mismo concepto mientras el primero sigue PENDIENTE muestra «Tienes un pago en proceso…».
 
 **Perfil y contraseña (RF16 y RF17):** el avatar o el menú ☰ → «Perfil». Solo el teléfono se puede editar (10 dígitos que empiecen por 3); correo y unidad son de solo lectura. «Cambiar contraseña» verifica la contraseña actual y exige una nueva distinta que cumpla las reglas. Cerrar sesión (desde el Perfil o el menú) pide confirmación.
 

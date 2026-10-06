@@ -32,7 +32,8 @@
         }
       ],
       "expo-sharing",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "scheme": "convive"
   }

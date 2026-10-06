@@ -67,6 +67,13 @@ export const MSG = {
     securityNote:
       'Al continuar se abrirá la ventana de pago de Wompi. Convive no almacena los datos de tu tarjeta ni de tu cuenta bancaria.',
   },
+  RF15: {
+    // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web).
+    finishInWompi: 'Completa el pago en la pestaña de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',
+    popupBlocked: 'Tu navegador bloqueó la ventana de Wompi. Pulsa «Ir a Wompi» para abrirla.',
+    statusUnknown:
+      'No pudimos confirmar tu pago todavía. Lo revisaremos automáticamente en unos minutos; no vuelvas a pagar este concepto.',
+  },
   RF16: {
     phoneUpdated: 'Tus datos se actualizaron correctamente.', // MSG-RF16-01
     phoneInvalid: 'Ingresa un número de celular válido de 10 dígitos.', // MSG-RF16-02

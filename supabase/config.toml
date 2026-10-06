@@ -1,0 +1,15 @@
+project_id = "convive"
+
+# Configuración de las Edge Functions (RF15). El resto del proyecto se configura en el panel de Supabase.
+
+# Wompi no envía sesión de Supabase: el webhook se protege con el checksum del evento.
+[functions.wompi-webhook]
+verify_jwt = false
+
+# La llama pg_cron sin sesión: se protege con el encabezado x-conciliacion-token (Vault).
+[functions.wompi-conciliar]
+verify_jwt = false
+
+# La llama la app con la sesión de la persona (se verifica el JWT).
+[functions.wompi-estado]
+verify_jwt = true

@@ -1,8 +1,8 @@
-// Pagos con Supabase (RF11 y RF12). Cumple el mismo contrato que el servicio simulado
+// Pagos con Supabase (RF11, RF12 y RF15). Cumple el mismo contrato que el servicio simulado
 // (payments.types.ts). El esquema y las funciones están en supabase/migrations:
 // 20261004000000_seleccion_concepto_pago.sql (estado de la cuenta) y 20261005000000_pago_wompi.sql
-// (transacciones, referencia y firma). La unidad sale de la sesión en el servidor (auth.uid()),
-// no del usuario que envía la app.
+// (transacciones, referencia y firma); el estado lo consulta la Edge Function wompi-estado (RF15).
+// La unidad sale de la sesión en el servidor (auth.uid()), no del usuario que envía la app.
 
 import { getSupabase } from '@/lib/supabase';
 import {
@@ -12,6 +12,7 @@ import {
   type PaymentCheckout,
   type PaymentGateway,
   type PaymentInput,
+  type PaymentStatus,
   type PaymentsBackend,
   type WompiMethod,
 } from '@/services/payments.types';
@@ -39,6 +40,21 @@ type CheckoutRow = {
 };
 
 type RpcError = { message?: string; details?: string | null };
+
+/** Web Checkout de Wompi (el mismo para Sandbox y Producción: lo define la llave pública). */
+const WOMPI_CHECKOUT_URL = 'https://checkout.wompi.co/p/';
+
+/** Dirección del checkout con los datos que generó el servidor. La firma nunca se calcula en la app. */
+export function buildCheckoutUrl(checkout: Omit<PaymentCheckout, 'checkoutUrl' | 'transactionId'>): string {
+  const params = [
+    ['public-key', checkout.publicKey],
+    ['currency', checkout.currency],
+    ['amount-in-cents', String(checkout.amountInCents)],
+    ['reference', checkout.reference],
+    ['signature:integrity', checkout.signature],
+  ];
+  return `${WOMPI_CHECKOUT_URL}?${params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&')}`;
+}
 
 const WOMPI_METHODS: WompiMethod[] = ['CARD', 'PSE', 'NEQUI', 'BANCOLOMBIA_TRANSFER', 'DAVIPLATA'];
 
@@ -87,19 +103,31 @@ export async function startPayment(_user: unknown, input: PaymentInput): Promise
     .maybeSingle<CheckoutRow>();
   if (error) throw toPaymentError(error);
   if (!data) throw new PaymentError('failed');
-  return {
-    transactionId: data.transaccion_id,
+  const checkout = {
     reference: data.referencia,
     amountInCents: Number(data.monto_centavos),
-    currency: 'COP',
+    currency: 'COP' as const,
     signature: data.firma,
     publicKey: data.llave_publica,
   };
+  return { ...checkout, transactionId: data.transaccion_id, checkoutUrl: buildCheckoutUrl(checkout) };
 }
 
 export async function cancelPayment(_user: unknown, reference: string): Promise<void> {
   const { error } = await getSupabase().rpc('cancelar_pago', { p_referencia: reference });
   if (error) throw error;
+}
+
+/** Respuesta de la Edge Function wompi-estado (supabase/functions/wompi-estado). */
+type StatusResponse = { estado: PaymentStatus['status']; enWompi: boolean; wompiId?: string; medio?: string };
+
+export async function checkPaymentStatus(_user: unknown, reference: string): Promise<PaymentStatus> {
+  const { data, error } = await getSupabase().functions.invoke<StatusResponse>('wompi-estado', {
+    body: { referencia: reference },
+  });
+  if (error) throw error;
+  if (!data) throw new PaymentError('failed');
+  return { inWompi: data.enWompi, status: data.estado, method: data.medio, wompiId: data.wompiId };
 }
 
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
@@ -108,4 +136,5 @@ export const paymentsBackend = {
   getPaymentGateway,
   startPayment,
   cancelPayment,
+  checkPaymentStatus,
 } satisfies PaymentsBackend;
