@@ -67,6 +67,26 @@ export const MSG = {
     securityNote:
       'Al continuar se abrirá la ventana de pago de Wompi. Convive no almacena los datos de tu tarjeta ni de tu cuenta bancaria.',
   },
+  RF13: {
+    approvedTitle: 'Pago exitoso', // MSG-RF13-01
+    approved: 'Tu pago fue aprobado y se aplicó a tu estado de cuenta.', // MSG-RF13-01
+    declinedTitle: 'Pago rechazado', // MSG-RF13-02
+    declined:
+      'La entidad no aprobó tu pago. No se realizó ningún cobro. Puedes intentarlo de nuevo o usar otro medio de pago.', // MSG-RF13-02
+    pendingTitle: 'Pago en proceso', // MSG-RF13-03
+    pending:
+      'Estamos esperando la confirmación de tu banco. Te avisaremos con una notificación cuando termine. No vuelvas a pagar este concepto.', // MSG-RF13-03
+    errorTitle: 'No pudimos procesar tu pago', // MSG-RF13-04
+    error: 'Ocurrió un problema con el medio de pago. Intenta de nuevo o usa otro medio.', // MSG-RF13-04
+    voidedTitle: 'Pago anulado', // MSG-RF13-05
+    voided: 'La transacción fue anulada y no se realizó ningún cobro.', // MSG-RF13-05
+    receiptDownloaded: 'Comprobante descargado. Lo encuentras en tu carpeta de descargas.', // MSG-RF13-06
+    stillPending: 'Tu pago sigue en proceso. Te avisaremos cuando cambie.', // MSG-RF13-07
+    // Propuestos (no están en el documento):
+    cancelledTitle: 'Pago cancelado',
+    receiptFailed: 'No pudimos generar el comprobante. Intenta de nuevo.',
+    notFound: 'No encontramos este pago.',
+  },
   RF15: {
     // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web).
     finishInWompi: 'Completa el pago en la pestaña de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',

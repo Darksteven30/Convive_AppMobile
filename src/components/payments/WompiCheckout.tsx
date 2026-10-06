@@ -4,9 +4,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 
 import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
 import { OptionRow } from '@/components/ui/OptionRow';
 import { colors, radius, spacing, typography } from '@/constants/theme';
-import { WOMPI_METHOD_LABELS, type PaymentCheckout, type WompiMethod } from '@/services/payments.service';
+import {
+  WOMPI_METHOD_LABELS,
+  type MockWompiStatus,
+  type PaymentCheckout,
+  type WompiMethod,
+} from '@/services/payments.service';
 import { formatCurrency } from '@/utils/format';
 
 const methodIcons: Record<WompiMethod, ComponentProps<typeof Ionicons>['name']> = {
@@ -21,7 +27,17 @@ export type WompiResult = {
   method: WompiMethod;
   /** ID de la transacción en Wompi, p. ej. 12345-1757459940-67890. */
   wompiId: string;
+  /** Resultado que «responderá Wompi» en esta prueba (lo consulta después el servidor). */
+  status: MockWompiStatus;
 };
+
+/** Resultados que se pueden simular (como las tarjetas de prueba de Wompi Sandbox). */
+const RESULTS: { status: MockWompiStatus; label: string }[] = [
+  { status: 'APPROVED', label: 'Aprobado' },
+  { status: 'DECLINED', label: 'Rechazado' },
+  { status: 'PENDING', label: 'En proceso' },
+  { status: 'ERROR', label: 'Error' },
+];
 
 type Props = {
   /** Transacción creada en el servidor; null mantiene la ventana cerrada. */
@@ -44,10 +60,11 @@ const randomDigits = (length: number) => Array.from({ length }, () => Math.floor
  */
 export function WompiCheckout({ checkout, methods, onClose, onComplete }: Props) {
   const [method, setMethod] = useState<WompiMethod | null>(null);
+  const [status, setStatus] = useState<MockWompiStatus>('APPROVED');
 
   const pay = () => {
     if (!method) return;
-    onComplete({ method, wompiId: `${randomDigits(5)}-${Math.floor(Date.now() / 1000)}-${randomDigits(5)}` });
+    onComplete({ method, status, wompiId: `${randomDigits(5)}-${Math.floor(Date.now() / 1000)}-${randomDigits(5)}` });
   };
 
   return (
@@ -83,6 +100,13 @@ export function WompiCheckout({ checkout, methods, onClose, onComplete }: Props)
               onPress={() => setMethod(item)}
             />
           ))}
+
+          <Text style={typography.subtitle}>Resultado de la prueba</Text>
+          <View style={styles.results}>
+            {RESULTS.map((item) => (
+              <Chip key={item.status} label={item.label} selected={item.status === status} onPress={() => setStatus(item.status)} />
+            ))}
+          </View>
 
           <View style={styles.footer}>
             <Button label="Pagar" variant="wompi" pill block disabled={!method} onPress={pay} />
@@ -126,6 +150,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     color: colors.textMuted,
+  },
+  results: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
   footer: {
     marginTop: 'auto',
