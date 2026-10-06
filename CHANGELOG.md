@@ -10,6 +10,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF13 – Confirmación del resultado del pago y comprobante**:
+  - Una pantalla por estado con su ícono, color y mensaje: Pago exitoso, Pago rechazado, Pago en proceso (reloj naranja), No pudimos procesar tu pago y Pago anulado (MSG-RF13-01 a 05).
+  - El estado se lee del servidor después de consultarlo en Wompi; nunca se toma de la ventana de pago. Con el ID de Wompi conocido, el servidor consulta `GET /transactions/{id}`.
+  - Tabla de detalle con datos reales: concepto, valor, fecha («09 sep 2026 - 06:19 p. m.»), medio informado por Wompi, referencia Convive e ID Wompi.
+  - «Descargar comprobante» en PDF solo para pagos aprobados (MSG-RF13-06); «Intentar de nuevo» en rechazado o error vuelve a Aplicar con el mismo concepto y valor y una referencia nueva; «Actualizar estado» en proceso vuelve a consultar (MSG-RF13-07).
+  - El saldo solo se descuenta si el pago es APROBADO y «Volver al inicio» lo muestra actualizado.
+  - En modo simulado, la ventana de Wompi permite elegir el resultado (aprobado, rechazado, en proceso o error) para probar cada pantalla.
 - **RF15 – Integración y conciliación con Wompi**:
   - Llaves de Wompi por conjunto: la pública en `wompi_conjuntos` y la privada, el secreto de eventos y el de integridad cifrados en el Vault de Supabase. `configurar_wompi()` exige que las cuatro sean del mismo ambiente (Sandbox o Producción), así que pasar a producción no requiere cambiar código.
   - Edge Function `wompi-webhook`: recibe `transaction.updated`, valida el checksum con el secreto de eventos y descarta los eventos que no coinciden; es idempotente (cada evento se procesa una sola vez).

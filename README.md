@@ -32,7 +32,7 @@ npm run test:coverage  # genera el reporte de cobertura
 | `__tests__/unit` | Servicios de autenticación, pagos, funciones de Wompi (checksum y API), finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
 | `__tests__/components` | Calendario de reservas |
 | `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
-| `__tests__/screens` | Pagos (RF11 y RF12), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
+| `__tests__/screens` | Pagos (RF11, RF12, RF13 y RF15), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
 
 ## Backend (Supabase)
 
@@ -113,6 +113,8 @@ Otros casos del inicio de sesión (RF01):
 **Pagos (RF11):** con la residente, Inicio o Pagos → «Abonar». Cada concepto muestra su saldo pendiente (casa 56: administración $35.000, extraordinaria sin saldo, otros $10.678,90). Al elegir uno aparece «Valor a pagar» con el saldo por defecto; se puede bajar para un abono parcial, pero no superar el saldo. Los conceptos sin saldo también se pueden pagar con cualquier valor mayor a $0, y «Otros conceptos» pide una descripción de 5 a 100 caracteres. El administrador (unidad sin saldo) ve «¡Estás al día!».
 
 **Pago con Wompi (RF12):** después de elegir el concepto, «Aplicar» muestra el botón «Pagar con Wompi», los medios habilitados del conjunto y el texto de seguridad. Al pulsarlo se crea la transacción PENDIENTE con referencia única y firma, y se abre la ventana de Wompi con el valor en centavos (no editable). Con Supabase y las llaves configuradas (ver «Wompi (RF15)») se abre el checkout real de Wompi Sandbox; sin Supabase, la ventana es **simulada**: se elige el medio y «Pagar» lleva a la confirmación; cerrarla con ✕ cancela el pago. Un segundo pago del mismo concepto mientras el primero sigue PENDIENTE muestra «Tienes un pago en proceso…».
+
+**Resultado del pago (RF13):** al terminar en Wompi, la Confirmación muestra el estado que el servidor consultó en Wompi: exitoso (con «Descargar comprobante» en PDF), rechazado o error (con «Intentar de nuevo»), en proceso (con «Actualizar estado») o anulado. En modo simulado, la ventana de Wompi tiene «Resultado de la prueba» para elegir cada caso; con Wompi Sandbox, la tarjeta 4242 4242 4242 4242 se aprueba y la 4111 1111 1111 1111 se rechaza. El saldo solo baja cuando el pago se aprueba.
 
 **Perfil y contraseña (RF16 y RF17):** el avatar o el menú ☰ → «Perfil». Solo el teléfono se puede editar (10 dígitos que empiecen por 3); correo y unidad son de solo lectura. «Cambiar contraseña» verifica la contraseña actual y exige una nueva distinta que cumpla las reglas. Cerrar sesión (desde el Perfil o el menú) pide confirmación.
 
