@@ -5,6 +5,7 @@ import {
   WOMPI_API,
   ambienteDeLlave,
   eventChecksum,
+  fetchTransactionById,
   integritySignature,
   type WompiEvent,
   type WompiTransaction,
@@ -283,5 +284,58 @@ describe('RF15 · Conciliación automática (cada 15 min, pendientes de más de 
       body: { ok: true, revisados: 0, resultados: {} },
     });
     expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe('RF13 · Consultar estado por ID de Wompi (GET /transactions/{id})', () => {
+  /** API de Wompi de prueba para GET /transactions/{id}. */
+  const wompiPorId = (transacciones: Record<string, WompiTransaction>) =>
+    jest.fn(async (url: string) => {
+      const id = decodeURIComponent(url.split('/transactions/')[1] ?? '');
+      const encontrada = transacciones[id];
+      return {
+        ok: Boolean(encontrada),
+        status: encontrada ? 200 : 404,
+        json: async () => ({ data: encontrada }),
+      } as Response;
+    });
+
+  it('si ya se conoce el ID de Wompi, consulta GET /transactions/{id}', async () => {
+    const { db, rpc } = baseDeDatos({ credenciales_wompi: credenciales(), aplicar_estado_wompi: 'APROBADA' });
+    const fetcher = wompiPorId({ 'w-123': transaccion('APPROVED', { id: 'w-123' }) });
+
+    const resultado = await sincronizarPago(db, REFERENCIA, fetcher as unknown as typeof fetch, 'w-123');
+
+    expect(fetcher).toHaveBeenCalledWith(`${WOMPI_API.sandbox}/transactions/w-123`, {
+      headers: { Authorization: `Bearer ${PRIVATE_KEY}` },
+    });
+    expect(rpc).toHaveBeenCalledWith('aplicar_estado_wompi', expect.objectContaining({ p_wompi_id: 'w-123' }));
+    expect(resultado).toMatchObject({ estado: 'APROBADA', enWompi: true });
+  });
+
+  it('si Wompi no encuentra ese ID, no cambia nada', async () => {
+    const { db, rpc } = baseDeDatos({ credenciales_wompi: credenciales() });
+
+    const resultado = await sincronizarPago(db, REFERENCIA, wompiPorId({}) as unknown as typeof fetch, 'w-no-existe');
+
+    expect(resultado).toEqual({ estado: null, enWompi: false });
+    expect(rpc).not.toHaveBeenCalledWith('aplicar_estado_wompi', expect.anything());
+  });
+
+  it('sin ID de Wompi (recién vuelve del checkout) busca por la referencia de Convive', async () => {
+    const { db } = baseDeDatos({ credenciales_wompi: credenciales(), aplicar_estado_wompi: 'APROBADA' });
+    const fetcher = wompi({ [REFERENCIA]: [transaccion('APPROVED')] });
+
+    await sincronizarPago(db, REFERENCIA, fetcher as unknown as typeof fetch, null);
+
+    expect(fetcher.mock.calls[0][0]).toBe(`${WOMPI_API.sandbox}/transactions?reference=${REFERENCIA}`);
+  });
+
+  it('falla si Wompi responde con otro error', async () => {
+    const fetcher = jest.fn(async () => ({ ok: false, status: 500 }) as Response);
+
+    await expect(fetchTransactionById('sandbox', PRIVATE_KEY, 'w-1', fetcher as unknown as typeof fetch)).rejects.toThrow(
+      'wompi_500',
+    );
   });
 });

@@ -2,12 +2,25 @@ import { act, fireEvent, screen } from '@testing-library/react-native';
 
 import { MSG } from '@/constants/messages';
 import { paymentsBackend } from '@/services/payments.mock';
-import { PaymentError, getMockTransactions, setMockBalance, setMockGateway } from '@/services/payments.service';
+import {
+  PaymentError,
+  getMockTransactions,
+  setMockBalance,
+  setMockGateway,
+  setMockWompiStatus,
+  simulateWompiPayment,
+} from '@/services/payments.service';
 
 import { navigate, press, pressDialogButton, renderSignedIn } from '../helpers/app';
 
 // RF15: el checkout real de Wompi se abre en el navegador; en las pruebas no se abre nada.
 jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(async () => ({ type: 'cancel' })) }));
+// RF13: el comprobante PDF se genera con expo-print y se comparte con expo-sharing.
+jest.mock('expo-print', () => ({ printToFileAsync: jest.fn(async () => ({ uri: 'file:///cache/comprobante.pdf' })) }));
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn(async () => true),
+  shareAsync: jest.fn(async () => undefined),
+}));
 
 const continuar = () => screen.getByRole('button', { name: 'Continuar' });
 const valor = () => screen.getByLabelText('Valor a pagar');
@@ -66,7 +79,7 @@ describe('Flujo de pago', () => {
     expect(app.getPathname()).toBe('/pago/confirmacion');
     expect(screen.getByText('Pago exitoso')).toBeTruthy();
     expect(screen.getByText('Cuota administración')).toBeTruthy();
-    expect(screen.getByText('$20.000,50')).toBeTruthy();
+    expect(screen.getByText('$ 20.000,50')).toBeTruthy();
     expect(screen.getByText('Nequi (vía Wompi)')).toBeTruthy();
     expect(screen.getByText(/^CNV-56-\d{14}-\d{6}$/)).toBeTruthy();
     expect(screen.getByText(/^\d{5}-\d{10}-\d{5}$/)).toBeTruthy();
@@ -335,6 +348,7 @@ describe('RF12 · Pago a través de la pasarela Wompi', () => {
     const app = await openApplyAsResident();
     await press(pagarConWompi());
     await press(screen.getByRole('button', { name: 'PSE' }));
+    await press(screen.getByRole('button', { name: 'En proceso' }));
     await press(screen.getByRole('button', { name: 'Pagar' }));
     expect(app.getPathname()).toBe('/pago/confirmacion');
 
@@ -435,12 +449,16 @@ describe('RF15 · Checkout real de Wompi', () => {
 
   it('abre el checkout de Wompi y, si el pago existe en Wompi, va a la confirmación', async () => {
     const app = await payWithRealCheckout();
-    jest.spyOn(paymentsBackend, 'checkPaymentStatus').mockResolvedValue({
-      inWompi: true,
-      status: 'PENDIENTE',
-      method: 'BANCOLOMBIA_TRANSFER',
-      wompiId: '12345-1759750000-67890',
+    // Mientras la persona está en el checkout, Wompi registra el pago (en proceso, por Bancolombia).
+    WebBrowser.openBrowserAsync.mockImplementationOnce(async () => {
+      simulateWompiPayment(getMockTransactions()[0].reference, {
+        id: '12345-1759750000-67890',
+        status: 'PENDING',
+        method: 'BANCOLOMBIA_TRANSFER',
+      });
+      return { type: 'cancel' };
     });
+    jest.spyOn(paymentsBackend, 'checkPaymentStatus');
 
     await press(pagarConWompi());
 
@@ -452,6 +470,7 @@ describe('RF15 · Checkout real de Wompi', () => {
       getMockTransactions()[0].reference,
     );
     expect(app.getPathname()).toBe('/pago/confirmacion');
+    expect(screen.getByText(MSG.RF13.pendingTitle)).toBeTruthy();
     expect(screen.getByText('Botón Bancolombia (vía Wompi)')).toBeTruthy();
     expect(screen.getByText('12345-1759750000-67890')).toBeTruthy();
   });
@@ -476,5 +495,223 @@ describe('RF15 · Checkout real de Wompi', () => {
     expect(screen.getByText(MSG.RF15.statusUnknown)).toBeTruthy();
     expect(getMockTransactions()[0].status).toBe('PENDIENTE');
     expect(app.getPathname()).toBe('/pago/aplicar');
+  });
+});
+
+describe('RF13 · Resultado del pago y comprobante', () => {
+  const Print = jest.requireMock('expo-print') as { printToFileAsync: jest.Mock };
+  const Sharing = jest.requireMock('expo-sharing') as { shareAsync: jest.Mock };
+  const monica = {
+    id: 'u1',
+    name: 'Monica Galvis',
+    initials: 'MG',
+    email: 'monica@gmail.com',
+    phone: '',
+    house: '56',
+    address: '',
+    role: 'residente' as const,
+  };
+
+  /**
+   * Paga $20.000 de administración en la ventana de Wompi simulada con el resultado indicado.
+   * Como con el Wompi real, la app le pide el estado al servidor y abre la Confirmación.
+   */
+  async function payWith(result: 'Aprobado' | 'Rechazado' | 'En proceso' | 'Error', method = 'Nequi') {
+    const app = await openSelectionAsResident();
+    await press(screen.getByText('Cuota administración'));
+    await typeAmount('20000');
+    await press(continuar());
+    await press(pagarConWompi());
+    await press(screen.getByRole('button', { name: method }));
+    await press(screen.getByRole('button', { name: result }));
+    await press(screen.getByRole('button', { name: 'Pagar' }));
+    expect(app.getPathname()).toBe('/pago/confirmacion');
+    return app;
+  }
+
+  const lastReference = () => getMockTransactions().at(-1)!.reference;
+
+  beforeEach(() => {
+    Print.printToFileAsync.mockClear();
+    Sharing.shareAsync.mockClear();
+  });
+
+  it('APPROVED: «Pago exitoso» (MSG-RF13-01) con la tabla de datos reales del servidor', async () => {
+    await payWith('Aprobado');
+
+    expect(screen.getByText(MSG.RF13.approvedTitle)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.approved)).toBeTruthy();
+    expect(screen.getByTestId('icon-checkmark-circle-outline')).toBeTruthy();
+    // Tabla: concepto, valor, fecha «09 sep 2026 - 06:19 p. m.», medio informado por Wompi, referencia e ID Wompi.
+    expect(screen.getByText('Cuota administración')).toBeTruthy();
+    expect(screen.getByText('$ 20.000,00')).toBeTruthy();
+    expect(
+      screen.getByText(/^\d{2} (ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic) \d{4} - \d{2}:\d{2} (a|p)\. m\.$/),
+    ).toBeTruthy();
+    expect(screen.getByText('Nequi (vía Wompi)')).toBeTruthy();
+    expect(screen.getByText(lastReference())).toBeTruthy();
+    expect(screen.getByText('ID Wompi')).toBeTruthy();
+    expect(screen.getByText(/^\d{5}-\d{10}-\d{5}$/)).toBeTruthy();
+    // Botones del pago exitoso.
+    expect(screen.getByRole('button', { name: 'Volver al inicio' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Descargar comprobante' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Intentar de nuevo' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Actualizar estado' })).toBeNull();
+  });
+
+  it('APPROVED descuenta el saldo y «Volver al inicio» lo muestra actualizado', async () => {
+    const app = await payWith('Aprobado');
+
+    await press(screen.getByRole('button', { name: 'Volver al inicio' }));
+
+    expect(app.getPathname()).toBe('/inicio');
+    // $45.678,90 − $20.000 = $25.678,90.
+    expect(screen.getByText('$25.678,90')).toBeTruthy();
+  });
+
+  it('«Descargar comprobante» genera el PDF y muestra MSG-RF13-06', async () => {
+    await payWith('Aprobado');
+
+    await press(screen.getByRole('button', { name: 'Descargar comprobante' }));
+
+    expect(Print.printToFileAsync).toHaveBeenCalledWith({ html: expect.stringContaining(lastReference()) });
+    expect(Sharing.shareAsync).toHaveBeenCalledWith(
+      'file:///cache/comprobante.pdf',
+      expect.objectContaining({ mimeType: 'application/pdf' }),
+    );
+    expect(screen.getByText(MSG.RF13.receiptDownloaded)).toBeTruthy();
+  });
+
+  it('si el comprobante falla, avisa sin salir de la pantalla', async () => {
+    await payWith('Aprobado');
+    Print.printToFileAsync.mockRejectedValueOnce(new Error('sin espacio'));
+
+    await press(screen.getByRole('button', { name: 'Descargar comprobante' }));
+
+    expect(screen.getByText(MSG.RF13.receiptFailed)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.approvedTitle)).toBeTruthy();
+  });
+
+  it('DECLINED: «Pago rechazado» (MSG-RF13-02), sin comprobante y sin descontar el saldo', async () => {
+    const app = await payWith('Rechazado');
+
+    expect(screen.getByText(MSG.RF13.declinedTitle)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.declined)).toBeTruthy();
+    expect(screen.getByTestId('icon-close-circle-outline')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Intentar de nuevo' })).toBeTruthy();
+
+    await press(screen.getByRole('button', { name: 'Volver al inicio' }));
+    expect(app.getPathname()).toBe('/inicio');
+    expect(screen.getByText('$45.678,90')).toBeTruthy();
+  });
+
+  it('ERROR: «No pudimos procesar tu pago» (MSG-RF13-04) con «Intentar de nuevo»', async () => {
+    await payWith('Error');
+
+    expect(screen.getByText(MSG.RF13.errorTitle)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.error)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Intentar de nuevo' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
+  });
+
+  it('«Intentar de nuevo» vuelve a Aplicar con el mismo concepto y valor y crea una referencia nueva', async () => {
+    const app = await payWith('Rechazado');
+    const first = lastReference();
+
+    await press(screen.getByRole('button', { name: 'Intentar de nuevo' }));
+
+    expect(app.getPathname()).toBe('/pago/aplicar');
+    expect(screen.getByText('Cuota administración')).toBeTruthy();
+    expect(screen.getByText('$20.000,00')).toBeTruthy();
+
+    await press(pagarConWompi());
+    await press(screen.getByRole('button', { name: 'Nequi' }));
+    await press(screen.getByRole('button', { name: 'Pagar' }));
+
+    expect(getMockTransactions()).toHaveLength(2);
+    expect(lastReference()).not.toBe(first);
+    expect(getMockTransactions()[1]).toMatchObject({ conceptId: 'administracion', amount: 20000 });
+    expect(screen.getByText(MSG.RF13.approvedTitle)).toBeTruthy();
+  });
+
+  it('PENDING: «Pago en proceso» (MSG-RF13-03) con reloj naranja y «Actualizar estado»', async () => {
+    await payWith('En proceso');
+
+    expect(screen.getByText(MSG.RF13.pendingTitle)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.pending)).toBeTruthy();
+    expect(screen.getByTestId('icon-time-outline')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Actualizar estado' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Intentar de nuevo' })).toBeNull();
+  });
+
+  it('«Actualizar estado» sin cambios muestra MSG-RF13-07 y sigue en proceso', async () => {
+    await payWith('En proceso');
+
+    await press(screen.getByRole('button', { name: 'Actualizar estado' }));
+
+    expect(screen.getByText(MSG.RF13.stillPending)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.pendingTitle)).toBeTruthy();
+  });
+
+  it('«Actualizar estado» cambia a la pantalla correspondiente si Wompi ya respondió', async () => {
+    const app = await payWith('En proceso');
+    setMockWompiStatus(lastReference(), 'APPROVED');
+
+    await press(screen.getByRole('button', { name: 'Actualizar estado' }));
+
+    expect(screen.getByText(MSG.RF13.approvedTitle)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Descargar comprobante' })).toBeTruthy();
+    // El saldo se descontó al aprobarse.
+    await press(screen.getByRole('button', { name: 'Volver al inicio' }));
+    expect(app.getPathname()).toBe('/inicio');
+    expect(screen.getByText('$25.678,90')).toBeTruthy();
+  });
+
+  it('VOIDED: «Pago anulado» (MSG-RF13-05) y el saldo descontado se devuelve', async () => {
+    await payWith('Aprobado');
+    const reference = lastReference();
+    await press(screen.getByRole('button', { name: 'Volver al inicio' }));
+    expect(screen.getByText('$25.678,90')).toBeTruthy();
+
+    // Wompi anula el pago aprobado y el servidor lo concilia (webhook o conciliación, RF15).
+    setMockWompiStatus(reference, 'VOIDED');
+    await act(async () => {
+      await paymentsBackend.checkPaymentStatus(monica, reference);
+    });
+
+    await navigate({ pathname: '/pago/confirmacion', params: { reference } });
+    expect(screen.getByText(MSG.RF13.voidedTitle)).toBeTruthy();
+    expect(screen.getByText(MSG.RF13.voided)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
+
+    await press(screen.getByRole('button', { name: 'Volver al inicio' }));
+    expect(screen.getByText('$45.678,90')).toBeTruthy();
+  });
+
+  it('nunca toma el estado de la ventana: lo pide al servidor y muestra lo que este responde', async () => {
+    jest.spyOn(paymentsBackend, 'checkPaymentStatus');
+    jest.spyOn(paymentsBackend, 'getPaymentResult');
+
+    await payWith('Aprobado');
+
+    expect(paymentsBackend.checkPaymentStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'monica@gmail.com' }),
+      lastReference(),
+    );
+    expect(paymentsBackend.getPaymentResult).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'monica@gmail.com' }),
+      lastReference(),
+    );
+  });
+
+  it('si el pago no existe, lo informa y permite volver al inicio', async () => {
+    await signInResident();
+
+    await navigate({ pathname: '/pago/confirmacion', params: { reference: 'CNV-NO-EXISTE' } });
+
+    expect(screen.getByText(MSG.RF13.notFound)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Volver al inicio' })).toBeTruthy();
   });
 });

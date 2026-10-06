@@ -20,9 +20,14 @@ const mockRpc = jest.fn((name: string, _args?: unknown) => {
 let invokeResult: RpcResult = { data: null, error: null };
 const mockInvoke = jest.fn(async (_name: string, _options?: unknown) => invokeResult);
 
+// RF13: lectura de transacciones_pago (from → select → eq → maybeSingle).
+let tableResult: RpcResult = { data: null, error: null };
+const mockEq = jest.fn((_column: string, _value: string) => ({ maybeSingle: async () => tableResult }));
+const mockFrom = jest.fn((_table: string) => ({ select: (_columns: string) => ({ eq: mockEq }) }));
+
 jest.mock('@/lib/supabase', () => ({
   isSupabaseEnabled: true,
-  getSupabase: () => ({ rpc: mockRpc, functions: { invoke: mockInvoke } }),
+  getSupabase: () => ({ rpc: mockRpc, functions: { invoke: mockInvoke }, from: mockFrom }),
 }));
 
 const user = {
@@ -189,5 +194,53 @@ describe('Pagos con Supabase · integración con Wompi (RF15)', () => {
     invokeResult = { data: null, error };
 
     await expect(supabasePayments.checkPaymentStatus(user, 'CNV-56-1')).rejects.toBe(error);
+  });
+});
+
+describe('Pagos con Supabase · resultado del pago (RF13)', () => {
+  it('lee el pago de transacciones_pago con el nombre del concepto', async () => {
+    tableResult = {
+      data: {
+        referencia: 'CNV-56-1',
+        estado: 'APROBADA',
+        concepto_id: 'administracion',
+        descripcion: null,
+        monto: '20000.00',
+        medio_pago: 'NEQUI',
+        wompi_id: '12211851-1791244176-40978',
+        created_at: '2026-10-05T23:49:00Z',
+        conceptos_pago: { nombre: 'Cuota administración' },
+      },
+      error: null,
+    };
+
+    const result = await supabasePayments.getPaymentResult(user, 'CNV-56-1');
+
+    expect(mockFrom).toHaveBeenCalledWith('transacciones_pago');
+    expect(mockEq).toHaveBeenCalledWith('referencia', 'CNV-56-1');
+    expect(result).toEqual({
+      reference: 'CNV-56-1',
+      status: 'APROBADA',
+      conceptId: 'administracion',
+      conceptName: 'Cuota administración',
+      description: null,
+      amount: 20000,
+      method: 'NEQUI',
+      wompiId: '12211851-1791244176-40978',
+      date: '2026-10-05T23:49:00Z',
+    });
+  });
+
+  it('devuelve null si el pago no existe o no es de la unidad (RLS)', async () => {
+    tableResult = { data: null, error: null };
+
+    expect(await supabasePayments.getPaymentResult(user, 'CNV-OTRA')).toBeNull();
+  });
+
+  it('propaga el error de la base de datos', async () => {
+    const error = new Error('permission denied');
+    tableResult = { data: null, error };
+
+    await expect(supabasePayments.getPaymentResult(user, 'CNV-56-1')).rejects.toBe(error);
   });
 });
