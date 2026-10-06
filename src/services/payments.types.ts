@@ -49,6 +49,24 @@ export type PaymentCheckout = {
   signature: string;
   /** Llave pública de Wompi del conjunto (la única llave que llega a la app). */
   publicKey: string;
+  /**
+   * RF15: dirección del checkout real de Wompi con estos datos. Sin ella (modo simulado) la app
+   * muestra la ventana de Wompi simulada.
+   */
+  checkoutUrl?: string;
+};
+
+/** Estados de la transacción en Convive (los finales los confirma Wompi). */
+export type PaymentStatusCode = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'ERROR' | 'ANULADA' | 'CANCELADA';
+
+/** RF15: estado de un pago después de consultarlo en el API de Wompi. */
+export type PaymentStatus = {
+  /** false si Wompi aún no tiene ninguna transacción con esa referencia (la persona no pagó). */
+  inWompi: boolean;
+  status: PaymentStatusCode | null;
+  /** Medio que usó la persona en Wompi (payment_method_type). */
+  method?: string;
+  wompiId?: string;
 };
 
 /**
@@ -80,6 +98,8 @@ export type PaymentsBackend = {
   startPayment(user: User, input: PaymentInput): Promise<PaymentCheckout>;
   /** RF12: la persona cerró la ventana de Wompi sin pagar (MSG-RF12-02). */
   cancelPayment(user: User, reference: string): Promise<void>;
+  /** RF15: consulta en Wompi el estado del pago y lo aplica en el servidor. */
+  checkPaymentStatus(user: User, reference: string): Promise<PaymentStatus>;
 };
 
 /** Suma en centavos para no acumular errores de punto flotante (0,1 + 0,2). */

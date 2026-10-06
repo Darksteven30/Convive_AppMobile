@@ -13,6 +13,7 @@ import {
   type PaymentCheckout,
   type PaymentGateway,
   type PaymentInput,
+  type PaymentStatus,
   type PaymentsBackend,
 } from '@/services/payments.types';
 import { validatePaymentSelection } from '@/services/payments.validation';
@@ -174,10 +175,18 @@ export async function cancelPayment(user: User, reference: string): Promise<void
   );
 }
 
+/** En modo simulado no hay Wompi real: el pago sigue como lo dejó la ventana simulada. */
+export async function checkPaymentStatus(user: User, reference: string): Promise<PaymentStatus> {
+  await simulateNetwork(0.5);
+  const transaction = transactions.find((item) => item.reference === reference && item.house === user.house);
+  return { inWompi: false, status: transaction?.status ?? null };
+}
+
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
 export const paymentsBackend = {
   getAccountStatus,
   getPaymentGateway,
   startPayment,
   cancelPayment,
+  checkPaymentStatus,
 } satisfies PaymentsBackend;

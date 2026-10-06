@@ -15,6 +15,8 @@ export {
   type PaymentErrorCode,
   type PaymentGateway,
   type PaymentInput,
+  type PaymentStatus,
+  type PaymentStatusCode,
   type WompiMethod,
 } from '@/services/payments.types';
 export {
@@ -34,11 +36,16 @@ export {
 
 const backend: PaymentsBackend = isSupabaseEnabled ? supabaseBackend : mockBackend;
 
+/** RF15: con Supabase el pago se hace en el checkout real de Wompi; sin él, en la ventana simulada. */
+export const usesRealCheckout = isSupabaseEnabled;
+
 export const getAccountStatus: PaymentsBackend['getAccountStatus'] = (...args) => backend.getAccountStatus(...args);
 export const getPaymentGateway: PaymentsBackend['getPaymentGateway'] = (...args) =>
   backend.getPaymentGateway(...args);
 export const startPayment: PaymentsBackend['startPayment'] = (...args) => backend.startPayment(...args);
 export const cancelPayment: PaymentsBackend['cancelPayment'] = (...args) => backend.cancelPayment(...args);
+export const checkPaymentStatus: PaymentsBackend['checkPaymentStatus'] = (...args) =>
+  backend.checkPaymentStatus(...args);
 
 /** Nombre de cada medio de Wompi para los chips y el comprobante. */
 export const WOMPI_METHOD_LABELS: Record<WompiMethod, string> = {
