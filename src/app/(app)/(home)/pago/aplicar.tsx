@@ -19,6 +19,7 @@ import {
   cancelPayment,
   checkPaymentStatus,
   getPaymentGateway,
+  simulateWompiPayment,
   startPayment,
   usesRealCheckout,
   type PaymentCheckout,
@@ -66,11 +67,12 @@ export default function PagoAplicarScreen() {
     };
   }, [user]);
 
-  const goToConfirmation = (params: { method: string; reference: string; wompiId: string }) =>
-    router.replace({ pathname: '/pago/confirmacion', params: { conceptName, amount: String(value), ...params } });
+  // RF13: la Confirmación lee el pago del servidor; solo se le pasa la referencia.
+  const goToConfirmation = (reference: string) =>
+    router.replace({ pathname: '/pago/confirmacion', params: { reference } });
 
   // RF15: al volver de Wompi se pregunta al servidor qué pasó (el estado nunca se toma del navegador).
-  const verifyRealPayment = async (created: PaymentCheckout) => {
+  const verifyPayment = async (created: PaymentCheckout) => {
     if (!user) return;
     setStarting(true);
     try {
@@ -81,7 +83,7 @@ export default function PagoAplicarScreen() {
         showToast('info', MSG.RF12.cancelled);
         return;
       }
-      goToConfirmation({ method: result.method ?? '', reference: created.reference, wompiId: result.wompiId ?? '' });
+      goToConfirmation(created.reference);
     } catch {
       // La conciliación automática (cada 15 min) lo resolverá aunque ahora no se pueda consultar.
       showToast('info', MSG.RF15.statusUnknown);
@@ -94,13 +96,13 @@ export default function PagoAplicarScreen() {
     if (Platform.OS !== 'web') {
       // Navegador dentro de la app: la promesa termina cuando la persona lo cierra.
       await WebBrowser.openBrowserAsync(url);
-      await verifyRealPayment(created);
+      await verifyPayment(created);
       return;
     }
     const askWhenFinished = () =>
       showDialog({
         message: MSG.RF15.finishInWompi,
-        actions: [{ label: 'Ya terminé', primary: true, onPress: () => verifyRealPayment(created) }],
+        actions: [{ label: 'Ya terminé', primary: true, onPress: () => verifyPayment(created) }],
       });
     if (tab) {
       tab.location.href = url;
@@ -166,11 +168,14 @@ export default function PagoAplicarScreen() {
     showToast('info', MSG.RF12.cancelled);
   };
 
-  // Terminó en Wompi: la transacción sigue PENDIENTE hasta que el servidor confirme el estado (RF13).
-  const completeCheckout = ({ method, wompiId }: WompiResult) => {
-    const reference = checkout?.reference ?? '';
+  // Terminó en la ventana simulada: queda registrado «en Wompi» y, como con el Wompi real, el estado
+  // se le pide al servidor (nunca se toma de la ventana).
+  const completeCheckout = ({ method, wompiId, status }: WompiResult) => {
+    if (!checkout) return;
+    const created = checkout;
+    simulateWompiPayment(created.reference, { id: wompiId, method, status });
     setCheckout(null);
-    goToConfirmation({ method, reference, wompiId });
+    verifyPayment(created);
   };
 
   return (
