@@ -30,7 +30,7 @@ async function typeAmount(text: string) {
   await fireEvent.changeText(valor(), text);
 }
 
-/** Residente de la casa 56 con saldo: administración $35.000, extraordinaria sin saldo y otros $10.678,90. */
+/** Residente de la casa 56 con saldo: administración $ 35.000, extraordinaria sin saldo y otros $ 10.678,90. */
 async function signInResident() {
   const app = await renderSignedIn('monica@gmail.com', 'Residente123');
   setMockBalance('56', 'administracion', 35000);
@@ -53,7 +53,7 @@ describe('Flujo de pago', () => {
   it('completa el pago con un abono parcial: concepto y valor → Wompi → confirmación', async () => {
     const app = await openSelectionAsResident();
     expect(screen.getByText('Efectuar pago')).toBeTruthy();
-    expect(screen.getByText('$45.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
 
     // Paso 1: no se puede continuar sin elegir concepto.
     expect(continuar()).toBeDisabled();
@@ -70,7 +70,7 @@ describe('Flujo de pago', () => {
     // Paso 2: resumen con el concepto y el valor elegidos (no el saldo total).
     expect(app.getPathname()).toBe('/pago/aplicar');
     expect(screen.getByText('Cuota administración')).toBeTruthy();
-    expect(screen.getByText('$20.000,50')).toBeTruthy();
+    expect(screen.getByText('$ 20.000,50')).toBeTruthy();
     await press(pagarConWompi());
     await press(screen.getByRole('button', { name: 'Nequi' }));
     await press(screen.getByRole('button', { name: 'Pagar' }));
@@ -115,10 +115,14 @@ describe('Flujo de pago', () => {
     await signInResident();
 
     await press(screen.getByText('Pagos'));
-    expect(screen.getByText('$45.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
     expect(screen.getByText('Historial de pagos')).toBeTruthy();
     expect(screen.getByText('Ago 2026 — Cuota admón.')).toBeTruthy();
     expect(screen.getByText('Jun 2026 — Cuota admón.')).toBeTruthy();
+
+    // Toast en lugar de Alert.alert, que no se ve en web.
+    await press(screen.getByText('Descargar comprobante'));
+    expect(screen.getByTestId('toast-info')).toHaveTextContent('La descarga estará disponible próximamente.');
   });
 });
 
@@ -126,9 +130,9 @@ describe('RF11 · Selección del concepto de pago', () => {
   it('muestra el saldo pendiente debajo de cada concepto', async () => {
     await openSelectionAsResident();
 
-    expect(screen.getByText('Saldo pendiente: $35.000,00')).toBeTruthy();
+    expect(screen.getByText('Saldo pendiente: $ 35.000,00')).toBeTruthy();
     expect(screen.getByText('Sin saldo pendiente')).toBeTruthy();
-    expect(screen.getByText('Saldo pendiente: $10.678,90')).toBeTruthy();
+    expect(screen.getByText('Saldo pendiente: $ 10.678,90')).toBeTruthy();
   });
 
   it('el estado de la cuenta y los saldos salen del servicio, no de una constante', async () => {
@@ -136,7 +140,7 @@ describe('RF11 · Selección del concepto de pago', () => {
     setMockBalance('56', 'administracion', 0);
 
     await press(screen.getByText('Pagos'));
-    expect(screen.getByText('$10.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 10.678,90')).toBeTruthy();
 
     await press(screen.getByText('Abonar'));
     expect(screen.getAllByText('Sin saldo pendiente')).toHaveLength(2);
@@ -163,6 +167,20 @@ describe('RF11 · Selección del concepto de pago', () => {
     await typeAmount('');
     expect(screen.getByText(MSG.RF11.amountInvalid)).toBeTruthy();
     expect(continuar()).toBeDisabled();
+  });
+
+  it('no deja continuar con menos de $ 1.500, el mínimo que acepta Wompi', async () => {
+    const app = await openSelectionAsResident();
+    await press(screen.getByText('Cuota administración'));
+
+    await typeAmount('1000');
+    expect(screen.getByText('El valor mínimo para pagar en línea es $ 1.500,00.')).toBeTruthy();
+    expect(continuar()).toBeDisabled();
+
+    await typeAmount('1500');
+    expect(screen.queryByText(MSG.RF11.amountBelowMinimum('$ 1.500,00'))).toBeNull();
+    await press(continuar());
+    expect(app.getPathname()).toBe('/pago/aplicar');
   });
 
   it('MSG-RF11-03: el valor no puede superar el saldo del concepto', async () => {
@@ -198,7 +216,7 @@ describe('RF11 · Selección del concepto de pago', () => {
     await press(continuar());
     expect(app.getPathname()).toBe('/pago/aplicar');
     expect(screen.getByText('Cuota extraordinaria')).toBeTruthy();
-    expect(screen.getByText('$50.000,00')).toBeTruthy();
+    expect(screen.getByText('$ 50.000,00')).toBeTruthy();
   });
 
   it('«Otros conceptos» pide una descripción de 5 a 100 caracteres y la pasa a Aplicar', async () => {
@@ -220,7 +238,7 @@ describe('RF11 · Selección del concepto de pago', () => {
     expect(app.getPathname()).toBe('/pago/aplicar');
     expect(screen.getByText('Otros conceptos')).toBeTruthy();
     expect(screen.getByText('Parqueadero de visitantes')).toBeTruthy();
-    expect(screen.getByText('$10.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 10.678,90')).toBeTruthy();
   });
 
   it('MSG-RF11-05: si la unidad está al día muestra el estado vacío y deja pagar otros valores', async () => {
@@ -229,7 +247,7 @@ describe('RF11 · Selección del concepto de pago', () => {
     await navigate('/inicio');
     await press(screen.getByText('Abonar'));
 
-    expect(screen.getByText('$0,00')).toBeTruthy();
+    expect(screen.getByText('$ 0,00')).toBeTruthy();
     expect(screen.getByText(MSG.RF11.upToDateTitle)).toBeTruthy();
     expect(screen.getByText(MSG.RF11.upToDateMessage)).toBeTruthy();
     expect(screen.getAllByText('Sin saldo pendiente')).toHaveLength(3);
@@ -263,12 +281,12 @@ describe('RF11 · Selección del concepto de pago', () => {
     spy.mockImplementation(original);
     await press(screen.getByRole('button', { name: 'Reintentar' }));
     expect(screen.getByText('Seleccione el concepto')).toBeTruthy();
-    expect(screen.getByText('$45.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
   });
 });
 
 describe('RF12 · Pago a través de la pasarela Wompi', () => {
-  /** Abre «Aplicar» con la cuota de administración completa ($35.000). setup prepara Wompi antes de entrar. */
+  /** Abre «Aplicar» con la cuota de administración completa ($ 35.000). setup prepara Wompi antes de entrar. */
   async function openApplyAsResident(setup?: () => void) {
     const app = await openSelectionAsResident();
     setup?.();
@@ -304,7 +322,7 @@ describe('RF12 · Pago a través de la pasarela Wompi', () => {
     expect(transaction).toMatchObject({ conceptId: 'administracion', amountInCents: 3500000, status: 'PENDIENTE' });
     expect(screen.getByText('Wompi')).toBeTruthy();
     expect(screen.getByText(`Referencia ${transaction.reference}`)).toBeTruthy();
-    expect(screen.getAllByText('$35.000,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$ 35.000,00').length).toBeGreaterThan(0);
     // El valor solo se muestra: no hay campo para cambiarlo y el medio se elige dentro de Wompi.
     expect(screen.queryByLabelText('Valor a pagar')).toBeNull();
     expect(screen.getByRole('button', { name: 'Pagar' })).toBeDisabled();
@@ -513,7 +531,7 @@ describe('RF13 · Resultado del pago y comprobante', () => {
   };
 
   /**
-   * Paga $20.000 de administración en la ventana de Wompi simulada con el resultado indicado.
+   * Paga $ 20.000 de administración en la ventana de Wompi simulada con el resultado indicado.
    * Como con el Wompi real, la app le pide el estado al servidor y abre la Confirmación.
    */
   async function payWith(result: 'Aprobado' | 'Rechazado' | 'En proceso' | 'Error', method = 'Nequi') {
@@ -565,8 +583,8 @@ describe('RF13 · Resultado del pago y comprobante', () => {
     await press(screen.getByRole('button', { name: 'Volver al inicio' }));
 
     expect(app.getPathname()).toBe('/inicio');
-    // $45.678,90 − $20.000 = $25.678,90.
-    expect(screen.getByText('$25.678,90')).toBeTruthy();
+    // $ 45.678,90 − $ 20.000 = $ 25.678,90.
+    expect(screen.getByText('$ 25.678,90')).toBeTruthy();
   });
 
   it('«Descargar comprobante» genera el PDF y muestra MSG-RF13-06', async () => {
@@ -600,10 +618,13 @@ describe('RF13 · Resultado del pago y comprobante', () => {
     expect(screen.getByTestId('icon-close-circle-outline')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Intentar de nuevo' })).toBeTruthy();
+    // No se cobró nada: el detalle no dice «Valor pagado».
+    expect(screen.getByText('Valor')).toBeTruthy();
+    expect(screen.queryByText('Valor pagado')).toBeNull();
 
     await press(screen.getByRole('button', { name: 'Volver al inicio' }));
     expect(app.getPathname()).toBe('/inicio');
-    expect(screen.getByText('$45.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
   });
 
   it('ERROR: «No pudimos procesar tu pago» (MSG-RF13-04) con «Intentar de nuevo»', async () => {
@@ -623,7 +644,7 @@ describe('RF13 · Resultado del pago y comprobante', () => {
 
     expect(app.getPathname()).toBe('/pago/aplicar');
     expect(screen.getByText('Cuota administración')).toBeTruthy();
-    expect(screen.getByText('$20.000,00')).toBeTruthy();
+    expect(screen.getByText('$ 20.000,00')).toBeTruthy();
 
     await press(pagarConWompi());
     await press(screen.getByRole('button', { name: 'Nequi' }));
@@ -666,14 +687,14 @@ describe('RF13 · Resultado del pago y comprobante', () => {
     // El saldo se descontó al aprobarse.
     await press(screen.getByRole('button', { name: 'Volver al inicio' }));
     expect(app.getPathname()).toBe('/inicio');
-    expect(screen.getByText('$25.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 25.678,90')).toBeTruthy();
   });
 
   it('VOIDED: «Pago anulado» (MSG-RF13-05) y el saldo descontado se devuelve', async () => {
     await payWith('Aprobado');
     const reference = lastReference();
     await press(screen.getByRole('button', { name: 'Volver al inicio' }));
-    expect(screen.getByText('$25.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 25.678,90')).toBeTruthy();
 
     // Wompi anula el pago aprobado y el servidor lo concilia (webhook o conciliación, RF15).
     setMockWompiStatus(reference, 'VOIDED');
@@ -687,7 +708,7 @@ describe('RF13 · Resultado del pago y comprobante', () => {
     expect(screen.queryByRole('button', { name: 'Descargar comprobante' })).toBeNull();
 
     await press(screen.getByRole('button', { name: 'Volver al inicio' }));
-    expect(screen.getByText('$45.678,90')).toBeTruthy();
+    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
   });
 
   it('nunca toma el estado de la ventana: lo pide al servidor y muestra lo que este responde', async () => {
