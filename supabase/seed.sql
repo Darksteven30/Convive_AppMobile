@@ -71,3 +71,42 @@ select c.id, 'sandbox', array['CARD', 'PSE', 'NEQUI', 'BANCOLOMBIA_TRANSFER', 'D
   from public.conjuntos c
  where c.nombre = 'Conjunto Residencial Convive'
 on conflict (conjunto_id) do nothing;
+
+-- ---------------------------------------------------------------------------------------------
+-- RF02 · Historial de pagos de ejemplo (requiere 20261005000000_pago_wompi.sql)
+-- Casa 56 (monica): la cuota de administración de los últimos 16 meses, una cuota extraordinaria
+-- y dos pagos de «Otros conceptos», todos APROBADOS. Son pagos de meses anteriores: no cambian la
+-- cartera de arriba. Las fechas se calculan desde hoy, así que el filtro por defecto (últimos 12
+-- meses) siempre muestra más de 12 pagos y aparece «Ver más». Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+with base as (
+  select date_trunc('month', now() at time zone 'America/Bogota') as mes
+),
+historial (concepto_id, descripcion, monto, meses, dia, sufijo, medio) as (
+  select 'administracion', null::text, 35000.00::numeric(18, 2), n, interval '4 days 10 hours', 'ADM',
+         (array['NEQUI', 'CARD', 'PSE', 'DAVIPLATA'])[1 + n % 4]
+    from generate_series(1, 16) as n
+  union all
+  values
+    ('extraordinaria', null, 120000.00, 7, interval '14 days 15 hours', 'EXT', 'PSE'),
+    ('otros', 'Parqueadero de visitantes', 15000.00, 3, interval '19 days 9 hours', 'OTR', 'NEQUI'),
+    ('otros', 'Copia de la llave de la piscina', 8500.00, 1, interval '11 days 17 hours', 'LLV', 'CARD')
+),
+pagos as (
+  select h.*,
+         (base.mes - make_interval(months => h.meses) + h.dia) at time zone 'America/Bogota' as fecha,
+         to_char(base.mes - make_interval(months => h.meses), 'YYYYMM') || '-' || h.sufijo as codigo
+    from historial h, base
+)
+insert into public.transacciones_pago
+  (unidad_id, concepto_id, descripcion, monto, monto_centavos, moneda, referencia, firma, estado,
+   wompi_id, medio_pago, creada_por, created_at, updated_at)
+select u.id, pg.concepto_id, pg.descripcion, pg.monto, (pg.monto * 100)::bigint, 'COP',
+       'CNV-56-SEED-' || pg.codigo, 'seed', 'APROBADA', 'seed-56-' || pg.codigo, pg.medio, p.id,
+       pg.fecha, pg.fecha
+  from pagos pg
+  join public.unidades u on u.nombre = '56'
+  join public.conjuntos c on c.id = u.conjunto_id and c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles p on p.email = 'monica@gmail.com'
+on conflict (referencia) do nothing;
