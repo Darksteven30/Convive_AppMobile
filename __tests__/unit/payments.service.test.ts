@@ -17,6 +17,7 @@ import {
   startPayment,
   toCents,
   validatePaymentSelection,
+  WOMPI_MIN_AMOUNT,
   type MockWompiStatus,
   type PaymentConcept,
 } from '@/services/payments.service';
@@ -78,7 +79,7 @@ describe('validatePaymentSelection (RF11)', () => {
 
   it('acepta el saldo completo o un abono parcial', () => {
     expect(validate({})).toEqual({});
-    expect(validate({ amount: 0.01 })).toEqual({});
+    expect(validate({ amount: 1500 })).toEqual({});
     expect(validate({ amount: 20000.5 })).toEqual({});
   });
 
@@ -103,13 +104,23 @@ describe('validatePaymentSelection (RF11)', () => {
     );
   });
 
-  it('un concepto sin saldo acepta cualquier valor mayor a 0', () => {
+  it('Wompi no acepta menos de $ 1.500: lo avisa antes de abrir la pasarela', () => {
+    expect(WOMPI_MIN_AMOUNT).toBe(1500);
+    expect(validate({ amount: 1499.99 }).amount).toBe('El valor mínimo para pagar en línea es $ 1.500,00.');
+    expect(validate({ amount: 1 }).amount).toBe(MSG.RF11.amountBelowMinimum('$ 1.500,00'));
+    expect(validate({ conceptId: 'extraordinaria', amount: 1000 }).amount).toBe(
+      MSG.RF11.amountBelowMinimum('$ 1.500,00'),
+    );
+    expect(validate({ amount: 1500 })).toEqual({});
+  });
+
+  it('un concepto sin saldo acepta cualquier valor desde el mínimo', () => {
     expect(validate({ conceptId: 'extraordinaria', amount: 50000 })).toEqual({});
     expect(validate({ conceptId: 'extraordinaria', amount: 0 }).amount).toBe(MSG.RF11.amountInvalid);
   });
 
   it('«Otros conceptos» pide una descripción de 5 a 100 caracteres', () => {
-    const otros = (description: string) => validate({ conceptId: 'otros', amount: 1000, description });
+    const otros = (description: string) => validate({ conceptId: 'otros', amount: 2000, description });
 
     expect(otros('').description).toBe(MSG.RF11.descriptionLength);
     expect(otros('  abc  ').description).toBe(MSG.RF11.descriptionLength);
@@ -129,6 +140,12 @@ describe('validatePaymentSelection (RF11)', () => {
 describe('RF12 · Pago con Wompi (simulado)', () => {
   const monica = resident('56');
   const payAdmin = (amount = 35000) => startPayment(monica, { conceptId: 'administracion', amount });
+
+  it('el servicio rechaza un pago por debajo del mínimo sin crear la transacción', async () => {
+    await expect(payAdmin(1000)).rejects.toMatchObject({ code: 'invalid' });
+    // El mismo concepto se puede pagar de inmediato: no quedó ningún pago PENDIENTE.
+    await expect(payAdmin(1500)).resolves.toBeTruthy();
+  });
 
   it('informa los medios habilitados en la cuenta Wompi del conjunto', async () => {
     expect(await getPaymentGateway(monica)).toEqual({
@@ -168,7 +185,7 @@ describe('RF12 · Pago con Wompi (simulado)', () => {
   it('MSG-RF12-03: no permite un segundo pago del mismo concepto mientras haya uno PENDIENTE', async () => {
     const first = await payAdmin();
 
-    const error = await payAdmin(1000).catch((e: unknown) => e);
+    const error = await payAdmin(2000).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(PaymentError);
     expect(error).toMatchObject({ code: 'pending', transactionId: first.transactionId });
 
@@ -298,7 +315,7 @@ describe('RF13 · Estado del pago y saldo (simulado)', () => {
   });
 
   it('si Wompi no tiene el pago, informa que no está en Wompi', async () => {
-    const checkout = await startPayment(monica, { conceptId: 'administracion', amount: 1000 });
+    const checkout = await startPayment(monica, { conceptId: 'administracion', amount: 2000 });
 
     expect(await checkPaymentStatus(monica, checkout.reference)).toEqual({ inWompi: false, status: 'PENDIENTE' });
   });

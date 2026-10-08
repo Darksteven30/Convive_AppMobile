@@ -7,6 +7,8 @@ import { formatAmount } from '@/utils/money';
 
 export const DESCRIPTION_MIN = 5;
 export const DESCRIPTION_MAX = 100;
+/** Wompi rechaza transacciones de menos de $ 1.500 COP; iniciar_pago() aplica la misma regla. */
+export const WOMPI_MIN_AMOUNT = 1500;
 
 export type PaymentSelection = {
   conceptId: string | null;
@@ -21,6 +23,7 @@ export type SelectionErrors = Partial<Record<'concept' | 'amount' | 'description
 /**
  * Reglas de RF11: concepto obligatorio y del catálogo; valor > 0 y, si el concepto tiene saldo
  * pendiente, ≤ saldo. Un concepto sin saldo acepta cualquier valor > 0 (p. ej. una cuota extra).
+ * En todos los casos, al menos WOMPI_MIN_AMOUNT: la pasarela no acepta menos.
  */
 export function validatePaymentSelection(input: PaymentSelection, concepts: PaymentConcept[]): SelectionErrors {
   const concept = concepts.find((item) => item.id === input.conceptId);
@@ -31,6 +34,8 @@ export function validatePaymentSelection(input: PaymentSelection, concepts: Paym
   const errors: SelectionErrors = {};
   if (input.amount == null || !(input.amount > 0)) {
     errors.amount = MSG.RF11.amountInvalid;
+  } else if (toCents(input.amount) < toCents(WOMPI_MIN_AMOUNT)) {
+    errors.amount = MSG.RF11.amountBelowMinimum(formatAmount(WOMPI_MIN_AMOUNT));
   } else if (concept.balance > 0 && toCents(input.amount) > toCents(concept.balance)) {
     errors.amount = MSG.RF11.amountAboveBalance(formatAmount(concept.balance));
   }
