@@ -25,6 +25,7 @@ const admin: User = {
   phone: '',
   house: '',
   address: '',
+  complex: '',
   role: 'administrador',
 };
 

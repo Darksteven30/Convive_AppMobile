@@ -1,11 +1,5 @@
 // Datos de ejemplo para la maqueta. Se reemplazarán por llamadas al backend.
 
-export const paymentHistory = [
-  { id: '2026-08', label: 'Ago 2026 — Cuota admón.' },
-  { id: '2026-07', label: 'Jul 2026 — Cuota admón.' },
-  { id: '2026-06', label: 'Jun 2026 — Cuota admón.' },
-];
-
 export const news = [
   { id: 'n1', title: 'Mantenimiento de ascensor' },
   { id: 'n2', title: 'Asamblea general' },

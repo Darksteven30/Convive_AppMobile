@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { SegmentedTabs } from '@/components/layout/SegmentedTabs';
-import { BalanceCard } from '@/components/ui/BalanceCard';
+import { AccountStatusCard } from '@/components/payments/AccountStatusCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { hasPermission } from '@/constants/permissions';
@@ -16,7 +16,7 @@ import { useAccountStatus } from '@/hooks/useAccountStatus';
 export default function InicioScreen() {
   const { role } = useSession();
   const canPay = hasPermission(role, 'pagos');
-  const { status, loading } = useAccountStatus(canPay);
+  const account = useAccountStatus(canPay);
 
   return (
     <Screen
@@ -27,10 +27,14 @@ export default function InicioScreen() {
         </>
       }
     >
+      {/* RF02: mismo «Estado de la cuenta» que en Pagos. */}
       {canPay && (
-        <BalanceCard amount={status?.total ?? null} loading={loading}>
-          <Button label="Abonar" variant="outline" pill onPress={() => router.push('/pago/seleccion')} />
-        </BalanceCard>
+        <AccountStatusCard
+          status={account.status}
+          loading={account.loading}
+          failed={account.failed}
+          onRetry={account.reload}
+        />
       )}
 
       <Card title="Acceso rápido">

@@ -1,7 +1,8 @@
-// Pagos con Supabase (RF11, RF12 y RF15). Cumple el mismo contrato que el servicio simulado
+// Pagos con Supabase (RF02, RF11, RF12 y RF15). Cumple el mismo contrato que el servicio simulado
 // (payments.types.ts). El esquema y las funciones están en supabase/migrations:
 // 20261004000000_seleccion_concepto_pago.sql (estado de la cuenta) y 20261005000000_pago_wompi.sql
-// (transacciones, referencia y firma); el estado lo consulta la Edge Function wompi-estado (RF15).
+// (transacciones, referencia y firma), 20261009000000_estado_cuenta.sql (historial de pagos); el
+// estado lo consulta la Edge Function wompi-estado (RF15).
 // La unidad sale de la sesión en el servidor (auth.uid()), no del usuario que envía la app.
 
 import { getSupabase } from '@/lib/supabase';
@@ -11,6 +12,7 @@ import {
   type AccountStatus,
   type PaymentCheckout,
   type PaymentGateway,
+  type PaymentHistoryFilters,
   type PaymentInput,
   type PaymentResult,
   type PaymentStatus,
@@ -166,6 +168,34 @@ export async function getPaymentResult(_user: unknown, reference: string): Promi
   };
 }
 
+/** Fila de mi_historial_pagos() (RF02): pagos APROBADOS de la unidad de la sesión. */
+type HistoryRow = {
+  referencia: string;
+  concepto_id: string;
+  concepto: string;
+  descripcion: string | null;
+  monto: number | string;
+  medio_pago: string | null;
+  wompi_id: string | null;
+  fecha: string;
+};
+
+export async function getPaymentHistory(_user: unknown, filters: PaymentHistoryFilters): Promise<PaymentResult[]> {
+  const { data, error } = await getSupabase().rpc('mi_historial_pagos', { p_desde: filters.from, p_hasta: filters.to });
+  if (error) throw error;
+  return ((data ?? []) as HistoryRow[]).map((row) => ({
+    reference: row.referencia,
+    status: 'APROBADA',
+    conceptId: row.concepto_id,
+    conceptName: row.concepto,
+    description: row.descripcion,
+    amount: Number(row.monto),
+    method: row.medio_pago,
+    wompiId: row.wompi_id,
+    date: row.fecha,
+  }));
+}
+
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
 export const paymentsBackend = {
   getAccountStatus,
@@ -174,4 +204,5 @@ export const paymentsBackend = {
   cancelPayment,
   checkPaymentStatus,
   getPaymentResult,
+  getPaymentHistory,
 } satisfies PaymentsBackend;

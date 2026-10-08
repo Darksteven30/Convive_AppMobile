@@ -20,6 +20,14 @@ export const MSG = {
     passwordsDontMatch: 'Las contraseñas no coinciden.',
     socialUnavailable: 'El inicio de sesión con Google y Apple estará disponible próximamente.',
   },
+  RF02: {
+    noPayments: 'Aún no tienes pagos registrados.', // MSG-RF02-01
+    startAfterEnd: 'La fecha inicial no puede ser mayor que la fecha final.', // MSG-RF02-02
+    receiptDownloaded: 'Comprobante descargado. Lo encuentras en tu carpeta de descargas.', // MSG-RF02-03
+    receiptFailed: 'No pudimos generar el comprobante, intenta de nuevo.', // MSG-RF02-04
+    loadFailed: 'No pudimos cargar tu estado de cuenta.', // MSG-RF02-05 (con «Reintentar»)
+    upToDate: 'Estás al día', // Tarjeta «Estado de la cuenta» con saldo $ 0
+  },
   RF03: {
     saved: 'Movimiento registrado correctamente.', // MSG-RF03-01
     amountInvalid: 'Ingresa un monto mayor a $ 0.', // MSG-RF03-02

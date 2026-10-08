@@ -1,4 +1,4 @@
-// RF13 · Comprobante de pago en PDF. Solo existe para pagos APROBADOS.
+// RF02 y RF13 · Comprobante de pago en PDF. Solo existe para pagos APROBADOS.
 // - Celular: el PDF se genera con expo-print a partir de HTML y se abre en la hoja de compartir.
 // - Web: se imprime desde una ventana nueva («Guardar como PDF»).
 // Mismo enfoque que la exportación de reportes (report-export.service.ts).
@@ -41,9 +41,24 @@ export function receiptFileName(result: PaymentResult): string {
   return `comprobante_${result.reference}.pdf`;
 }
 
+/** Quién pagó: lo que el comprobante agrega a la tabla de la pantalla (RF02). */
+export type ReceiptOwner = Pick<User, 'name' | 'address' | 'complex'>;
+
+/** Logo de Convive (una casa) en línea, para que el PDF no dependa de archivos externos. */
+const LOGO_SVG =
+  '<svg class="logo" viewBox="0 0 48 48" width="44" height="44" role="img" aria-label="Convive">' +
+  '<rect width="48" height="48" rx="12" fill="#0F766E"/>' +
+  '<path d="M12 24 24 13l12 11v12a2 2 0 0 1-2 2h-6v-8h-8v8h-6a2 2 0 0 1-2-2z" fill="#fff"/>' +
+  '</svg>';
+
 /** Documento HTML del comprobante, que expo-print convierte en PDF. */
-export function buildReceiptHtml(result: PaymentResult, user: Pick<User, 'name' | 'address'>): string {
-  const rows = receiptRows(result)
+export function buildReceiptHtml(result: PaymentResult, user: ReceiptOwner): string {
+  const owner: [string, string][] = [
+    ['Conjunto', user.complex],
+    ['Unidad', user.address],
+    ['Propietario', user.name],
+  ];
+  const rows = [...owner, ...receiptRows(result)]
     .map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`)
     .join('');
 
@@ -55,6 +70,7 @@ export function buildReceiptHtml(result: PaymentResult, user: Pick<User, 'name' 
   <style>
     body { font-family: -apple-system, Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 32px; font-size: 13px; }
     h1 { color: #0F766E; font-size: 22px; margin: 0; }
+    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .status { display: inline-block; margin: 12px 0; padding: 4px 12px; border-radius: 999px; background: #DCFCE7; color: #166534; font-weight: 600; }
     .meta { color: #555; margin: 2px 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -64,18 +80,23 @@ export function buildReceiptHtml(result: PaymentResult, user: Pick<User, 'name' 
   </style>
 </head>
 <body>
-  <h1>Convive</h1>
+  <div class="brand">
+    ${LOGO_SVG}
+    <div>
+      <h1>Convive</h1>
+      <p class="meta">${escapeHtml(user.complex)}</p>
+    </div>
+  </div>
   <p class="meta">Comprobante de pago</p>
-  <p class="meta">${escapeHtml(user.name)} · ${escapeHtml(user.address)}</p>
   <span class="status">Pago exitoso</span>
   <table>${rows}</table>
-  <p class="footer">Pago procesado por Wompi. Generado el ${formatDateTime(new Date())}.</p>
+  <p class="footer">Pago procesado por Wompi. Generado el ${formatDateTime(new Date())}</p>
 </body>
 </html>`;
 }
 
 /** Genera el comprobante y lo comparte (en web abre el diálogo de impresión). Solo pagos APROBADOS. */
-export async function exportReceiptPdf(result: PaymentResult, user: Pick<User, 'name' | 'address'>): Promise<void> {
+export async function exportReceiptPdf(result: PaymentResult, user: ReceiptOwner): Promise<void> {
   if (result.status !== 'APROBADA') {
     throw new Error('receipt_only_approved');
   }

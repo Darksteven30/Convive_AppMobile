@@ -85,6 +85,12 @@ export type PaymentResult = {
   date: string;
 };
 
+/** RF02: periodo del historial de pagos, con fechas «aaaa-mm-dd» (ambas incluidas). */
+export type PaymentHistoryFilters = {
+  from: string;
+  to: string;
+};
+
 /**
  * - pending: ya hay un pago PENDIENTE del mismo concepto (MSG-RF12-03).
  * - unavailable: Wompi no está disponible para el conjunto (MSG-RF12-04).
@@ -118,6 +124,11 @@ export type PaymentsBackend = {
   checkPaymentStatus(user: User, reference: string): Promise<PaymentStatus>;
   /** RF13: el pago guardado en el servidor (null si no existe o no es de la unidad). */
   getPaymentResult(user: User, reference: string): Promise<PaymentResult | null>;
+  /**
+   * RF02: pagos APROBADOS de la unidad del usuario en el periodo, del más reciente al más antiguo.
+   * La unidad la decide el servidor a partir de la sesión, nunca la app.
+   */
+  getPaymentHistory(user: User, filters: PaymentHistoryFilters): Promise<PaymentResult[]>;
 };
 
 /** Suma en centavos para no acumular errores de punto flotante (0,1 + 0,2). */

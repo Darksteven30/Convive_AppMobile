@@ -13,6 +13,7 @@ const mockUser: User = {
   phone: '311 123 4567',
   house: '56',
   address: 'Casa # 56 Cali - Valle',
+  complex: 'Conjunto Residencial Convive',
   role: 'residente',
 };
 let mockSessionEnd: (() => void) | null = null;

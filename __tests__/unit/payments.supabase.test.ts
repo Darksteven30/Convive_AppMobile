@@ -38,6 +38,7 @@ const user = {
   phone: '',
   house: '56',
   address: '',
+  complex: '',
   role: 'residente' as const,
 };
 
@@ -242,5 +243,76 @@ describe('Pagos con Supabase · resultado del pago (RF13)', () => {
     tableResult = { data: null, error };
 
     await expect(supabasePayments.getPaymentResult(user, 'CNV-56-1')).rejects.toBe(error);
+  });
+});
+
+describe('Pagos con Supabase · historial de pagos (RF02)', () => {
+  it('pide a mi_historial_pagos() el periodo y convierte las filas', async () => {
+    results.mi_historial_pagos = {
+      data: [
+        {
+          referencia: 'CNV-56-2',
+          concepto_id: 'otros',
+          concepto: 'Otros conceptos',
+          descripcion: 'Parqueadero',
+          monto: '15000.00',
+          medio_pago: 'CARD',
+          wompi_id: 'w-2',
+          fecha: '2026-09-20T14:00:00Z',
+        },
+        {
+          referencia: 'CNV-56-1',
+          concepto_id: 'administracion',
+          concepto: 'Cuota administración',
+          descripcion: null,
+          monto: 35000,
+          medio_pago: null,
+          wompi_id: null,
+          fecha: '2026-09-05T15:00:00Z',
+        },
+      ],
+      error: null,
+    };
+
+    const history = await supabasePayments.getPaymentHistory(user, { from: '2025-10-08', to: '2026-10-08' });
+
+    // Solo el periodo: la unidad la toma el servidor de la sesión, nunca de la app.
+    expect(mockRpc).toHaveBeenCalledWith('mi_historial_pagos', { p_desde: '2025-10-08', p_hasta: '2026-10-08' });
+    expect(history).toEqual([
+      {
+        reference: 'CNV-56-2',
+        status: 'APROBADA',
+        conceptId: 'otros',
+        conceptName: 'Otros conceptos',
+        description: 'Parqueadero',
+        amount: 15000,
+        method: 'CARD',
+        wompiId: 'w-2',
+        date: '2026-09-20T14:00:00Z',
+      },
+      {
+        reference: 'CNV-56-1',
+        status: 'APROBADA',
+        conceptId: 'administracion',
+        conceptName: 'Cuota administración',
+        description: null,
+        amount: 35000,
+        method: null,
+        wompiId: null,
+        date: '2026-09-05T15:00:00Z',
+      },
+    ]);
+  });
+
+  it('sin pagos devuelve una lista vacía', async () => {
+    results.mi_historial_pagos = { data: [], error: null };
+    expect(await supabasePayments.getPaymentHistory(user, { from: '2026-01-01', to: '2026-01-31' })).toEqual([]);
+  });
+
+  it('propaga el error de la base de datos', async () => {
+    const error = new Error('rango_invalido');
+    results.mi_historial_pagos = { data: null, error };
+
+    await expect(supabasePayments.getPaymentHistory(user, { from: '2026-02-01', to: '2026-01-01' })).rejects.toBe(error);
   });
 });

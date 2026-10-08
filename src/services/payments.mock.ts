@@ -5,6 +5,7 @@
 // RF13/RF15: la ventana de Wompi simulada «reporta» el resultado (como el API de Wompi) y
 // checkPaymentStatus lo aplica con las mismas reglas que aplicar_estado_wompi(): el saldo se descuenta
 // una sola vez si se aprueba y se devuelve si se anula.
+// RF02: la casa 56 trae un historial de pagos APROBADOS de meses anteriores, igual que supabase/seed.sql.
 
 import type { User } from '@/services/auth.types';
 import { simulateNetwork } from '@/services/mockNetwork';
@@ -15,6 +16,7 @@ import {
   type AccountStatus,
   type PaymentCheckout,
   type PaymentGateway,
+  type PaymentHistoryFilters,
   type PaymentInput,
   type PaymentResult,
   type PaymentStatus,
@@ -22,6 +24,7 @@ import {
   type PaymentsBackend,
 } from '@/services/payments.types';
 import { validatePaymentSelection } from '@/services/payments.validation';
+import { toISODate } from '@/utils/date';
 
 const catalog = [
   { id: 'administracion', name: 'Cuota administración', requiresDescription: false },
@@ -75,7 +78,56 @@ let portfolio: Record<string, Record<string, number>> = {};
 let gateway: PaymentGateway = initialGateway;
 let transactions: MockTransaction[] = [];
 let wompiRecords: Record<string, MockWompiRecord> = {};
+let history: HistoryEntry[] = [];
 let nextId = 1;
+
+/** RF02: pago APROBADO de meses anteriores (no pasó por la ventana de Wompi simulada). */
+type HistoryEntry = { house: string; result: PaymentResult };
+
+const conceptName = (conceptId: string) => catalog.find((item) => item.id === conceptId)?.name ?? conceptId;
+
+/**
+ * Historial de la casa 56 como el de supabase/seed.sql: la cuota de administración de los últimos
+ * 16 meses, una extraordinaria y dos de «Otros conceptos». Las fechas se calculan desde hoy, así que
+ * los últimos 12 meses (el filtro por defecto) siempre tienen más de 12 pagos.
+ */
+function seedHistory(today = new Date()): HistoryEntry[] {
+  const methods = ['NEQUI', 'CARD', 'PSE', 'DAVIPLATA'];
+  const entry = (
+    suffix: string,
+    conceptId: string,
+    amount: number,
+    monthsAgo: number,
+    [day, hour]: [number, number],
+    method: string,
+    description: string | null = null,
+  ): HistoryEntry => {
+    const date = new Date(today.getFullYear(), today.getMonth() - monthsAgo, day, hour);
+    const code = `${date.getFullYear()}${pad(date.getMonth() + 1)}-${suffix}`;
+    return {
+      house: '56',
+      result: {
+        reference: `CNV-56-SEED-${code}`,
+        status: 'APROBADA',
+        conceptId,
+        conceptName: conceptName(conceptId),
+        description,
+        amount,
+        method,
+        wompiId: `seed-56-${code}`,
+        date: date.toISOString(),
+      },
+    };
+  };
+  return [
+    ...Array.from({ length: 16 }, (_, index) =>
+      entry('ADM', 'administracion', 35_000, index + 1, [5, 10], methods[(index + 1) % methods.length]),
+    ),
+    entry('EXT', 'extraordinaria', 120_000, 7, [15, 15], 'PSE'),
+    entry('OTR', 'otros', 15_000, 3, [20, 9], 'NEQUI', 'Parqueadero de visitantes'),
+    entry('LLV', 'otros', 8_500, 1, [12, 17], 'CARD', 'Copia de la llave de la piscina'),
+  ];
+}
 
 /** Restaura los datos simulados (lo usan las pruebas para empezar cada caso desde cero). */
 export function resetMockPaymentsState() {
@@ -85,9 +137,9 @@ export function resetMockPaymentsState() {
   gateway = { ...initialGateway, methods: [...initialGateway.methods] };
   transactions = [];
   wompiRecords = {};
+  history = seedHistory();
   nextId = 1;
 }
-resetMockPaymentsState();
 
 /** Solo para las pruebas: cambia el saldo de una unidad en un concepto. */
 export function setMockBalance(house: string, conceptId: string, balance: number) {
@@ -124,6 +176,8 @@ function statusFor(user: User): AccountStatus {
 }
 
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+
+resetMockPaymentsState();
 
 /** CNV-{unidad}-{aaaammddhhmmss}-{consecutivo}: única aunque se pague dos veces en el mismo segundo. */
 function createReference(house: string, date: Date) {
@@ -251,21 +305,43 @@ export async function checkPaymentStatus(user: User, reference: string): Promise
   return { inWompi: true, status: updated.status, method: record.method, wompiId: record.id };
 }
 
-export async function getPaymentResult(user: User, reference: string): Promise<PaymentResult | null> {
-  await simulateNetwork(0.5);
-  const transaction = transactions.find((item) => item.reference === reference && item.house === user.house);
-  if (!transaction) return null;
+function toResult(transaction: MockTransaction): PaymentResult {
   return {
     reference: transaction.reference,
     status: transaction.status,
     conceptId: transaction.conceptId,
-    conceptName: catalog.find((item) => item.id === transaction.conceptId)?.name ?? transaction.conceptId,
+    conceptName: conceptName(transaction.conceptId),
     description: transaction.description,
     amount: transaction.amount,
     method: transaction.method,
     wompiId: transaction.wompiId,
     date: transaction.createdAt,
   };
+}
+
+export async function getPaymentResult(user: User, reference: string): Promise<PaymentResult | null> {
+  await simulateNetwork(0.5);
+  const transaction = transactions.find((item) => item.reference === reference && item.house === user.house);
+  return transaction ? toResult(transaction) : null;
+}
+
+/** Igual que mi_historial_pagos(): solo pagos APROBADOS de la unidad, del más reciente al más antiguo. */
+export async function getPaymentHistory(user: User, filters: PaymentHistoryFilters): Promise<PaymentResult[]> {
+  await simulateNetwork(0.5);
+  if (filters.from > filters.to) {
+    throw new PaymentError('invalid');
+  }
+  const approved = transactions
+    .filter((item) => item.status === 'APROBADA')
+    .map((item) => ({ house: item.house, result: toResult(item) }));
+  return [...history, ...approved]
+    .filter((item) => item.house === user.house)
+    .map((item) => item.result)
+    .filter((item) => {
+      const day = toISODate(new Date(item.date));
+      return day >= filters.from && day <= filters.to;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** Implementación del contrato PaymentsBackend que usa payments.service.ts. */
@@ -276,4 +352,5 @@ export const paymentsBackend = {
   cancelPayment,
   checkPaymentStatus,
   getPaymentResult,
+  getPaymentHistory,
 } satisfies PaymentsBackend;

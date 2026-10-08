@@ -40,6 +40,7 @@ function toUser(row: ProfileRow): User {
     phone: row.telefono ? formatPhone(row.telefono) : '',
     house: row.unidad ?? '',
     address: row.direccion ?? row.conjunto,
+    complex: row.conjunto,
     role: row.rol,
   };
 }

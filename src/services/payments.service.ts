@@ -14,6 +14,7 @@ export {
   type PaymentConcept,
   type PaymentErrorCode,
   type PaymentGateway,
+  type PaymentHistoryFilters,
   type PaymentInput,
   type PaymentResult,
   type PaymentStatus,
@@ -23,8 +24,12 @@ export {
 export {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  HISTORY_PAGE_SIZE,
   WOMPI_MIN_AMOUNT,
+  defaultHistoryFilters,
+  validateHistoryFilters,
   validatePaymentSelection,
+  type HistoryFilterErrors,
   type PaymentSelection,
   type SelectionErrors,
 } from '@/services/payments.validation';
@@ -52,6 +57,7 @@ export const cancelPayment: PaymentsBackend['cancelPayment'] = (...args) => back
 export const checkPaymentStatus: PaymentsBackend['checkPaymentStatus'] = (...args) =>
   backend.checkPaymentStatus(...args);
 export const getPaymentResult: PaymentsBackend['getPaymentResult'] = (...args) => backend.getPaymentResult(...args);
+export const getPaymentHistory: PaymentsBackend['getPaymentHistory'] = (...args) => backend.getPaymentHistory(...args);
 
 /** Nombre de cada medio de Wompi para los chips y el comprobante. */
 export const WOMPI_METHOD_LABELS: Record<WompiMethod, string> = {

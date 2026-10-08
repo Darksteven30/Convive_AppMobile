@@ -32,7 +32,7 @@ npm run test:coverage  # genera el reporte de cobertura
 | `__tests__/unit` | Servicios de autenticación, pagos, funciones de Wompi (checksum y API), finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
 | `__tests__/components` | Calendario de reservas |
 | `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
-| `__tests__/screens` | Pagos (RF11, RF12, RF13 y RF15), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
+| `__tests__/screens` | Estado de cuenta (RF02), Pagos (RF11, RF12, RF13 y RF15), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
 
 ## Backend (Supabase)
 
@@ -44,7 +44,7 @@ La app funciona en dos modos:
 Para conectar un proyecto:
 
 1. Crear una cuenta en [supabase.com](https://supabase.com) → **New project** (región *South America (São Paulo)*). Guardar la contraseña de la base de datos.
-2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto»).
+2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo»).
 3. **Authentication → Sign In / Providers → Email**: desactivar **Confirm email** (las cuentas ya las registra la administración) y dejar el código (OTP) de 6 dígitos con vencimiento de **600** segundos.
 4. **Authentication → Emails → Reset Password**: cambiar la plantilla para que envíe el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos).
 5. **Project Settings → API Keys**: copiar la *Project URL* y la *publishable key* en un archivo `.env.local` (ver `.env.example`). Nunca usar la *secret key* en la app.
@@ -110,7 +110,9 @@ Otros casos del inicio de sesión (RF01):
 
 **Reportes (RF04):** con el administrador, Panel → «Reportes»; con la junta directiva, General → «Ver reportes financieros». Filtra por fecha inicial, fecha final (máximo 12 meses) y categoría, muestra los totales del periodo y exporta a PDF o Excel. Los datos de ejemplo tienen movimientos de julio a octubre de 2026. En el celular el archivo se abre en la hoja de compartir; en web el PDF abre el diálogo de impresión («Guardar como PDF») y el Excel se descarga.
 
-**Pagos (RF11):** con la residente, Inicio o Pagos → «Abonar». Cada concepto muestra su saldo pendiente (casa 56: administración $35.000, extraordinaria sin saldo, otros $10.678,90). Al elegir uno aparece «Valor a pagar» con el saldo por defecto; se puede bajar para un abono parcial, pero no superar el saldo. Los conceptos sin saldo también se pueden pagar con cualquier valor mayor a $0, y «Otros conceptos» pide una descripción de 5 a 100 caracteres. El administrador (unidad sin saldo) ve «¡Estás al día!».
+**Estado de cuenta (RF02):** con la residente, la pestaña Pagos muestra el saldo pendiente de la unidad y el historial de pagos APROBADOS de los últimos 12 meses (se puede cambiar el periodo), 12 por página con «Ver más». Al marcar un pago se habilita «Descargar comprobante», que genera el PDF con el conjunto, la unidad, el propietario y los datos del pago. Deslizar hacia abajo vuelve a consultar todo. La casa 56 trae pagos de ejemplo de los últimos 16 meses (en Supabase, el bloque «RF02» de `seed.sql`); la junta directiva (casa 12) no tiene pagos y el administrador ve «Estás al día» sin «Abonar».
+
+**Pagos (RF11):** con la residente, Inicio o Pagos → «Abonar». Cada concepto muestra su saldo pendiente (casa 56: administración $35.000, extraordinaria sin saldo, otros $10.678,90). Al elegir uno aparece «Valor a pagar» con el saldo por defecto; se puede bajar para un abono parcial, pero no superar el saldo. Los conceptos sin saldo también se pueden pagar con cualquier valor desde $ 1.500 (el mínimo de Wompi), y «Otros conceptos» pide una descripción de 5 a 100 caracteres. Con el saldo en $ 0 no aparece «Abonar» (RF02); si se abre Selección de todos modos (`/pago/seleccion`), muestra «¡Estás al día!».
 
 **Pago con Wompi (RF12):** después de elegir el concepto, «Aplicar» muestra el botón «Pagar con Wompi», los medios habilitados del conjunto y el texto de seguridad. Al pulsarlo se crea la transacción PENDIENTE con referencia única y firma, y se abre la ventana de Wompi con el valor en centavos (no editable). Con Supabase y las llaves configuradas (ver «Wompi (RF15)») se abre el checkout real de Wompi Sandbox; sin Supabase, la ventana es **simulada**: se elige el medio y «Pagar» lleva a la confirmación; cerrarla con ✕ cancela el pago. Un segundo pago del mismo concepto mientras el primero sigue PENDIENTE muestra «Tienes un pago en proceso…».
 

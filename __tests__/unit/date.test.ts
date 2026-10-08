@@ -2,6 +2,7 @@ import {
   addMonthsISO,
   formatDate,
   formatDateTime,
+  formatMonthYear,
   fromISODate,
   isFutureDate,
   startOfMonthISO,
@@ -47,5 +48,13 @@ describe('utilidades de fecha', () => {
     expect(formatDateTime(new Date(2026, 8, 9, 18, 19))).toBe('09 sep 2026 - 06:19 p. m.');
     expect(formatDateTime(new Date(2026, 0, 1, 0, 5))).toBe('01 ene 2026 - 12:05 a. m.');
     expect(formatDateTime(new Date(2026, 0, 1, 12, 0))).toBe('01 ene 2026 - 12:00 p. m.');
+  });
+});
+
+describe('formatMonthYear', () => {
+  it('muestra el periodo del historial de pagos como «mmm aaaa» (RF02)', () => {
+    expect(formatMonthYear(new Date(2026, 7, 5))).toBe('Ago 2026');
+    expect(formatMonthYear(new Date(2025, 0, 31))).toBe('Ene 2025');
+    expect(formatMonthYear(new Date(2026, 11, 1))).toBe('Dic 2026');
   });
 });

@@ -10,6 +10,14 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF02 – Estado de cuenta y descarga de comprobantes**:
+  - Tarjeta «Estado de la cuenta» en Inicio y Pagos: con saldo $ 0 muestra «Estás al día» en verde y oculta «Abonar»; si no se puede consultar, MSG-RF02-05 con «Reintentar».
+  - «Historial de pagos» con los pagos APROBADOS de la unidad, del más reciente al más antiguo, 12 por página con «Ver más» («Ago 2026 — Cuota administración»); reemplaza la lista fija de ejemplo.
+  - Filtro de periodo con fecha inicial y final (por defecto, los últimos 12 meses) y MSG-RF02-02 si la inicial es mayor que la final; estado vacío MSG-RF02-01.
+  - Cada pago se marca con un check; «Descargar comprobante» se habilita al elegir uno y genera el PDF con logo, conjunto, unidad, propietario, concepto, valor, fecha, medio de pago, referencia e ID de Wompi (MSG-RF02-03 y MSG-RF02-04).
+  - Deslizar hacia abajo vuelve a consultar el saldo y el historial.
+  - Migración `20261009000000_estado_cuenta.sql`: función `mi_historial_pagos()`, que filtra por la unidad de la sesión (también para el administrador, que por RLS ve los pagos de todo el conjunto). `seed.sql` agrega pagos de ejemplo de la casa 56.
+
 - **RF13 – Confirmación del resultado del pago y comprobante**:
   - Una pantalla por estado con su ícono, color y mensaje: Pago exitoso, Pago rechazado, Pago en proceso (reloj naranja), No pudimos procesar tu pago y Pago anulado (MSG-RF13-01 a 05).
   - El estado se lee del servidor después de consultarlo en Wompi; nunca se toma de la ventana de pago. Con el ID de Wompi conocido, el servidor consulta `GET /transactions/{id}`.
