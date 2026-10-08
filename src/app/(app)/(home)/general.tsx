@@ -15,7 +15,7 @@ import { hasPermission } from '@/constants/permissions';
 import { colors, spacing } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
 import { bookingCategories, expenseCategories, financialSummary, pqrsCategories } from '@/data/mock';
-import { formatCurrency } from '@/utils/format';
+import { formatAmount } from '@/utils/money';
 
 export default function GeneralScreen() {
   const { role } = useSession();
@@ -43,12 +43,12 @@ export default function GeneralScreen() {
         <Card style={styles.half}>
           <Ionicons name="arrow-up-circle" size={22} color={colors.success} />
           <Text style={styles.label}>Total ingresos</Text>
-          <Text style={styles.value}>{formatCurrency(financialSummary.income)}</Text>
+          <Text style={styles.value}>{formatAmount(financialSummary.income)}</Text>
         </Card>
         <Card style={styles.half}>
           <Ionicons name="arrow-down-circle" size={22} color={colors.danger} />
           <Text style={styles.label}>Total egresos</Text>
-          <Text style={styles.value}>{formatCurrency(financialSummary.expenses)}</Text>
+          <Text style={styles.value}>{formatAmount(financialSummary.expenses)}</Text>
         </Card>
       </View>
 

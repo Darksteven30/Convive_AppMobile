@@ -13,7 +13,7 @@ import {
   type PaymentCheckout,
   type WompiMethod,
 } from '@/services/payments.service';
-import { formatCurrency } from '@/utils/format';
+import { formatAmount } from '@/utils/money';
 
 const methodIcons: Record<WompiMethod, ComponentProps<typeof Ionicons>['name']> = {
   CARD: 'card-outline',
@@ -86,7 +86,7 @@ export function WompiCheckout({ checkout, methods, onClose, onComplete }: Props)
 
           <View style={styles.summary}>
             <Text style={styles.label}>Valor a pagar</Text>
-            <Text style={typography.amount}>{formatCurrency(checkout.amountInCents / 100)}</Text>
+            <Text style={typography.amount}>{formatAmount(checkout.amountInCents / 100)}</Text>
             <Text style={styles.label}>Referencia {checkout.reference}</Text>
           </View>
 

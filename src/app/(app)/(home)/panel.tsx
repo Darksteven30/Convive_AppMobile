@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { colors, spacing, typography } from '@/constants/theme';
 import { adminSummary } from '@/data/mock';
-import { formatCurrency } from '@/utils/format';
+import { formatAmount } from '@/utils/money';
 
 /**
  * Pantalla principal del administrador (RF01): indicadores de cartera y PQRS pendientes.
@@ -31,7 +31,7 @@ export default function PanelScreen() {
       </Text>
 
       <Card title="Cartera por cobrar">
-        <Text style={typography.amount}>{formatCurrency(portfolioDue)}</Text>
+        <Text style={typography.amount}>{formatAmount(portfolioDue)}</Text>
         <Text style={styles.muted}>
           {unitsInArrears} de {totalUnits} unidades en mora
         </Text>
