@@ -1,8 +1,10 @@
 // Reglas de RF11 para el concepto y el valor a pagar. Las usan la pantalla de Selección y el
 // servicio simulado (que replica lo que valida el servidor en iniciar_pago()).
+// También las del periodo del historial de pagos (RF02).
 
 import { MSG } from '@/constants/messages';
-import { toCents, type PaymentConcept } from '@/services/payments.types';
+import { toCents, type PaymentConcept, type PaymentHistoryFilters } from '@/services/payments.types';
+import { addMonthsISO, todayISO } from '@/utils/date';
 import { formatAmount } from '@/utils/money';
 
 export const DESCRIPTION_MIN = 5;
@@ -44,4 +46,19 @@ export function validatePaymentSelection(input: PaymentSelection, concepts: Paym
     errors.description = MSG.RF11.descriptionLength;
   }
   return errors;
+}
+
+/** RF02: el historial muestra 12 pagos por página y «Ver más» agrega los siguientes. */
+export const HISTORY_PAGE_SIZE = 12;
+
+/** RF02: periodo por defecto del historial, los últimos 12 meses hasta hoy. */
+export function defaultHistoryFilters(today = todayISO()): PaymentHistoryFilters {
+  return { from: addMonthsISO(today, -12), to: today };
+}
+
+export type HistoryFilterErrors = Partial<Record<'from', string>>;
+
+/** RF02: fecha inicial ≤ fecha final (MSG-RF02-02). */
+export function validateHistoryFilters(filters: PaymentHistoryFilters): HistoryFilterErrors {
+  return filters.from > filters.to ? { from: MSG.RF02.startAfterEnd } : {};
 }

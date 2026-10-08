@@ -18,7 +18,7 @@ jest.mock('expo-sharing', () => ({
 const Print = jest.requireMock('expo-print') as { printToFileAsync: jest.Mock };
 const Sharing = jest.requireMock('expo-sharing') as { isAvailableAsync: jest.Mock; shareAsync: jest.Mock };
 
-const user = { name: 'Monica Galvis', address: 'Casa # 56 Cali - Valle' };
+const user = { name: 'Monica Galvis', address: 'Casa # 56 Cali - Valle', complex: 'Conjunto Residencial Convive' };
 
 const approved: PaymentResult = {
   reference: 'CNV-56-20260909181900-A1B2C3',
@@ -91,6 +91,16 @@ describe('RF13 · Comprobante de pago', () => {
     expect(html).toContain('&lt;b&gt;Parqueadero&lt;/b&gt;');
     expect(html).not.toContain('<b>Parqueadero</b>');
     expect(receiptFileName(approved)).toBe('comprobante_CNV-56-20260909181900-A1B2C3.pdf');
+  });
+
+  it('el PDF lleva el logo, el conjunto, la unidad y el propietario (RF02)', () => {
+    const html = buildReceiptHtml(approved, user);
+
+    expect(html).toContain('<svg');
+    expect(html).toContain('<tr><th>Conjunto</th><td>Conjunto Residencial Convive</td></tr>');
+    expect(html).toContain('<tr><th>Unidad</th><td>Casa # 56 Cali - Valle</td></tr>');
+    expect(html).toContain('<tr><th>Propietario</th><td>Monica Galvis</td></tr>');
+    expect(html).toContain('<tr><th>ID Wompi</th><td>12345-1757459940-67890</td></tr>');
   });
 
   it('genera el PDF y lo comparte en el celular', async () => {

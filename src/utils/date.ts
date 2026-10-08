@@ -38,11 +38,18 @@ export function addMonthsISO(value: string, months: number): string {
   return toISODate(date);
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/** Periodo del historial de pagos (RF02, «mmm aaaa»): «Ago 2026». */
+export function formatMonthYear(date: Date): string {
+  const month = MONTHS[date.getMonth()];
+  return `${month[0].toUpperCase()}${month.slice(1)} ${date.getFullYear()}`;
+}
+
 /** Fecha y hora para comprobantes y reportes: «09 sep 2026 - 06:19 p. m.» (documento, 7.2). */
 export function formatDateTime(date: Date): string {
-  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const hours = date.getHours();
   const suffix = hours < 12 ? 'a. m.' : 'p. m.';
   const hours12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${pad(date.getDate())} ${months[date.getMonth()]} ${date.getFullYear()} - ${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
+  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
 }

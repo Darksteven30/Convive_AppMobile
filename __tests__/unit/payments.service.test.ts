@@ -5,10 +5,12 @@ import {
   PaymentError,
   cancelPayment,
   checkPaymentStatus,
+  defaultHistoryFilters,
   getAccountStatus,
   getPaymentResult,
   getMockTransactions,
   getPaymentGateway,
+  getPaymentHistory,
   resetMockPaymentsState,
   setMockBalance,
   setMockGateway,
@@ -16,11 +18,13 @@ import {
   simulateWompiPayment,
   startPayment,
   toCents,
+  validateHistoryFilters,
   validatePaymentSelection,
   WOMPI_MIN_AMOUNT,
   type MockWompiStatus,
   type PaymentConcept,
 } from '@/services/payments.service';
+import { toISODate, todayISO } from '@/utils/date';
 
 const resident = (house: string): User => ({
   id: 'u1',
@@ -30,6 +34,7 @@ const resident = (house: string): User => ({
   phone: '',
   house,
   address: '',
+  complex: '',
   role: 'residente',
 });
 
@@ -342,5 +347,74 @@ describe('RF13 · Estado del pago y saldo (simulado)', () => {
 
     expect(await getPaymentResult(resident('12'), reference)).toBeNull();
     expect(await getPaymentResult(monica, 'CNV-NO-EXISTE')).toBeNull();
+  });
+});
+
+describe('RF02 · Periodo del historial', () => {
+  it('por defecto son los últimos 12 meses hasta hoy', () => {
+    expect(defaultHistoryFilters('2026-10-08')).toEqual({ from: '2025-10-08', to: '2026-10-08' });
+  });
+
+  it('MSG-RF02-02: la fecha inicial no puede ser mayor que la final', () => {
+    expect(validateHistoryFilters({ from: '2026-10-08', to: '2026-10-08' })).toEqual({});
+    expect(validateHistoryFilters({ from: '2026-10-09', to: '2026-10-08' })).toEqual({
+      from: 'La fecha inicial no puede ser mayor que la fecha final.',
+    });
+  });
+});
+
+describe('RF02 · Historial de pagos (simulado)', () => {
+  const monica = resident('56');
+  const everything = () => ({ from: '2000-01-01', to: todayISO() });
+
+  it('la casa 56 trae pagos APROBADOS de meses anteriores, del más reciente al más antiguo', async () => {
+    const history = await getPaymentHistory(monica, everything());
+
+    // 16 cuotas de administración, una extraordinaria y dos de «Otros conceptos» (como seed.sql).
+    expect(history).toHaveLength(19);
+    expect(history.every((payment) => payment.status === 'APROBADA')).toBe(true);
+    const dates = history.map((payment) => payment.date);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    // Los últimos 12 meses tienen más de una página (12) para probar «Ver más».
+    expect((await getPaymentHistory(monica, defaultHistoryFilters())).length).toBeGreaterThan(12);
+  });
+
+  it('solo devuelve los pagos de la unidad del usuario', async () => {
+    expect(await getPaymentHistory(resident('12'), everything())).toEqual([]);
+  });
+
+  it('filtra por el periodo con ambas fechas incluidas', async () => {
+    const [latest] = await getPaymentHistory(monica, everything());
+    const day = toISODate(new Date(latest.date));
+
+    const sameDay = await getPaymentHistory(monica, { from: day, to: day });
+    expect(sameDay.map((payment) => payment.reference)).toContain(latest.reference);
+    expect(sameDay.every((payment) => toISODate(new Date(payment.date)) === day)).toBe(true);
+  });
+
+  it('agrega los pagos que Wompi aprueba, pero no los rechazados ni los pendientes', async () => {
+    const pay = async (conceptId: string, status: MockWompiStatus | null) => {
+      const checkout = await startPayment(monica, { conceptId, amount: 5000, description: 'Parqueadero' });
+      if (status) {
+        simulateWompiPayment(checkout.reference, { id: `w-${conceptId}`, status, method: 'NEQUI' });
+        await checkPaymentStatus(monica, checkout.reference);
+      }
+      return checkout.reference;
+    };
+    const approved = await pay('extraordinaria', 'APPROVED');
+    const declined = await pay('administracion', 'DECLINED');
+    const pending = await pay('otros', null);
+
+    const history = await getPaymentHistory(monica, everything());
+    expect(history[0]).toMatchObject({ reference: approved, status: 'APROBADA', amount: 5000, wompiId: 'w-extraordinaria' });
+    const references = history.map((payment) => payment.reference);
+    expect(references).not.toContain(declined);
+    expect(references).not.toContain(pending);
+  });
+
+  it('rechaza un periodo con la fecha inicial mayor que la final, como el servidor', async () => {
+    await expect(getPaymentHistory(monica, { from: '2026-10-09', to: '2026-10-08' })).rejects.toMatchObject({
+      code: 'invalid',
+    });
   });
 });

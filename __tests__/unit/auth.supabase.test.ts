@@ -91,6 +91,7 @@ describe('signIn', () => {
       phone: '311 123 4567',
       house: '56',
       address: 'Casa # 56 Cali - Valle',
+      complex: 'Conjunto Residencial Convive',
       role: 'residente',
     });
   });

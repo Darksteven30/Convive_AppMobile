@@ -111,19 +111,7 @@ describe('Flujo de pago', () => {
     expect(screen.getByText('Historial de pagos')).toBeTruthy();
   });
 
-  it('la sección Pagos muestra el estado de la cuenta y el historial', async () => {
-    await signInResident();
-
-    await press(screen.getByText('Pagos'));
-    expect(screen.getByText('$ 45.678,90')).toBeTruthy();
-    expect(screen.getByText('Historial de pagos')).toBeTruthy();
-    expect(screen.getByText('Ago 2026 — Cuota admón.')).toBeTruthy();
-    expect(screen.getByText('Jun 2026 — Cuota admón.')).toBeTruthy();
-
-    // Toast en lugar de Alert.alert, que no se ve en web.
-    await press(screen.getByText('Descargar comprobante'));
-    expect(screen.getByTestId('toast-info')).toHaveTextContent('La descarga estará disponible próximamente.');
-  });
+  // La sección Pagos (estado de cuenta e historial, RF02) se prueba en estado-cuenta.test.tsx.
 });
 
 describe('RF11 · Selección del concepto de pago', () => {
@@ -242,10 +230,10 @@ describe('RF11 · Selección del concepto de pago', () => {
   });
 
   it('MSG-RF11-05: si la unidad está al día muestra el estado vacío y deja pagar otros valores', async () => {
-    // El administrador (unidad «Administración») no tiene saldo pendiente.
+    // El administrador (unidad «Administración») no tiene saldo pendiente. Con saldo $ 0 el RF02
+    // oculta «Abonar», así que se abre Selección directamente.
     await renderSignedIn('admin@convive.com', 'Admin123');
-    await navigate('/inicio');
-    await press(screen.getByText('Abonar'));
+    await navigate('/pago/seleccion');
 
     expect(screen.getByText('$ 0,00')).toBeTruthy();
     expect(screen.getByText(MSG.RF11.upToDateTitle)).toBeTruthy();
@@ -274,7 +262,9 @@ describe('RF11 · Selección del concepto de pago', () => {
     const original = paymentsBackend.getAccountStatus;
     const spy = jest.spyOn(paymentsBackend, 'getAccountStatus').mockRejectedValue(new Error('sin conexión'));
 
-    await openSelectionAsResident();
+    // Sin saldo, Inicio no muestra «Abonar» (RF02): se abre Selección directamente.
+    await signInResident();
+    await navigate('/pago/seleccion');
     expect(screen.getByText(MSG.general.unexpected)).toBeTruthy();
     expect(screen.queryByText('Seleccione el concepto')).toBeNull();
 
@@ -527,6 +517,7 @@ describe('RF13 · Resultado del pago y comprobante', () => {
     phone: '',
     house: '56',
     address: '',
+    complex: '',
     role: 'residente' as const,
   };
 

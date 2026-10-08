@@ -11,6 +11,8 @@ export type User = {
   phone: string;
   house: string;
   address: string;
+  /** Conjunto residencial de la unidad (aparece en el comprobante de pago, RF02). */
+  complex: string;
   role: Role;
 };
 
