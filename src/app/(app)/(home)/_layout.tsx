@@ -36,6 +36,9 @@ export default function HomeLayout() {
         <Stack.Screen name="finanzas/index" />
         <Stack.Screen name="finanzas/nuevo" />
       </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'reportes')}>
+        <Stack.Screen name="reportes" />
+      </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'visitantes')}>
         <Stack.Screen name="visitantes" options={sectionOptions} />
       </Stack.Protected>

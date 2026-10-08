@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { colors, radius, spacing } from '@/constants/theme';
 
-type Variant = 'primary' | 'success' | 'brand' | 'secondary' | 'outline';
+type Variant = 'primary' | 'success' | 'brand' | 'wompi' | 'secondary' | 'outline';
 
 type Props = {
   label: string;
@@ -24,6 +24,7 @@ const variantStyles: Record<Variant, { bg: string; fg: string; border?: string }
   primary: { bg: colors.primary, fg: colors.onPrimary },
   success: { bg: colors.success, fg: colors.text },
   brand: { bg: colors.brandDark, fg: colors.onPrimary },
+  wompi: { bg: colors.wompi, fg: colors.onPrimary },
   secondary: { bg: colors.surface, fg: colors.text },
   outline: { bg: colors.background, fg: colors.text, border: colors.border },
 };

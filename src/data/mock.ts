@@ -1,13 +1,5 @@
 // Datos de ejemplo para la maqueta. Se reemplazarán por llamadas al backend.
 
-export const accountBalance = 45678.9;
-
-export const paymentHistory = [
-  { id: '2026-08', label: 'Ago 2026 — Cuota admón.' },
-  { id: '2026-07', label: 'Jul 2026 — Cuota admón.' },
-  { id: '2026-06', label: 'Jun 2026 — Cuota admón.' },
-];
-
 export const news = [
   { id: 'n1', title: 'Mantenimiento de ascensor' },
   { id: 'n2', title: 'Asamblea general' },
@@ -22,18 +14,6 @@ export const pqrsList: Pqrs[] = [
   { id: 'p231', code: '#0231', title: 'Daño portón' },
   { id: 'p225', code: '#0225', title: 'Ruido torre 4' },
   { id: 'p198', code: '#0198', title: 'Fuga de agua' },
-];
-
-export const paymentConcepts = [
-  { id: 'administracion', label: 'Cuota administración' },
-  { id: 'extraordinaria', label: 'Cuota extraordinaria' },
-  { id: 'otros', label: 'Otros conceptos' },
-];
-
-export const paymentMethods = [
-  { id: 'pse', label: 'PSE', description: 'Pagos seguros en línea' },
-  { id: 'tarjeta', label: 'Tarjeta de crédito / débito' },
-  { id: 'nequi', label: 'Nequi / Daviplata' },
 ];
 
 export const financialSummary = {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -9,6 +9,7 @@ import { Calendar, type DateRange } from '@/components/ui/Calendar';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { spacing } from '@/constants/theme';
+import { useFeedback } from '@/context/FeedbackContext';
 import { zones } from '@/data/mock';
 
 const formatDate = (date: Date) => date.toLocaleDateString('es-CO');
@@ -16,16 +17,17 @@ const formatDate = (date: Date) => date.toLocaleDateString('es-CO');
 export default function ReservasScreen() {
   const [zone, setZone] = useState(zones[0]);
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
+  const { showToast } = useFeedback();
 
   const book = () => {
     if (!range.start) {
-      Alert.alert('Reserva', 'Selecciona al menos una fecha en el calendario.');
+      showToast('error', 'Selecciona al menos una fecha en el calendario.');
       return;
     }
     const dates = range.end
       ? `del ${formatDate(range.start)} al ${formatDate(range.end)}`
       : `el ${formatDate(range.start)}`;
-    Alert.alert('Reserva agendada', `${zone} ${dates}.`);
+    showToast('success', `Reserva agendada: ${zone} ${dates}.`);
   };
 
   return (

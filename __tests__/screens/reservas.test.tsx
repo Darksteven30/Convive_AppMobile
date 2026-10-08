@@ -1,15 +1,8 @@
 import { screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import { press, renderSignedIn } from '../helpers/app';
 
-let alertSpy: jest.SpyInstance;
-
-beforeEach(() => {
-  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-});
-afterEach(() => alertSpy.mockRestore());
-
+// Los avisos son toasts (useFeedback): a diferencia de Alert.alert, también se ven en web.
 // Días 15 y 18: aparecen una sola vez en cualquier mes (no se repiten con días de meses vecinos).
 const formatted = (day: number) => {
   const now = new Date();
@@ -27,7 +20,7 @@ describe('Reservas', () => {
     await openReservas();
 
     await press(screen.getByText('Agendar reserva'));
-    expect(alertSpy).toHaveBeenCalledWith('Reserva', 'Selecciona al menos una fecha en el calendario.');
+    expect(screen.getByTestId('toast-error')).toHaveTextContent('Selecciona al menos una fecha en el calendario.');
   });
 
   it('agenda la zona elegida en un solo día', async () => {
@@ -37,7 +30,7 @@ describe('Reservas', () => {
     await press(screen.getByText('15'));
     await press(screen.getByText('Agendar reserva'));
 
-    expect(alertSpy).toHaveBeenCalledWith('Reserva agendada', `Cancha el ${formatted(15)}.`);
+    expect(screen.getByTestId('toast-success')).toHaveTextContent(`Reserva agendada: Cancha el ${formatted(15)}.`);
   });
 
   it('agenda un rango de fechas', async () => {
@@ -48,9 +41,8 @@ describe('Reservas', () => {
     await press(screen.getByText('18'));
     await press(screen.getByText('Agendar reserva'));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Reserva agendada',
-      `BBq del ${formatted(15)} al ${formatted(18)}.`,
+    expect(screen.getByTestId('toast-success')).toHaveTextContent(
+      `Reserva agendada: BBq del ${formatted(15)} al ${formatted(18)}.`,
     );
   });
 });

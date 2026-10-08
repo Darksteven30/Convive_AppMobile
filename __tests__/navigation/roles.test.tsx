@@ -17,7 +17,7 @@ type RoleCase = {
 const roles: RoleCase[] = [
   { role: 'administrador', email: 'admin@convive.com', password: 'Admin123', label: 'Administrador', canPay: true, canSeeGeneral: true, canSeePanel: true, canSeeVisitors: false },
   { role: 'junta directiva', email: 'junta@convive.com', password: 'Junta123', label: 'Junta directiva', canPay: true, canSeeGeneral: true, canSeePanel: false, canSeeVisitors: false },
-  { role: 'residente', email: 'monica@gmail.com', password: 'Residente123', label: 'Residente', canPay: true, canSeeGeneral: false, canSeePanel: false, canSeeVisitors: false },
+  { role: 'residente', email: 'monica@gmail.com', password: 'Residente123', label: 'Residente', canPay: true, canSeeGeneral: true, canSeePanel: false, canSeeVisitors: false },
   { role: 'vigilancia', email: 'vigilancia@convive.com', password: 'Vigilancia123', label: 'Vigilancia', canPay: false, canSeeGeneral: false, canSeePanel: false, canSeeVisitors: true },
 ];
 

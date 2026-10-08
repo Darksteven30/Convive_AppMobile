@@ -33,6 +33,11 @@ export function formatAmountInput(raw: string): AmountInput {
   return { text, value };
 }
 
+/** Valor inicial de un campo de monto a partir de un número: 10678.9 → «$ 10.678,90». */
+export function amountInputFrom(value: number): AmountInput {
+  return formatAmountInput(value.toFixed(2).replace('.', ','));
+}
+
 /** Formato de lectura con espacio tras el signo, como en el documento: «$ 1.250.000,00». */
 export function formatAmount(value: number): string {
   const [integer, decimals] = Math.abs(value).toFixed(2).split('.');
