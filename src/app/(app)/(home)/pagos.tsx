@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Text } from 'react-native';
 import { router } from 'expo-router';
 
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -8,11 +8,13 @@ import { BalanceCard } from '@/components/ui/BalanceCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { typography } from '@/constants/theme';
+import { useFeedback } from '@/context/FeedbackContext';
 import { paymentHistory } from '@/data/mock';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
 
 export default function PagosScreen() {
   const { status, loading } = useAccountStatus();
+  const { showToast } = useFeedback();
 
   return (
     <Screen
@@ -37,7 +39,7 @@ export default function PagosScreen() {
           label="Descargar comprobante"
           variant="success"
           pill
-          onPress={() => Alert.alert('Comprobante', 'La descarga estará disponible próximamente.')}
+          onPress={() => showToast('info', 'La descarga estará disponible próximamente.')}
         />
       </Card>
     </Screen>

@@ -10,12 +10,21 @@ describe('General (resumen financiero)', () => {
     expect(app.getPathname()).toBe('/general');
 
     expect(screen.getByText('Saldo actual general')).toBeTruthy();
-    expect(screen.getAllByText('$10.000.000,00')).toHaveLength(2); // saldo e ingresos
-    expect(screen.getByText('$1.000.000,00')).toBeTruthy();
+    expect(screen.getAllByText('$ 10.000.000,00')).toHaveLength(2); // saldo e ingresos
+    expect(screen.getByText('$ 1.000.000,00')).toBeTruthy();
     expect(screen.getByText('Movimiento de fondos')).toBeTruthy();
     expect(screen.getByText('Categorías de gasto')).toBeTruthy();
     expect(screen.getByText('Categorías de PQRS')).toBeTruthy();
     expect(screen.getByText('Categorías de reservas')).toBeTruthy();
+  });
+
+  it('RF14: el residente lo consulta en solo lectura, sin acceso a los reportes', async () => {
+    const app = await renderSignedIn('monica@gmail.com', 'Residente123');
+
+    await press(screen.getByText('General'));
+    expect(app.getPathname()).toBe('/general');
+    expect(screen.getByText('Resumen financiero')).toBeTruthy();
+    expect(screen.queryByText('Ver reportes financieros')).toBeNull();
   });
 
   it('la leyenda de la dona calcula los porcentajes', async () => {

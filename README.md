@@ -96,7 +96,7 @@ En modo simulado, las cuentas ya tienen estas contraseñas (`src/services/auth.m
 |---|---|---|---|---|
 | Administrador | admin@convive.com | Admin123 | Panel | Todas las secciones |
 | Junta directiva | junta@convive.com | Junta123 | General | Todas las secciones excepto Panel |
-| Residente | monica@gmail.com | Residente123 | Inicio | Inicio, Pagos, Reservas, PQRS y Perfil |
+| Residente | monica@gmail.com | Residente123 | Inicio | Inicio, Pagos, Reservas, General (solo lectura, sin reportes), PQRS y Perfil |
 | Vigilancia | vigilancia@convive.com | Vigilancia123 | Visitantes | Visitantes, Inicio (sin estado de cuenta), Reservas, PQRS y Perfil |
 
 Otros casos del inicio de sesión (RF01):

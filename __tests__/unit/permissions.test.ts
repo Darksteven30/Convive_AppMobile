@@ -5,7 +5,7 @@ import type { Role } from '@/services/auth.service';
 const expected: Record<Role, Record<Permission, boolean>> = {
   administrador: { pagos: true, general: true, panel: true, finanzas: true, reportes: true, visitantes: false },
   junta_directiva: { pagos: true, general: true, panel: false, finanzas: false, reportes: true, visitantes: false },
-  residente: { pagos: true, general: false, panel: false, finanzas: false, reportes: false, visitantes: false },
+  residente: { pagos: true, general: true, panel: false, finanzas: false, reportes: false, visitantes: false },
   vigilancia: { pagos: false, general: false, panel: false, finanzas: false, reportes: false, visitantes: true },
 };
 

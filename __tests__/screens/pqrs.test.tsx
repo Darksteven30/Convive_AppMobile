@@ -1,18 +1,11 @@
 import { fireEvent, screen } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 
 import { navigate, press, renderSignedIn } from '../helpers/app';
 
-let alertSpy: jest.SpyInstance;
-
-beforeEach(() => {
-  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-});
-afterEach(() => alertSpy.mockRestore());
-
+// Los avisos son toasts (useFeedback): a diferencia de Alert.alert, también se ven en web.
 async function openPqrs() {
   const app = await renderSignedIn('monica@gmail.com', 'Residente123');
-  await press(screen.getByText('Realizar PQR'));
+  await press(screen.getByText('Radicar PQRS'));
   expect(app.getPathname()).toBe('/pqrs');
 }
 
@@ -29,11 +22,11 @@ describe('PQRS', () => {
     await openPqrs();
 
     await press(screen.getByText('Radicar'));
-    expect(alertSpy).toHaveBeenCalledWith('Nueva PQRS', 'Completa el tipo y la descripción.');
+    expect(screen.getByTestId('toast-error')).toHaveTextContent('Completa el tipo y la descripción.');
 
     await fireEvent.changeText(screen.getByLabelText('Tipo'), 'Ruido');
     await press(screen.getByText('Radicar'));
-    expect(alertSpy).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('toast-error')).toHaveTextContent('Completa el tipo y la descripción.');
     expect(screen.queryByText('#0232 — Ruido')).toBeNull();
   });
 
@@ -45,9 +38,16 @@ describe('PQRS', () => {
     await press(screen.getByText('Radicar'));
 
     expect(screen.getByText('#0232 — Parqueadero')).toBeTruthy();
-    expect(alertSpy).toHaveBeenCalledWith('PQRS radicada', 'Tu solicitud #0232 fue registrada.');
+    expect(screen.getByTestId('toast-success')).toHaveTextContent('Tu solicitud #0232 fue registrada.');
     expect(screen.getByLabelText('Tipo').props.value).toBe('');
     expect(screen.getByLabelText('Descripción').props.value).toBe('');
+  });
+
+  it('«Adjuntar foto» avisa que estará disponible próximamente', async () => {
+    await openPqrs();
+
+    await press(screen.getByLabelText('Adjuntar foto'));
+    expect(screen.getByTestId('toast-info')).toHaveTextContent('La carga de fotos estará disponible próximamente.');
   });
 
   it('"Informar novedad" en Inicio también abre PQRS', async () => {

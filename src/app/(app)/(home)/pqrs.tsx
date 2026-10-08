@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -9,16 +9,18 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { TextField } from '@/components/ui/TextField';
 import { colors, radius, spacing } from '@/constants/theme';
+import { useFeedback } from '@/context/FeedbackContext';
 import { pqrsList, type Pqrs } from '@/data/mock';
 
 export default function PqrsScreen() {
   const [items, setItems] = useState<Pqrs[]>(pqrsList);
   const [type, setType] = useState('');
   const [description, setDescription] = useState('');
+  const { showToast } = useFeedback();
 
   const submit = () => {
     if (!type.trim() || !description.trim()) {
-      Alert.alert('Nueva PQRS', 'Completa el tipo y la descripción.');
+      showToast('error', 'Completa el tipo y la descripción.');
       return;
     }
     const next = Math.max(...items.map((item) => Number(item.code.slice(1))), 0) + 1;
@@ -26,7 +28,7 @@ export default function PqrsScreen() {
     setItems([{ id: `p${next}`, code, title: type.trim() }, ...items]);
     setType('');
     setDescription('');
-    Alert.alert('PQRS radicada', `Tu solicitud ${code} fue registrada.`);
+    showToast('success', `Tu solicitud ${code} fue registrada.`);
   };
 
   return (
@@ -58,7 +60,7 @@ export default function PqrsScreen() {
         <Pressable
           accessibilityLabel="Adjuntar foto"
           style={styles.photo}
-          onPress={() => Alert.alert('Foto', 'La carga de fotos estará disponible próximamente.')}
+          onPress={() => showToast('info', 'La carga de fotos estará disponible próximamente.')}
         >
           <Ionicons name="camera-outline" size={28} color={colors.textMuted} />
         </Pressable>

@@ -50,6 +50,12 @@ describe('RF13 · Comprobante de pago', () => {
     ]);
   });
 
+  it('solo un pago aprobado dice «Valor pagado»; en los demás estados no se cobró nada', () => {
+    for (const status of ['RECHAZADA', 'PENDIENTE', 'ERROR', 'ANULADA'] as const) {
+      expect(receiptRows({ ...approved, status })[1]).toEqual(['Valor', '$ 45.678,90']);
+    }
+  });
+
   it('incluye la descripción de «Otros conceptos» y muestra «—» si aún no hay datos de Wompi', () => {
     const rows = receiptRows({
       ...approved,

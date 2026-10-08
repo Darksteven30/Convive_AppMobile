@@ -57,6 +57,7 @@ export const MSG = {
     noBalanceHint: 'Este concepto no tiene saldo pendiente. Ingresa el valor que deseas pagar.',
     partialHint: 'Puedes disminuir el valor para hacer un abono parcial.',
     descriptionLength: 'La descripción debe tener entre 5 y 100 caracteres.',
+    amountBelowMinimum: (minimum: string) => `El valor mínimo para pagar en línea es ${minimum}.`,
   },
   RF12: {
     startFailed: 'No pudimos iniciar el pago. Intenta de nuevo en unos minutos.', // MSG-RF12-01

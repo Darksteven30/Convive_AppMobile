@@ -23,6 +23,7 @@ export {
 export {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  WOMPI_MIN_AMOUNT,
   validatePaymentSelection,
   type PaymentSelection,
   type SelectionErrors,

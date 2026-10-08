@@ -48,12 +48,20 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 - Movimientos de ejemplo de julio a octubre de 2026 para probar los reportes.
 - **RF16 – Perfil**: edición del teléfono (10 dígitos que empiezan por 3) con correo y unidad de solo lectura, confirmación al cerrar sesión y menú lateral ☰ (Perfil, Notificaciones, Ayuda, Cerrar sesión).
 - **RF17 – Cambio de contraseña**: verificación de la contraseña actual, nueva contraseña distinta y segura, mensajes del documento (MSG-RF17-01 a 06), mostrar/ocultar contraseña y confirmación al salir con cambios.
+- **Backend con Supabase – autenticación y perfiles**: esquema PostgreSQL con conjuntos, unidades y perfiles pre-registrados, Row Level Security y bloqueo por intentos en el servidor; sesión guardada en el dispositivo y aviso «Tu sesión expiró». Sin configuración la app sigue usando los datos simulados. La recuperación de contraseña por correo con Supabase aún no funciona: requiere configurar un SMTP propio para enviar el código.
 
-- **Backend con Supabase – autenticación y perfiles**: esquema PostgreSQL con conjuntos, unidades y perfiles pre-registrados, Row Level Security, bloqueo por intentos y recuperación con código en el servidor; sesión guardada en el dispositivo y aviso «Tu sesión expiró». Sin configuración la app sigue usando los datos simulados.
+### Cambiado
+
+- **RF14**: el residente puede consultar General (resumen financiero) en solo lectura, como indica el documento; los reportes siguen siendo solo para el administrador y la junta directiva.
+- El botón de Inicio «Realizar PQR» ahora dice «Radicar PQRS», como en el documento (RF18).
+- Todos los valores en pesos usan el formato del documento con espacio tras el signo («$ 45.678,90»); antes Inicio, Pagos, Panel, General y el pago mostraban «$45.678,90».
 
 ### Corregido
 
 - «Cambiar contraseña» aceptaba cualquier contraseña actual y usaba `Alert`, que no funciona en web.
+- **Pagos**: Wompi no acepta transacciones de menos de $ 1.500 y la app dejaba continuar desde $ 1, así que el residente quedaba atascado en la ventana de pago y al volver veía «Cancelaste el pago». Ahora Selección muestra «El valor mínimo para pagar en línea es $ 1.500,00.» y `iniciar_pago()` aplica la misma regla en el servidor (migración `20261008000000_monto_minimo_wompi.sql`).
+- **Pagos**: la pantalla de un pago rechazado, en proceso, con error o anulado decía «Valor pagado» aunque no se hubiera cobrado nada; ahora dice «Valor».
+- Los avisos de Reservas, PQRS y «Descargar comprobante» en Pagos usaban `Alert`, que no se ve en web; ahora son mensajes tipo toast que funcionan en el celular y en web.
 
 ## [0.1.0] - 2026-10-02
 

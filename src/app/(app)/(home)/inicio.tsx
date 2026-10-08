@@ -36,7 +36,7 @@ export default function InicioScreen() {
       <Card title="Acceso rápido">
         <View style={styles.row}>
           <Button label="Reservar zona" variant="outline" pill onPress={() => router.replace('/reservas')} />
-          <Button label="Realizar PQR" variant="outline" pill onPress={() => router.push('/pqrs')} />
+          <Button label="Radicar PQRS" variant="outline" pill onPress={() => router.push('/pqrs')} />
         </View>
       </Card>
 

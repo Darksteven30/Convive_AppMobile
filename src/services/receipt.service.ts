@@ -21,11 +21,14 @@ export function methodLabel(method: string | null): string {
   return `${WOMPI_METHOD_LABELS[method as WompiMethod] ?? method} (vía Wompi)`;
 }
 
-/** Filas de la tabla de detalle (pantalla de resultado y comprobante). */
+/**
+ * Filas de la tabla de detalle (pantalla de resultado y comprobante). Solo un pago APROBADO dice
+ * «Valor pagado»: en los demás estados no se cobró nada (o aún no se sabe).
+ */
 export function receiptRows(result: PaymentResult): [string, string][] {
   return [
     ['Concepto', result.description ? `${result.conceptName} — ${result.description}` : result.conceptName],
-    ['Valor pagado', formatAmount(result.amount)],
+    [result.status === 'APROBADA' ? 'Valor pagado' : 'Valor', formatAmount(result.amount)],
     ['Fecha', formatDateTime(new Date(result.date))],
     ['Medio de pago', methodLabel(result.method)],
     ['Referencia', result.reference],
