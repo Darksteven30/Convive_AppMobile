@@ -4,7 +4,15 @@ import { MSG } from '@/constants/messages';
 import { TOAST_DURATION_MS } from '@/context/FeedbackContext';
 import { MOCK_RESET_CODE } from '@/services/auth.service';
 
-import { navigate, press, renderApp, renderSignedIn, submitEmail, submitPassword } from '../helpers/app';
+import {
+  navigate,
+  press,
+  pressDialogButton,
+  renderApp,
+  renderSignedIn,
+  submitEmail,
+  submitPassword,
+} from '../helpers/app';
 
 afterEach(() => jest.useRealTimers());
 
@@ -274,7 +282,10 @@ describe('RF01 · sesión', () => {
     await press(screen.getByLabelText('Ver perfil'));
     expect(app.getPathname()).toBe('/perfil');
 
+    // RF16 · MSG-RF16-03: primero pide confirmación.
     await press(screen.getByText('Cerrar sesión'));
+    expect(screen.getByText(MSG.RF16.signOutTitle)).toBeTruthy();
+    await pressDialogButton('Cerrar sesión');
     expect(app.getPathname()).toBe('/sign-in');
 
     await navigate('/inicio');

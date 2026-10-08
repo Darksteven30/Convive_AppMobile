@@ -5,6 +5,7 @@ import { renderRouter } from 'expo-router/testing-library';
 import { resetMockAuthState } from '@/services/auth.service';
 import { resetMockFinanceState } from '@/services/finance.service';
 import { mockNetwork } from '@/services/mockNetwork';
+import { resetMockPaymentsState } from '@/services/payments.service';
 
 type Element = Parameters<typeof fireEvent.press>[0];
 
@@ -20,6 +21,7 @@ type Element = Parameters<typeof fireEvent.press>[0];
 export async function renderApp(initialUrl = '/') {
   resetMockAuthState();
   resetMockFinanceState();
+  resetMockPaymentsState();
   mockNetwork.delayMs = 0;
   const rendered = renderRouter('./src/app', { initialUrl });
   await rendered;
@@ -65,4 +67,14 @@ export async function renderSignedIn(email: string, password: string) {
   const app = await renderApp('/');
   await signInAs(email, password);
   return app;
+}
+
+/**
+ * Pulsa un botón del diálogo modal abierto (FeedbackContext). Sus botones pueden llamarse igual
+ * que una opción de la pantalla (p. ej. «Cerrar sesión»); el diálogo se dibuja después del contenido
+ * de la app, así que su botón es la última coincidencia.
+ */
+export async function pressDialogButton(name: string) {
+  const buttons = screen.getAllByRole('button', { name });
+  await press(buttons[buttons.length - 1]);
 }

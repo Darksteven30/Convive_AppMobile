@@ -10,8 +10,12 @@ export const colors = {
   success: '#34C759',
   brand: '#14A38B',
   brandDark: '#0F7B6C',
+  // Botón «Pagar con Wompi» (RF12).
+  wompi: '#0F766E',
   // Colores de mensajes del documento de requisitos (sección 7.2).
   danger: '#DC2626',
+  // RF13: pago en proceso (reloj naranja).
+  warning: '#F59E0B',
   toastSuccess: '#16A34A',
   toastInfo: '#1F2937',
   overlay: 'rgba(0, 0, 0, 0.45)',

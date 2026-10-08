@@ -1,4 +1,4 @@
-import { formatAmount, formatAmountInput } from '@/utils/money';
+import { amountInputFrom, formatAmount, formatAmountInput } from '@/utils/money';
 
 describe('formatAmountInput', () => {
   it.each([
@@ -28,10 +28,26 @@ describe('formatAmountInput', () => {
   });
 });
 
+describe('amountInputFrom', () => {
+  it('prepara el valor inicial de un campo de monto con dos decimales', () => {
+    expect(amountInputFrom(10678.9)).toEqual({ text: '$ 10.678,90', value: 10678.9 });
+    expect(amountInputFrom(35000)).toEqual({ text: '$ 35.000,00', value: 35000 });
+  });
+});
+
 describe('formatAmount', () => {
   it('usa el formato del documento con espacio tras el signo', () => {
     expect(formatAmount(1250000)).toBe('$ 1.250.000,00');
     expect(formatAmount(45678.9)).toBe('$ 45.678,90');
     expect(formatAmount(-1500)).toBe('-$ 1.500,00');
+  });
+
+  it('formatea valores pequeños sin separador de miles', () => {
+    expect(formatAmount(0)).toBe('$ 0,00');
+    expect(formatAmount(999.5)).toBe('$ 999,50');
+  });
+
+  it('redondea a dos decimales', () => {
+    expect(formatAmount(2.499)).toBe('$ 2,50');
   });
 });

@@ -1,4 +1,4 @@
-// Reglas de validación compartidas por los formularios (documento de requisitos, RF01 y RF17).
+// Reglas de validación compartidas por los formularios (documento de requisitos, RF01, RF16 y RF17).
 
 export const EMAIL_MAX_LENGTH = 100;
 export const PASSWORD_MIN_LENGTH = 8;
@@ -25,4 +25,22 @@ export const passwordRules = [
 
 export function meetsPasswordRules(password: string): boolean {
   return password.length <= PASSWORD_MAX_LENGTH && passwordRules.every((rule) => rule.test(password));
+}
+
+/** RF16: celular colombiano de 10 dígitos que empieza por 3. */
+export const PHONE_LENGTH = 10;
+
+/** Deja solo los dígitos: «311 123 4567» → «3111234567». */
+export function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, '');
+}
+
+export function isValidPhone(phone: string): boolean {
+  return /^3\d{9}$/.test(normalizePhone(phone));
+}
+
+/** Formato de lectura: «3111234567» → «311 123 4567». */
+export function formatPhone(phone: string): string {
+  const digits = normalizePhone(phone);
+  return digits.length === PHONE_LENGTH ? `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}` : phone;
 }

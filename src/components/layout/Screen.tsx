@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ReactNode } from 'react';
 
@@ -8,18 +8,32 @@ type Props = {
   header?: ReactNode;
   /** Contenido fijo debajo del área desplazable (p. ej. botón "Continuar"). */
   footer?: ReactNode;
+  /** «Deslizar hacia abajo» para volver a consultar los datos (p. ej. Pagos, RF02). */
+  onRefresh?: () => void;
+  refreshing?: boolean;
   children: ReactNode;
 };
 
 /** Contenedor base de cada pantalla: área segura, encabezado y contenido desplazable. */
-export function Screen({ header, footer, children }: Props) {
+export function Screen({ header, footer, onRefresh, refreshing = false, children }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.column}>
         {header ? <View style={styles.header}>{header}</View> : null}
         <ScrollView
+          testID="screen-scroll"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.brandDark]}
+                tintColor={colors.brandDark}
+              />
+            ) : undefined
+          }
         >
           {children}
         </ScrollView>

@@ -1,4 +1,12 @@
-import { isValidEmail, meetsPasswordRules, normalizeEmail, passwordRules } from '@/utils/validation';
+import {
+  formatPhone,
+  isValidEmail,
+  isValidPhone,
+  meetsPasswordRules,
+  normalizeEmail,
+  normalizePhone,
+  passwordRules,
+} from '@/utils/validation';
 
 describe('normalizeEmail', () => {
   it('quita espacios y pasa a minúsculas', () => {
@@ -47,5 +55,25 @@ describe('meetsPasswordRules', () => {
       'Una mayúscula',
       'Un número o símbolo',
     ]);
+  });
+});
+
+describe('teléfono (RF16)', () => {
+  it.each(['3111234567', '311 123 4567', '300-111-2233'])('acepta %s', (phone) => {
+    expect(isValidPhone(phone)).toBe(true);
+  });
+
+  it.each([
+    ['no empieza por 3', '2111234567'],
+    ['tiene menos de 10 dígitos', '311123456'],
+    ['tiene más de 10 dígitos', '31112345678'],
+    ['está vacío', ''],
+  ])('rechaza un teléfono que %s', (_case, phone) => {
+    expect(isValidPhone(phone)).toBe(false);
+  });
+
+  it('normaliza a dígitos y formatea para mostrar', () => {
+    expect(normalizePhone('311 123-4567')).toBe('3111234567');
+    expect(formatPhone('3111234567')).toBe('311 123 4567');
   });
 });

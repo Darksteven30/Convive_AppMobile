@@ -1,0 +1,420 @@
+import { MSG } from '@/constants/messages';
+import type { User } from '@/services/auth.service';
+import { mockNetwork } from '@/services/mockNetwork';
+import {
+  PaymentError,
+  cancelPayment,
+  checkPaymentStatus,
+  defaultHistoryFilters,
+  getAccountStatus,
+  getPaymentResult,
+  getMockTransactions,
+  getPaymentGateway,
+  getPaymentHistory,
+  resetMockPaymentsState,
+  setMockBalance,
+  setMockGateway,
+  setMockWompiStatus,
+  simulateWompiPayment,
+  startPayment,
+  toCents,
+  validateHistoryFilters,
+  validatePaymentSelection,
+  WOMPI_MIN_AMOUNT,
+  type MockWompiStatus,
+  type PaymentConcept,
+} from '@/services/payments.service';
+import { toISODate, todayISO } from '@/utils/date';
+
+const resident = (house: string): User => ({
+  id: 'u1',
+  name: 'Monica Galvis',
+  initials: 'MG',
+  email: 'monica@gmail.com',
+  phone: '',
+  house,
+  address: '',
+  complex: '',
+  role: 'residente',
+});
+
+const concepts: PaymentConcept[] = [
+  { id: 'administracion', name: 'Cuota administración', requiresDescription: false, balance: 35000 },
+  { id: 'extraordinaria', name: 'Cuota extraordinaria', requiresDescription: false, balance: 0 },
+  { id: 'otros', name: 'Otros conceptos', requiresDescription: true, balance: 10678.9 },
+];
+
+beforeEach(() => {
+  resetMockPaymentsState();
+  mockNetwork.delayMs = 0;
+});
+
+describe('getAccountStatus (simulado)', () => {
+  it('devuelve el catálogo con el saldo de cada concepto y el total de la unidad', async () => {
+    const status = await getAccountStatus(resident('56'));
+
+    expect(status.concepts.map((item) => [item.id, item.balance])).toEqual([
+      ['administracion', 35000],
+      ['extraordinaria', 0],
+      ['otros', 10678.9],
+    ]);
+    expect(status.concepts.find((item) => item.id === 'otros')?.requiresDescription).toBe(true);
+    expect(status.total).toBe(45678.9);
+  });
+
+  it('una unidad sin cartera está al día: todos los conceptos en 0', async () => {
+    const status = await getAccountStatus(resident('Administración'));
+
+    expect(status.concepts).toHaveLength(3);
+    expect(status.concepts.every((item) => item.balance === 0)).toBe(true);
+    expect(status.total).toBe(0);
+  });
+
+  it('suma en centavos sin errores de punto flotante', async () => {
+    setMockBalance('99', 'administracion', 0.1);
+    setMockBalance('99', 'otros', 0.2);
+
+    expect((await getAccountStatus(resident('99'))).total).toBe(0.3);
+  });
+});
+
+describe('validatePaymentSelection (RF11)', () => {
+  const validate = (input: Partial<Parameters<typeof validatePaymentSelection>[0]>) =>
+    validatePaymentSelection({ conceptId: 'administracion', amount: 35000, description: '', ...input }, concepts);
+
+  it('acepta el saldo completo o un abono parcial', () => {
+    expect(validate({})).toEqual({});
+    expect(validate({ amount: 1500 })).toEqual({});
+    expect(validate({ amount: 20000.5 })).toEqual({});
+  });
+
+  it('MSG-RF11-01: el concepto es obligatorio y debe estar en el catálogo', () => {
+    expect(validate({ conceptId: null })).toEqual({ concept: MSG.RF11.conceptRequired });
+    expect(validate({ conceptId: 'inventado' })).toEqual({ concept: MSG.RF11.conceptRequired });
+  });
+
+  it('MSG-RF11-02: el valor debe ser mayor a 0', () => {
+    expect(validate({ amount: null }).amount).toBe(MSG.RF11.amountInvalid);
+    expect(validate({ amount: 0 }).amount).toBe('El valor debe ser mayor a $ 0.');
+    expect(validate({ amount: -5 }).amount).toBe(MSG.RF11.amountInvalid);
+  });
+
+  it('MSG-RF11-03: el valor no puede superar el saldo del concepto', () => {
+    expect(validate({ amount: 35000.01 }).amount).toBe(
+      'El valor no puede superar el saldo pendiente de este concepto ($ 35.000,00).',
+    );
+    expect(validate({ conceptId: 'otros', amount: 10678.9, description: 'Parqueadero' })).toEqual({});
+    expect(validate({ conceptId: 'otros', amount: 10678.91, description: 'Parqueadero' }).amount).toBe(
+      'El valor no puede superar el saldo pendiente de este concepto ($ 10.678,90).',
+    );
+  });
+
+  it('Wompi no acepta menos de $ 1.500: lo avisa antes de abrir la pasarela', () => {
+    expect(WOMPI_MIN_AMOUNT).toBe(1500);
+    expect(validate({ amount: 1499.99 }).amount).toBe('El valor mínimo para pagar en línea es $ 1.500,00.');
+    expect(validate({ amount: 1 }).amount).toBe(MSG.RF11.amountBelowMinimum('$ 1.500,00'));
+    expect(validate({ conceptId: 'extraordinaria', amount: 1000 }).amount).toBe(
+      MSG.RF11.amountBelowMinimum('$ 1.500,00'),
+    );
+    expect(validate({ amount: 1500 })).toEqual({});
+  });
+
+  it('un concepto sin saldo acepta cualquier valor desde el mínimo', () => {
+    expect(validate({ conceptId: 'extraordinaria', amount: 50000 })).toEqual({});
+    expect(validate({ conceptId: 'extraordinaria', amount: 0 }).amount).toBe(MSG.RF11.amountInvalid);
+  });
+
+  it('«Otros conceptos» pide una descripción de 5 a 100 caracteres', () => {
+    const otros = (description: string) => validate({ conceptId: 'otros', amount: 2000, description });
+
+    expect(otros('').description).toBe(MSG.RF11.descriptionLength);
+    expect(otros('  abc  ').description).toBe(MSG.RF11.descriptionLength);
+    expect(otros('Multa')).toEqual({});
+    expect(otros('x'.repeat(100))).toEqual({});
+    expect(otros('x'.repeat(101)).description).toBe(MSG.RF11.descriptionLength);
+    // Los demás conceptos no la piden.
+    expect(validate({ description: '' })).toEqual({});
+  });
+
+  it('toCents redondea a centavos', () => {
+    expect(toCents(45678.9)).toBe(4567890);
+    expect(toCents(0.1 + 0.2)).toBe(30);
+  });
+});
+
+describe('RF12 · Pago con Wompi (simulado)', () => {
+  const monica = resident('56');
+  const payAdmin = (amount = 35000) => startPayment(monica, { conceptId: 'administracion', amount });
+
+  it('el servicio rechaza un pago por debajo del mínimo sin crear la transacción', async () => {
+    await expect(payAdmin(1000)).rejects.toMatchObject({ code: 'invalid' });
+    // El mismo concepto se puede pagar de inmediato: no quedó ningún pago PENDIENTE.
+    await expect(payAdmin(1500)).resolves.toBeTruthy();
+  });
+
+  it('informa los medios habilitados en la cuenta Wompi del conjunto', async () => {
+    expect(await getPaymentGateway(monica)).toEqual({
+      available: true,
+      methods: ['CARD', 'PSE', 'NEQUI', 'BANCOLOMBIA_TRANSFER', 'DAVIPLATA'],
+    });
+
+    setMockGateway({ methods: ['PSE', 'NEQUI'] });
+    expect((await getPaymentGateway(monica)).methods).toEqual(['PSE', 'NEQUI']);
+  });
+
+  it('crea la transacción PENDIENTE con referencia única, valor en centavos COP y firma', async () => {
+    const checkout = await startPayment(monica, { conceptId: 'otros', amount: 10678.9, description: '  Parqueadero  ' });
+
+    expect(checkout.reference).toMatch(/^CNV-56-\d{14}-\d{6}$/);
+    expect(checkout.reference.length).toBeLessThanOrEqual(50);
+    expect(checkout.amountInCents).toBe(1067890);
+    expect(checkout.currency).toBe('COP');
+    expect(checkout.signature).toMatch(/^[0-9a-f]{64}$/);
+    expect(checkout.publicKey).toMatch(/^pub_test_/);
+    expect(getMockTransactions()).toEqual([
+      expect.objectContaining({
+        reference: checkout.reference,
+        conceptId: 'otros',
+        description: 'Parqueadero',
+        amount: 10678.9,
+        status: 'PENDIENTE',
+      }),
+    ]);
+  });
+
+  it('envía $ 45.678,90 como 4567890 centavos', async () => {
+    setMockBalance('56', 'administracion', 45678.9);
+    expect((await payAdmin(45678.9)).amountInCents).toBe(4567890);
+  });
+
+  it('MSG-RF12-03: no permite un segundo pago del mismo concepto mientras haya uno PENDIENTE', async () => {
+    const first = await payAdmin();
+
+    const error = await payAdmin(2000).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PaymentError);
+    expect(error).toMatchObject({ code: 'pending', transactionId: first.transactionId });
+
+    // Otro concepto sí se puede pagar.
+    await expect(startPayment(monica, { conceptId: 'extraordinaria', amount: 5000 })).resolves.toBeTruthy();
+    // Otra unidad tampoco se ve afectada.
+    await expect(startPayment(resident('12'), { conceptId: 'administracion', amount: 35000 })).resolves.toBeTruthy();
+  });
+
+  it('MSG-RF12-02: al cerrar Wompi sin pagar la transacción se cancela y se puede volver a intentar', async () => {
+    const first = await payAdmin();
+    await cancelPayment(monica, first.reference);
+    expect(getMockTransactions()[0].status).toBe('CANCELADA');
+
+    const second = await payAdmin();
+    // La referencia nunca se repite, ni en reintentos.
+    expect(second.reference).not.toBe(first.reference);
+  });
+
+  it('solo cancela pagos de la propia unidad', async () => {
+    const first = await payAdmin();
+    await cancelPayment(resident('12'), first.reference);
+    expect(getMockTransactions()[0].status).toBe('PENDIENTE');
+  });
+
+  it('MSG-RF12-04: falla si Wompi no está disponible para el conjunto', async () => {
+    setMockGateway({ available: false });
+
+    await expect(payAdmin()).rejects.toMatchObject({ code: 'unavailable' });
+    expect(getMockTransactions()).toHaveLength(0);
+  });
+
+  it('valida en el servidor el concepto, el valor y la descripción (RF11)', async () => {
+    await expect(startPayment(monica, { conceptId: 'inventado', amount: 1000 })).rejects.toMatchObject({ code: 'invalid' });
+    await expect(payAdmin(0)).rejects.toMatchObject({ code: 'invalid' });
+    await expect(payAdmin(35000.01)).rejects.toMatchObject({ code: 'invalid' });
+    await expect(startPayment(monica, { conceptId: 'otros', amount: 1000, description: 'abc' })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+    expect(getMockTransactions()).toHaveLength(0);
+  });
+});
+
+describe('RF13 · Estado del pago y saldo (simulado)', () => {
+  const monica = resident('56');
+
+  /** Crea un pago de administración y Wompi lo registra con el estado indicado. */
+  async function payAndReport(status: MockWompiStatus, amount = 20000) {
+    const checkout = await startPayment(monica, { conceptId: 'administracion', amount });
+    simulateWompiPayment(checkout.reference, { id: 'w-1', status, method: 'NEQUI' });
+    return checkout.reference;
+  }
+
+  const adminBalance = async () =>
+    (await getAccountStatus(monica)).concepts.find((item) => item.id === 'administracion')!.balance;
+
+  it('el saldo solo se descuenta cuando el pago queda APROBADO', async () => {
+    const reference = await payAndReport('APPROVED');
+    expect(await adminBalance()).toBe(35000); // aún no se ha consultado el estado
+
+    expect(await checkPaymentStatus(monica, reference)).toEqual({
+      inWompi: true,
+      status: 'APROBADA',
+      method: 'NEQUI',
+      wompiId: 'w-1',
+    });
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it('consultar varias veces un pago aprobado no lo descuenta dos veces', async () => {
+    const reference = await payAndReport('APPROVED');
+
+    await checkPaymentStatus(monica, reference);
+    await checkPaymentStatus(monica, reference);
+
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it.each([
+    ['DECLINED', 'RECHAZADA'],
+    ['ERROR', 'ERROR'],
+    ['PENDING', 'PENDIENTE'],
+  ] as const)('%s queda %s y no toca el saldo', async (wompiStatus, status) => {
+    const reference = await payAndReport(wompiStatus);
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe(status);
+    expect(await adminBalance()).toBe(35000);
+  });
+
+  it('un pendiente que Wompi aprueba después descuenta el saldo al consultarlo de nuevo', async () => {
+    const reference = await payAndReport('PENDING');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'APPROVED');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('APROBADA');
+    expect(await adminBalance()).toBe(15000);
+  });
+
+  it('VOIDED devuelve exactamente lo descontado', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'VOIDED');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('ANULADA');
+    expect(await adminBalance()).toBe(35000);
+  });
+
+  it('un pago terminado no vuelve a PENDIENTE aunque llegue un estado tardío', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    setMockWompiStatus(reference, 'PENDING');
+
+    expect((await checkPaymentStatus(monica, reference)).status).toBe('APROBADA');
+  });
+
+  it('un pago aprobado sin saldo pendiente no deja el saldo en negativo', async () => {
+    const checkout = await startPayment(monica, { conceptId: 'extraordinaria', amount: 50000 });
+    simulateWompiPayment(checkout.reference, { id: 'w-2', status: 'APPROVED', method: 'CARD' });
+
+    await checkPaymentStatus(monica, checkout.reference);
+
+    const status = await getAccountStatus(monica);
+    expect(status.concepts.find((item) => item.id === 'extraordinaria')!.balance).toBe(0);
+  });
+
+  it('si Wompi no tiene el pago, informa que no está en Wompi', async () => {
+    const checkout = await startPayment(monica, { conceptId: 'administracion', amount: 2000 });
+
+    expect(await checkPaymentStatus(monica, checkout.reference)).toEqual({ inWompi: false, status: 'PENDIENTE' });
+  });
+
+  it('getPaymentResult devuelve el pago guardado con los datos de Wompi', async () => {
+    const reference = await payAndReport('APPROVED');
+    await checkPaymentStatus(monica, reference);
+
+    expect(await getPaymentResult(monica, reference)).toEqual({
+      reference,
+      status: 'APROBADA',
+      conceptId: 'administracion',
+      conceptName: 'Cuota administración',
+      description: null,
+      amount: 20000,
+      method: 'NEQUI',
+      wompiId: 'w-1',
+      date: expect.any(String),
+    });
+  });
+
+  it('getPaymentResult no devuelve pagos de otra unidad ni referencias inexistentes', async () => {
+    const reference = await payAndReport('APPROVED');
+
+    expect(await getPaymentResult(resident('12'), reference)).toBeNull();
+    expect(await getPaymentResult(monica, 'CNV-NO-EXISTE')).toBeNull();
+  });
+});
+
+describe('RF02 · Periodo del historial', () => {
+  it('por defecto son los últimos 12 meses hasta hoy', () => {
+    expect(defaultHistoryFilters('2026-10-08')).toEqual({ from: '2025-10-08', to: '2026-10-08' });
+  });
+
+  it('MSG-RF02-02: la fecha inicial no puede ser mayor que la final', () => {
+    expect(validateHistoryFilters({ from: '2026-10-08', to: '2026-10-08' })).toEqual({});
+    expect(validateHistoryFilters({ from: '2026-10-09', to: '2026-10-08' })).toEqual({
+      from: 'La fecha inicial no puede ser mayor que la fecha final.',
+    });
+  });
+});
+
+describe('RF02 · Historial de pagos (simulado)', () => {
+  const monica = resident('56');
+  const everything = () => ({ from: '2000-01-01', to: todayISO() });
+
+  it('la casa 56 trae pagos APROBADOS de meses anteriores, del más reciente al más antiguo', async () => {
+    const history = await getPaymentHistory(monica, everything());
+
+    // 16 cuotas de administración, una extraordinaria y dos de «Otros conceptos» (como seed.sql).
+    expect(history).toHaveLength(19);
+    expect(history.every((payment) => payment.status === 'APROBADA')).toBe(true);
+    const dates = history.map((payment) => payment.date);
+    expect([...dates].sort().reverse()).toEqual(dates);
+    // Los últimos 12 meses tienen más de una página (12) para probar «Ver más».
+    expect((await getPaymentHistory(monica, defaultHistoryFilters())).length).toBeGreaterThan(12);
+  });
+
+  it('solo devuelve los pagos de la unidad del usuario', async () => {
+    expect(await getPaymentHistory(resident('12'), everything())).toEqual([]);
+  });
+
+  it('filtra por el periodo con ambas fechas incluidas', async () => {
+    const [latest] = await getPaymentHistory(monica, everything());
+    const day = toISODate(new Date(latest.date));
+
+    const sameDay = await getPaymentHistory(monica, { from: day, to: day });
+    expect(sameDay.map((payment) => payment.reference)).toContain(latest.reference);
+    expect(sameDay.every((payment) => toISODate(new Date(payment.date)) === day)).toBe(true);
+  });
+
+  it('agrega los pagos que Wompi aprueba, pero no los rechazados ni los pendientes', async () => {
+    const pay = async (conceptId: string, status: MockWompiStatus | null) => {
+      const checkout = await startPayment(monica, { conceptId, amount: 5000, description: 'Parqueadero' });
+      if (status) {
+        simulateWompiPayment(checkout.reference, { id: `w-${conceptId}`, status, method: 'NEQUI' });
+        await checkPaymentStatus(monica, checkout.reference);
+      }
+      return checkout.reference;
+    };
+    const approved = await pay('extraordinaria', 'APPROVED');
+    const declined = await pay('administracion', 'DECLINED');
+    const pending = await pay('otros', null);
+
+    const history = await getPaymentHistory(monica, everything());
+    expect(history[0]).toMatchObject({ reference: approved, status: 'APROBADA', amount: 5000, wompiId: 'w-extraordinaria' });
+    const references = history.map((payment) => payment.reference);
+    expect(references).not.toContain(declined);
+    expect(references).not.toContain(pending);
+  });
+
+  it('rechaza un periodo con la fecha inicial mayor que la final, como el servidor', async () => {
+    await expect(getPaymentHistory(monica, { from: '2026-10-09', to: '2026-10-08' })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+  });
+});
