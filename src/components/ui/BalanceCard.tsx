@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { Card } from '@/components/ui/Card';
 import { colors, typography } from '@/constants/theme';
-import { formatCurrency } from '@/utils/format';
+import { formatAmount } from '@/utils/money';
 
 type Props = {
   title?: string;
@@ -20,7 +20,7 @@ export function BalanceCard({ title = 'Estado de la cuenta', amount, loading, ch
       {loading ? (
         <ActivityIndicator accessibilityLabel="Cargando saldo" color={colors.brandDark} style={styles.loading} />
       ) : (
-        <Text style={styles.amount}>{amount === null ? '—' : formatCurrency(amount)}</Text>
+        <Text style={styles.amount}>{amount === null ? '—' : formatAmount(amount)}</Text>
       )}
       {children}
     </Card>

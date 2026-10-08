@@ -41,4 +41,13 @@ describe('formatAmount', () => {
     expect(formatAmount(45678.9)).toBe('$ 45.678,90');
     expect(formatAmount(-1500)).toBe('-$ 1.500,00');
   });
+
+  it('formatea valores pequeños sin separador de miles', () => {
+    expect(formatAmount(0)).toBe('$ 0,00');
+    expect(formatAmount(999.5)).toBe('$ 999,50');
+  });
+
+  it('redondea a dos decimales', () => {
+    expect(formatAmount(2.499)).toBe('$ 2,50');
+  });
 });

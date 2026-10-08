@@ -25,7 +25,7 @@ import {
   type PaymentCheckout,
   type WompiMethod,
 } from '@/services/payments.service';
-import { formatCurrency } from '@/utils/format';
+import { formatAmount } from '@/utils/money';
 
 /** Sale del flujo de pago y deja la sección Pagos, aunque el pago se haya abierto desde Inicio. */
 function goToPayments() {
@@ -189,7 +189,7 @@ export default function PagoAplicarScreen() {
         <Text style={styles.concept}>{conceptName ?? 'Pago'}</Text>
         {description ? <Text style={styles.label}>{description}</Text> : null}
         <Text style={styles.label}>Valor a pagar</Text>
-        <Text style={typography.amount}>{formatCurrency(value)}</Text>
+        <Text style={typography.amount}>{formatAmount(value)}</Text>
       </Card>
 
       <SectionTitle title="Medio de pago" />

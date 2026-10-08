@@ -15,8 +15,7 @@ import { MSG } from '@/constants/messages';
 import { colors, spacing } from '@/constants/theme';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
 import { DESCRIPTION_MAX, validatePaymentSelection, type PaymentConcept } from '@/services/payments.service';
-import { formatCurrency } from '@/utils/format';
-import { amountInputFrom, formatAmountInput } from '@/utils/money';
+import { amountInputFrom, formatAmount, formatAmountInput } from '@/utils/money';
 
 /**
  * RF11 · Paso 1 del pago: selección del concepto y del valor a pagar.
@@ -111,7 +110,7 @@ export default function PagoSeleccionScreen() {
               key={item.id}
               icon="document-text-outline"
               label={item.name}
-              description={item.balance > 0 ? `Saldo pendiente: ${formatCurrency(item.balance)}` : 'Sin saldo pendiente'}
+              description={item.balance > 0 ? `Saldo pendiente: ${formatAmount(item.balance)}` : 'Sin saldo pendiente'}
               selected={item.id === conceptId}
               onPress={() => selectConcept(item)}
             />
