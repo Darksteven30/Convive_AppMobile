@@ -13,8 +13,8 @@ export const roleLabels: Record<Role, string> = {
 const permissions = {
   // Estado de cuenta, historial y flujo de pago: quienes tienen una unidad o la administran.
   pagos: ['administrador', 'junta_directiva', 'residente'],
-  // Resumen financiero general del conjunto.
-  general: ['administrador', 'junta_directiva'],
+  // Resumen financiero general del conjunto (RF14). El residente lo ve en solo lectura, sin reportes.
+  general: ['administrador', 'junta_directiva', 'residente'],
   // Panel de administración con indicadores de cartera y PQRS pendientes.
   panel: ['administrador'],
   // Registro de ingresos y egresos (RF03).
