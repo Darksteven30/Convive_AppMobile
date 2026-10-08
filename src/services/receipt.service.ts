@@ -90,7 +90,7 @@ export function buildReceiptHtml(result: PaymentResult, user: ReceiptOwner): str
   <p class="meta">Comprobante de pago</p>
   <span class="status">Pago exitoso</span>
   <table>${rows}</table>
-  <p class="footer">Pago procesado por Wompi. Generado el ${formatDateTime(new Date())}.</p>
+  <p class="footer">Pago procesado por Wompi. Generado el ${formatDateTime(new Date())}</p>
 </body>
 </html>`;
 }

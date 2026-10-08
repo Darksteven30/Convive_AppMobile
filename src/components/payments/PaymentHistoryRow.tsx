@@ -24,7 +24,8 @@ export function PaymentHistoryRow({ payment, selected, onPress }: Props) {
   return (
     <Pressable
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
+      // aria-checked (y no accessibilityState) para que también lo anuncie el lector de pantalla en web.
+      aria-checked={selected}
       accessibilityLabel={`${label}, ${formatAmount(payment.amount)}`}
       onPress={onPress}
       style={[styles.row, selected && styles.rowSelected]}
