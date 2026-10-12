@@ -110,3 +110,35 @@ select u.id, pg.concepto_id, pg.descripcion, pg.monto, (pg.monto * 100)::bigint,
   join public.conjuntos c on c.id = u.conjunto_id and c.nombre = 'Conjunto Residencial Convive'
   join public.perfiles p on p.email = 'monica@gmail.com'
 on conflict (referencia) do nothing;
+
+-- ---------------------------------------------------------------------------------------------
+-- RF03 / RF04 · Movimientos de ejemplo (requiere 20261012000000_finanzas.sql)
+-- Los mismos 13 movimientos de julio a octubre de 2026 del modo simulado (finance.mock.ts), para
+-- que los reportes tengan datos que filtrar. Los registra la administración (admin@convive.com).
+-- Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.movimientos (conjunto_id, tipo, categoria_id, monto, fecha, descripcion, registrado_por, created_at)
+select c.id, m.tipo::public.tipo_movimiento, m.categoria_id, m.monto, m.fecha::date, m.descripcion, p.id,
+       (m.fecha || ' 09:00')::timestamp at time zone 'America/Bogota'
+  from (values
+         ('ingreso', 'ing-admin', 8250000.00, '2026-07-05', 'Recaudo cuotas de administración julio'),
+         ('egreso', 'egr-servicios', 980000.00, '2026-07-18', 'Energía y acueducto de zonas comunes'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-07-30', 'Nómina de julio del personal de aseo y portería'),
+         ('ingreso', 'ing-admin', 8300000.00, '2026-08-05', 'Recaudo cuotas de administración agosto'),
+         ('ingreso', 'ing-zonas', 450000.00, '2026-08-16', 'Alquiler del salón social'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-08-30', 'Nómina de agosto del personal de aseo y portería'),
+         ('egreso', 'egr-vigilancia', 2100000.00, '2026-08-31', 'Servicio de vigilancia de agosto'),
+         ('ingreso', 'ing-admin', 8400000.00, '2026-09-05', 'Recaudo cuotas de administración septiembre'),
+         ('egreso', 'egr-mantenimiento', 1250000.00, '2026-09-12', 'Mantenimiento preventivo del ascensor'),
+         ('ingreso', 'ing-multas', 180000.00, '2026-09-20', 'Intereses de mora de septiembre'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-09-30', 'Nómina de septiembre del personal de aseo y portería'),
+         ('ingreso', 'ing-admin', 2150000.00, '2026-10-01', 'Recaudo parcial cuotas de administración octubre'),
+         ('egreso', 'egr-aseo', 320000.00, '2026-10-01', 'Insumos de limpieza para zonas comunes')
+       ) as m (tipo, categoria_id, monto, fecha, descripcion)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles p on p.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.movimientos x
+    where x.conjunto_id = c.id and x.fecha = m.fecha::date and x.descripcion = m.descripcion
+ );
