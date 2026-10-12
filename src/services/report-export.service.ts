@@ -9,7 +9,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { utils, write, writeFile, type WorkBook } from 'xlsx';
 
-import { ALL_CATEGORIES, findCategory, type FinancialReport } from '@/services/finance.service';
+import type { FinancialReport } from '@/services/finance.service';
 import { formatDate, formatDateTime } from '@/utils/date';
 import { formatAmount } from '@/utils/money';
 
@@ -17,10 +17,6 @@ const PDF_MIME = 'application/pdf';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 const typeLabel = (type: string) => (type === 'ingreso' ? 'Ingreso' : 'Egreso');
-
-export function categoryLabel(categoryId: string): string {
-  return categoryId === ALL_CATEGORIES ? 'Todas' : (findCategory(categoryId)?.name ?? 'Sin categoría');
-}
 
 /** «reporte-financiero_2026-10-01_2026-10-03.pdf» */
 export function reportFileName(report: FinancialReport, extension: 'pdf' | 'xlsx'): string {
@@ -39,7 +35,7 @@ export function buildReportHtml(report: FinancialReport): string {
         <tr>
           <td>${formatDate(item.date)}</td>
           <td>${typeLabel(item.type)}</td>
-          <td>${escapeHtml(categoryLabel(item.categoryId))}</td>
+          <td>${escapeHtml(item.categoryName)}</td>
           <td>${escapeHtml(item.description)}</td>
           <td class="amount ${item.type}">${item.type === 'egreso' ? '−' : ''}${formatAmount(item.amount)}</td>
         </tr>`,
@@ -72,7 +68,7 @@ export function buildReportHtml(report: FinancialReport): string {
   <h1>Convive</h1>
   <h2>Reporte financiero</h2>
   <p class="meta">Periodo: ${formatDate(filters.from)} – ${formatDate(filters.to)}</p>
-  <p class="meta">Categoría: ${escapeHtml(categoryLabel(filters.categoryId))}</p>
+  <p class="meta">Categoría: ${escapeHtml(report.categoryName)}</p>
   <p class="meta">Generado por ${escapeHtml(report.generatedBy.name)} el ${formatDateTime(new Date(report.generatedAt))}</p>
   <div class="totals">
     <div class="total"><span>Total ingresos</span><strong class="ingreso">${formatAmount(totals.income)}</strong></div>
@@ -93,7 +89,7 @@ export function buildReportWorkbook(report: FinancialReport): WorkBook {
   const header = [
     ['Convive · Reporte financiero'],
     ['Periodo', `${formatDate(filters.from)} – ${formatDate(filters.to)}`],
-    ['Categoría', categoryLabel(filters.categoryId)],
+    ['Categoría', report.categoryName],
     ['Generado', `${report.generatedBy.name} · ${formatDateTime(new Date(report.generatedAt))}`],
     [],
     ['Fecha', 'Tipo', 'Categoría', 'Concepto', 'Valor (COP)'],
@@ -102,7 +98,7 @@ export function buildReportWorkbook(report: FinancialReport): WorkBook {
   const rows = report.movements.map((item) => [
     formatDate(item.date),
     typeLabel(item.type),
-    categoryLabel(item.categoryId),
+    item.categoryName,
     item.description,
     item.type === 'egreso' ? -item.amount : item.amount,
   ]);
