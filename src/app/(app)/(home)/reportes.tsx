@@ -22,7 +22,7 @@ import {
   type Category,
   type FinancialReport,
 } from '@/services/finance.service';
-import { categoryLabel, exportReportExcel, exportReportPdf } from '@/services/report-export.service';
+import { exportReportExcel, exportReportPdf } from '@/services/report-export.service';
 import { formatDate, startOfMonthISO, todayISO } from '@/utils/date';
 import { formatAmount } from '@/utils/money';
 
@@ -47,11 +47,13 @@ export default function ReportesScreen() {
 
   useEffect(() => {
     let active = true;
-    listReportCategories().then((items) => active && setCategories(items));
+    listReportCategories()
+      .then((items) => active && setCategories(items))
+      .catch(() => active && showToast('error', MSG.general.unexpected));
     return () => {
       active = false;
     };
-  }, []);
+  }, [showToast]);
 
   const filters = { from, to, categoryId };
   const errors = validateReportFilters(filters, today);
@@ -153,7 +155,7 @@ export default function ReportesScreen() {
           </View>
 
           <Text style={styles.muted}>
-            {formatDate(report.filters.from)} – {formatDate(report.filters.to)} · {categoryLabel(report.filters.categoryId)} ·{' '}
+            {formatDate(report.filters.from)} – {formatDate(report.filters.to)} · {report.categoryName} ·{' '}
             {report.movements.length} {report.movements.length === 1 ? 'movimiento' : 'movimientos'}
           </Text>
 

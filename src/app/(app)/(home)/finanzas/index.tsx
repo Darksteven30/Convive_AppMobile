@@ -7,22 +7,31 @@ import { MovementRow } from '@/components/finance/MovementRow';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
+import { MSG } from '@/constants/messages';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useFeedback } from '@/context/FeedbackContext';
 import { listMovements, type Movement } from '@/services/finance.service';
 
 /** Finanzas (administrador): movimientos registrados y acceso a «Nuevo movimiento» (RF03). */
 export default function FinanzasScreen() {
   const [movements, setMovements] = useState<Movement[] | null>(null);
+  const { showToast } = useFeedback();
 
   // Se recarga cada vez que la pantalla vuelve a tener el foco (p. ej. al guardar un movimiento).
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      listMovements().then((items) => active && setMovements(items));
+      listMovements()
+        .then((items) => active && setMovements(items))
+        .catch(() => {
+          if (!active) return;
+          setMovements([]);
+          showToast('error', MSG.general.unexpected);
+        });
       return () => {
         active = false;
       };
-    }, []),
+    }, [showToast]),
   );
 
   return (
