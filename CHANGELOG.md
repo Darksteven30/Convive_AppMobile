@@ -8,6 +8,22 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Agregado
+
+- **Finanzas en Supabase (RF03 y RF04):**
+  - Migración `20261012000000_finanzas.sql`: catálogo `categorias_financieras` y tabla `movimientos` (monto decimal(18,2), auditoría de quién y cuándo registró) con Row Level Security por conjunto.
+  - `registrar_movimiento()` valida en el servidor la categoría (activa y del tipo elegido), el monto, la fecha (hora de Colombia), la descripción y el soporte; solo el administrador puede registrar.
+  - `movimientos_financieros()` consulta los movimientos del conjunto con las reglas de RF04 (rango máximo de 12 meses, fecha final no posterior a hoy); administrador y junta directiva (solo lectura).
+  - El soporte (PDF, JPG o PNG de máx. 5 MB) se sube al bucket privado `soportes-financieros` de Supabase Storage, en la carpeta del conjunto; si el movimiento no se guarda, se borra.
+  - `seed.sql`: los 13 movimientos de ejemplo de julio a octubre de 2026.
+  - Pruebas: servicio con Supabase (Jest) y pruebas de base de datos en `supabase/tests/rf03_rf04_finanzas_test.sql`.
+
+### Cambiado
+
+- El servicio de finanzas sigue el mismo patrón que pagos: `finance.service.ts` usa Supabase si hay `.env.local` y, si no, el servicio simulado (`finance.mock.ts`), con los tipos y las validaciones compartidos.
+- Cada movimiento y cada reporte traen el nombre de su categoría, así la lista, el reporte y la exportación a PDF/Excel no dependen del catálogo simulado.
+- Finanzas, Nuevo movimiento y Reportes muestran «Ocurrió un error inesperado…» si no se pueden cargar los datos.
+
 ## [0.2.0] - 2026-10-08
 
 Primera versión con backend: autenticación y perfiles en Supabase, pagos en línea con Wompi Sandbox
