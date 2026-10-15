@@ -24,6 +24,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 - Cada movimiento y cada reporte traen el nombre de su categoría, así la lista, el reporte y la exportación a PDF/Excel no dependen del catálogo simulado.
 - Finanzas, Nuevo movimiento y Reportes muestran «Ocurrió un error inesperado…» si no se pueden cargar los datos.
 
+### Corregido
+
+- Pruebas: con la caché de Jest vacía fallaban 113 de 481 pruebas en 10 suites. La primera prueba de cada suite que renderiza la app superaba el límite de 5 s de Jest mientras se transformaba el código, y su render inconcluso hacía fallar las siguientes. El límite pasa a 30 s (`testTimeout` en `package.json`); la prueba más lenta tarda unos 9 s con la caché vacía.
+
 ## [0.2.0] - 2026-10-08
 
 Primera versión con backend: autenticación y perfiles en Supabase, pagos en línea con Wompi Sandbox
