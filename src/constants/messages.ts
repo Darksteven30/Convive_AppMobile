@@ -97,8 +97,11 @@ export const MSG = {
     notFound: 'No encontramos este pago.',
   },
   RF15: {
-    // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web).
-    finishInWompi: 'Completa el pago en la pestaña de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',
+    // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web) o en
+    // el navegador del celular.
+    finishInWompi: 'Completa el pago en la ventana de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',
+    notInWompi:
+      'Todavía no vemos tu pago en Wompi. Si cerraste la ventana sin pagar, cancélalo; si aún estás pagando, termina y pulsa «Ya terminé».',
     popupBlocked: 'Tu navegador bloqueó la ventana de Wompi. Pulsa «Ir a Wompi» para abrirla.',
     statusUnknown:
       'No pudimos confirmar tu pago todavía. Lo revisaremos automáticamente en unos minutos; no vuelvas a pagar este concepto.',
