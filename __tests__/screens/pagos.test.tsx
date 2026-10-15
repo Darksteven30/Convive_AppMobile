@@ -14,7 +14,10 @@ import {
 import { navigate, press, pressDialogButton, renderSignedIn } from '../helpers/app';
 
 // RF15: el checkout real de Wompi se abre en el navegador; en las pruebas no se abre nada.
-jest.mock('expo-web-browser', () => ({ openBrowserAsync: jest.fn(async () => ({ type: 'cancel' })) }));
+jest.mock('expo-web-browser', () => ({
+  openBrowserAsync: jest.fn(async () => ({ type: 'cancel' })),
+  WebBrowserResultType: { CANCEL: 'cancel', DISMISS: 'dismiss', OPENED: 'opened' },
+}));
 // RF13: el comprobante PDF se genera con expo-print y se comparte con expo-sharing.
 jest.mock('expo-print', () => ({ printToFileAsync: jest.fn(async () => ({ uri: 'file:///cache/comprobante.pdf' })) }));
 jest.mock('expo-sharing', () => ({
@@ -483,15 +486,50 @@ describe('RF15 · Checkout real de Wompi', () => {
     expect(screen.getByText('12345-1759750000-67890')).toBeTruthy();
   });
 
-  it('si Wompi no tiene la transacción, la persona cerró sin pagar: se cancela (MSG-RF12-02)', async () => {
+  it('si Wompi no tiene la transacción, pregunta antes de cancelar y cancela si la persona lo confirma (MSG-RF12-02)', async () => {
     const app = await payWithRealCheckout();
     jest.spyOn(paymentsBackend, 'checkPaymentStatus').mockResolvedValue({ inWompi: false, status: 'PENDIENTE' });
 
     await press(pagarConWompi());
 
+    // No se cancela sola: puede que todavía esté pagando.
+    expect(screen.getByText(MSG.RF15.notInWompi)).toBeTruthy();
+    expect(getMockTransactions()[0].status).toBe('PENDIENTE');
+
+    await pressDialogButton('Cancelar pago');
+
     expect(screen.getByText(MSG.RF12.cancelled)).toBeTruthy();
     expect(getMockTransactions()[0].status).toBe('CANCELADA');
     expect(app.getPathname()).toBe('/pago/aplicar');
+  });
+
+  it('en Android el navegador se abre sin esperar: no consulta ni cancela hasta «Ya terminé»', async () => {
+    const app = await payWithRealCheckout();
+    // En Android la promesa termina apenas se abre el navegador, antes de que la persona pague.
+    WebBrowser.openBrowserAsync.mockResolvedValueOnce({ type: 'opened' });
+    const checkStatus = jest.spyOn(paymentsBackend, 'checkPaymentStatus');
+
+    await press(pagarConWompi());
+
+    expect(checkStatus).not.toHaveBeenCalled();
+    expect(getMockTransactions()[0].status).toBe('PENDIENTE');
+    expect(screen.getByText(MSG.RF15.finishInWompi)).toBeTruthy();
+
+    // Pulsa «Ya terminé» antes de pagar: Wompi aún no tiene el pago y no se cancela.
+    await pressDialogButton('Ya terminé');
+    expect(screen.getByText(MSG.RF15.notInWompi)).toBeTruthy();
+    expect(getMockTransactions()[0].status).toBe('PENDIENTE');
+
+    // Termina de pagar en Wompi y vuelve a pulsar «Ya terminé».
+    simulateWompiPayment(getMockTransactions()[0].reference, {
+      id: '12345-1759750000-11111',
+      status: 'APPROVED',
+      method: 'NEQUI',
+    });
+    await pressDialogButton('Ya terminé');
+
+    expect(app.getPathname()).toBe('/pago/confirmacion');
+    expect(screen.getByText(MSG.RF13.approvedTitle)).toBeTruthy();
   });
 
   it('si no se puede consultar el estado, avisa que se revisará automáticamente y no cancela', async () => {
