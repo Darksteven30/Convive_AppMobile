@@ -26,6 +26,9 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Corregido
 
+- **Pago con Wompi en Android (RF12/RF13):** al abrir el checkout, la app consultaba el estado enseguida porque en Android el navegador avisa que se abrió, no que se cerró. Como Wompi aún no tenía la transacción, la app cancelaba el pago aunque la persona siguiera pagando, y así se podía pagar dos veces el mismo concepto. Ahora:
+  - En Android, como en web, la app espera a que la persona pulse «Ya terminé» para consultar el estado.
+  - Si Wompi todavía no tiene el pago, la app ya no lo cancela sola: pregunta si se quiere cancelar o si aún se está pagando. Si no hay respuesta, el pago sigue pendiente y la conciliación automática lo cancela a los 30 minutos.
 - Pruebas: con la caché de Jest vacía fallaban 113 de 481 pruebas en 10 suites. La primera prueba de cada suite que renderiza la app superaba el límite de 5 s de Jest mientras se transformaba el código, y su render inconcluso hacía fallar las siguientes. El límite pasa a 30 s (`testTimeout` en `package.json`); la prueba más lenta tarda unos 9 s con la caché vacía.
 
 ## [0.2.0] - 2026-10-08
