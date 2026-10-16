@@ -29,22 +29,22 @@ npm run test:coverage  # genera el reporte de cobertura
 
 | Carpeta | Qué prueba |
 |---|---|
-| `__tests__/unit` | Servicios de autenticación, pagos, funciones de Wompi (checksum y API), finanzas y exportación de reportes, permisos por rol, contexto de sesión, fechas y formato de moneda |
-| `__tests__/components` | Calendario de reservas |
+| `__tests__/unit` | Servicios de autenticación, pagos, funciones de Wompi (checksum y API), finanzas y exportación de reportes, reservas de zonas comunes, permisos por rol, contexto de sesión, fechas y formato de moneda |
+| `__tests__/components` | Calendario (rango, un solo día y límite de meses) |
 | `__tests__/navigation` | RF01: flujo de inicio/cierre de sesión y acceso de cada rol (incluido el bloqueo por ruta directa) |
-| `__tests__/screens` | Estado de cuenta (RF02), Pagos (RF11, RF12, RF13 y RF15), PQRS, Reservas, General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
+| `__tests__/screens` | Estado de cuenta (RF02), Pagos (RF11, RF12, RF13 y RF15), PQRS, Reservas (RF05), General, Perfil y menú (RF16), cambio de contraseña (RF17), Finanzas (RF03) y Reportes (RF04) |
 
 ## Backend (Supabase)
 
 La app funciona en dos modos:
 
 - **Sin configurar** (por defecto y en las pruebas): usa servicios simulados en memoria; los datos se reinician al recargar.
-- **Con Supabase**: la autenticación y los perfiles viven en el proyecto de Supabase y la sesión se guarda en el dispositivo. Por ahora usan Supabase la autenticación, el estado de la cuenta con el saldo por concepto (RF11) la creación del pago (RF12), la integración con Wompi: checkout, webhook, consulta de estado y conciliación (RF15), y las finanzas: movimientos con su soporte en Storage (RF03) y reportes (RF04). El resumen de General (RF14) sigue simulado.
+- **Con Supabase**: la autenticación y los perfiles viven en el proyecto de Supabase y la sesión se guarda en el dispositivo. Por ahora usan Supabase la autenticación, el estado de la cuenta con el saldo por concepto (RF11) la creación del pago (RF12), la integración con Wompi: checkout, webhook, consulta de estado y conciliación (RF15), las finanzas: movimientos con su soporte en Storage (RF03) y reportes (RF04), y las reservas de zonas comunes con la validación de disponibilidad (RF05). El resumen de General (RF14) sigue simulado.
 
 Para conectar un proyecto:
 
 1. Crear una cuenta en [supabase.com](https://supabase.com) → **New project** (región *South America (São Paulo)*). Guardar la contraseña de la base de datos.
-2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo»).
+2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql`, `supabase/migrations/20261015000000_reservas.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo», «RF05 · Zonas comunes y reservas de ejemplo»).
 3. **Authentication → Sign In / Providers → Email**: desactivar **Confirm email** (las cuentas ya las registra la administración) y dejar el código (OTP) de 6 dígitos con vencimiento de **600** segundos.
 4. **Authentication → Emails → Reset Password**: cambiar la plantilla para que envíe el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos).
 5. **Project Settings → API Keys**: copiar la *Project URL* y la *publishable key* en un archivo `.env.local` (ver `.env.example`). Nunca usar la *secret key* en la app.
@@ -86,6 +86,8 @@ El pago se hace en el **checkout real de Wompi**. Las llaves son **por conjunto*
 
 **Pruebas de base de datos de finanzas (RF03 y RF04):** en el SQL Editor, ejecutar `supabase/tests/rf03_rf04_finanzas_test.sql`. Prueba el registro con sus validaciones (categoría, monto, fecha, descripción y soporte), los filtros y el rango de los reportes, los permisos por rol (solo el administrador registra; la junta consulta; el residente no ve nada), que cada conjunto vea solo sus movimientos y la configuración del bucket de soportes. Deshace sus datos al final; si todo pasa, responde con «RF03/RF04 OK: 14 pruebas pasaron».
 
+**Pruebas de base de datos de reservas (RF05):** en el SQL Editor, ejecutar `supabase/tests/rf05_reservas_test.sql`. Prueba la creación de la reserva con sus validaciones (fecha hasta 3 meses adelante, bloques de 1 hora, horario de la zona, franjas que ya empezaron y aforo), la verificación de disponibilidad (franjas cruzadas, pendientes que ocupan, canceladas que liberan), el estado confirmada o pendiente según la zona, que solo se reserve con una unidad asignada y en zonas del propio conjunto, y la consulta de disponibilidad. Deshace sus datos al final; si todo pasa, responde con «RF05 OK: 14 pruebas pasaron».
+
 Pruebas en Sandbox: Wompi tiene datos de prueba para cada medio (p. ej. la tarjeta `4242 4242 4242 4242` es aprobada y la `4111 1111 1111 1111` es rechazada). El saldo baja solo cuando Wompi confirma el pago como **APROBADO**.
 
 > En el plan gratuito, Supabase pausa el proyecto tras una semana sin uso (se reactiva desde el panel) y el servidor de correo incluido envía pocos correos por hora.
@@ -111,6 +113,8 @@ Otros casos del inicio de sesión (RF01):
 **Finanzas (RF03):** con el administrador, Panel → «Registrar movimiento» o «Ver movimientos». El soporte adjunto acepta PDF, JPG o PNG de máximo 5 MB (en Expo Go se usa la cámara, la galería o los archivos del celular). Con Supabase, el movimiento queda guardado en la base de datos y el soporte en el bucket privado `soportes-financieros` de Storage, en la carpeta del conjunto; sin Supabase se reinicia al recargar la app.
 
 **Reportes (RF04):** con el administrador, Panel → «Reportes»; con la junta directiva, General → «Ver reportes financieros». Filtra por fecha inicial, fecha final (máximo 12 meses) y categoría, muestra los totales del periodo y exporta a PDF o Excel. Los datos de ejemplo tienen movimientos de julio a octubre de 2026. En el celular el archivo se abre en la hoja de compartir; en web el PDF abre el diálogo de impresión («Guardar como PDF») y el Excel se descarga.
+
+**Reservas (RF05):** con cualquier cuenta con unidad, Inicio → «Reservar zona» o la pestaña Reservas. Se elige la zona (Salón social de 08:00 a 22:00, requiere aprobación; Cancha de 06:00 a 22:00, aforo 12; BBQ de 10:00 a 20:00, aforo 20), un día entre hoy y 3 meses adelante, la hora inicio y fin entre las franjas libres y, si se quiere, el número de asistentes. «Agendar reserva» pide confirmar; la Cancha y el BBQ quedan confirmados y el Salón social queda pendiente de aprobación. Las reservas de ejemplo se cuentan desde hoy: la Cancha está ocupada mañana de 08:00 a 10:00 y no tiene cupo dentro de 3 días (ese día se ve en gris); en Supabase están en el bloque «RF05» de `seed.sql`.
 
 **Estado de cuenta (RF02):** con la residente, la pestaña Pagos muestra el saldo pendiente de la unidad y el historial de pagos APROBADOS de los últimos 12 meses (se puede cambiar el periodo), 12 por página con «Ver más». Al marcar un pago se habilita «Descargar comprobante», que genera el PDF con el conjunto, la unidad, el propietario y los datos del pago. Deslizar hacia abajo vuelve a consultar todo. La casa 56 trae pagos de ejemplo de los últimos 16 meses (en Supabase, el bloque «RF02» de `seed.sql`); la junta directiva (casa 12) no tiene pagos y el administrador ve «Estás al día» sin «Abonar».
 
@@ -146,7 +150,7 @@ src/
 │   └── ui/                   # Botones, tarjetas, chips, campos, calendario
 ├── context/                  # Sesión del usuario (SessionContext) y mensajes (FeedbackContext)
 ├── lib/supabase.ts           # Cliente de Supabase (si hay .env.local)
-├── services/                 # auth y payments eligen entre su versión supabase y mock; finanzas simulada
+├── services/                 # auth, payments, finanzas y reservas eligen entre su versión supabase y mock
 ├── constants/theme.ts        # Colores, espaciados y tipografía
 ├── data/mock.ts              # Datos de ejemplo (reemplazar por el backend)
 └── utils/                    # Fechas, moneda y validaciones

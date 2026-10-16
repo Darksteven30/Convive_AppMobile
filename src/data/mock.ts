@@ -6,8 +6,6 @@ export const news = [
   { id: 'n3', title: 'Cambio horario piscina' },
 ];
 
-export const zones = ['Salon social', 'Cancha', 'BBq'];
-
 export type Pqrs = { id: string; code: string; title: string };
 
 export const pqrsList: Pqrs[] = [
