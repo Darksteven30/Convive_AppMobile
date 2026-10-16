@@ -16,6 +16,9 @@ type Props = {
   mode?: 'range' | 'single';
   /** Días que no se pueden elegir (p. ej. fechas futuras); se muestran en gris. */
   isDateDisabled?: (date: Date) => boolean;
+  /** Primer y último día que se pueden elegir: las flechas no pasan de sus meses. */
+  minDate?: Date;
+  maxDate?: Date;
 };
 
 type Cell = { date: Date; inMonth: boolean };
@@ -23,14 +26,23 @@ type Cell = { date: Date; inMonth: boolean };
 const sameDay = (a: Date | null, b: Date) =>
   !!a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
+const monthStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+const dayStart = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
 /** Calendario mensual. En modo rango, el primer toque marca el inicio y el segundo el fin. */
-export function Calendar({ value, onChange, mode = 'range', isDateDisabled }: Props) {
+export function Calendar({ value, onChange, mode = 'range', isDateDisabled, minDate, maxDate }: Props) {
   const [visible, setVisible] = useState(() => {
-    const base = value.start ?? new Date();
-    return new Date(base.getFullYear(), base.getMonth(), 1);
+    const base = monthStart(value.start ?? new Date());
+    if (minDate && base < monthStart(minDate)) return monthStart(minDate);
+    if (maxDate && base > monthStart(maxDate)) return monthStart(maxDate);
+    return base;
   });
 
   const weeks = useMemo(() => buildWeeks(visible), [visible]);
+  const canGoBack = !minDate || visible > monthStart(minDate);
+  const canGoForward = !maxDate || visible < monthStart(maxDate);
+  const outOfBounds = (date: Date) =>
+    (!!minDate && date < dayStart(minDate)) || (!!maxDate && date > dayStart(maxDate));
 
   const changeMonth = (delta: number) =>
     setVisible((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
@@ -47,15 +59,29 @@ export function Calendar({ value, onChange, mode = 'range', isDateDisabled }: Pr
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Mes anterior" onPress={() => changeMonth(-1)} hitSlop={8}>
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mes anterior"
+          accessibilityState={{ disabled: !canGoBack }}
+          disabled={!canGoBack}
+          onPress={() => changeMonth(-1)}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={20} color={canGoBack ? colors.text : colors.placeholder} />
         </Pressable>
         <View style={styles.selectors}>
           <Text style={styles.selector}>{MONTHS[visible.getMonth()]}</Text>
           <Text style={styles.selector}>{visible.getFullYear()}</Text>
         </View>
-        <Pressable accessibilityLabel="Mes siguiente" onPress={() => changeMonth(1)} hitSlop={8}>
-          <Ionicons name="chevron-forward" size={20} color={colors.text} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Mes siguiente"
+          accessibilityState={{ disabled: !canGoForward }}
+          disabled={!canGoForward}
+          onPress={() => changeMonth(1)}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-forward" size={20} color={canGoForward ? colors.text : colors.placeholder} />
         </Pressable>
       </View>
 
@@ -70,7 +96,7 @@ export function Calendar({ value, onChange, mode = 'range', isDateDisabled }: Pr
       {weeks.map((week, index) => (
         <View key={index} style={styles.week}>
           {week.map(({ date, inMonth }) => {
-            const disabled = !inMonth || !!isDateDisabled?.(date);
+            const disabled = !inMonth || outOfBounds(date) || !!isDateDisabled?.(date);
             const isEdge = sameDay(value.start, date) || sameDay(value.end, date);
             const inRange = !!value.start && !!value.end && date > value.start && date < value.end;
             return (
