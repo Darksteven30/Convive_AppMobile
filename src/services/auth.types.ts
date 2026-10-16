@@ -51,8 +51,10 @@ export type AuthBackend = {
   lookupEmail(email: string): Promise<EmailStatus>;
   /** Paso 2: verifica la contraseña. Tras 5 intentos fallidos bloquea la cuenta 15 minutos. */
   signIn(email: string, password: string): Promise<User>;
-  /** Primera contraseña de una cuenta pre-registrada. Deja la sesión iniciada. */
-  createPassword(email: string, password: string): Promise<User>;
+  /** Envía al correo pre-registrado un código de 6 dígitos para comprobar que es suyo antes de crear la contraseña. */
+  requestAccountCode(email: string): Promise<void>;
+  /** Primera contraseña de una cuenta pre-registrada, con el código recibido en el correo. Deja la sesión iniciada. */
+  createPassword(email: string, code: string, password: string): Promise<User>;
   /** Envía al correo un código de 6 dígitos para definir una nueva contraseña. */
   requestPasswordReset(email: string): Promise<void>;
   /** Define una nueva contraseña con el código recibido. También desbloquea la cuenta. */
