@@ -9,7 +9,7 @@ import { TextField } from '@/components/ui/TextField';
 import { MSG } from '@/constants/messages';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useFeedback } from '@/context/FeedbackContext';
-import { lookupEmail } from '@/services/auth.service';
+import { lookupEmail, requestAccountCode } from '@/services/auth.service';
 import { EMAIL_MAX_LENGTH, isValidEmail, normalizeEmail } from '@/utils/validation';
 
 /** RF01 · Paso 1: el usuario escribe su correo y la app decide el siguiente paso. */
@@ -45,6 +45,9 @@ export default function SignInScreen() {
       if (status === 'registered') {
         router.push({ pathname: '/contrasena', params: { email: normalized } });
       } else if (status === 'pending') {
+        // Antes de crear la contraseña se comprueba que el correo es suyo con un código.
+        await requestAccountCode(normalized);
+        showToast('success', MSG.RF01.resetCodeSent(normalized));
         router.push({ pathname: '/crear-contrasena', params: { email: normalized } });
       } else {
         showDialog({ message: MSG.RF01.emailNotRegistered, actions: [{ label: 'Aceptar', primary: true }] });
