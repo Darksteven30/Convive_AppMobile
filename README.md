@@ -44,13 +44,14 @@ La app funciona en dos modos:
 Para conectar un proyecto:
 
 1. Crear una cuenta en [supabase.com](https://supabase.com) → **New project** (región *South America (São Paulo)*). Guardar la contraseña de la base de datos.
-2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql`, `supabase/migrations/20261015000000_reservas.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo», «RF05 · Zonas comunes y reservas de ejemplo»).
-3. **Authentication → Sign In / Providers → Email**: desactivar **Confirm email** (las cuentas ya las registra la administración) y dejar el código (OTP) de 6 dígitos con vencimiento de **600** segundos.
-4. **Authentication → Emails → Reset Password**: cambiar la plantilla para que envíe el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos).
-5. **Project Settings → API Keys**: copiar la *Project URL* y la *publishable key* en un archivo `.env.local` (ver `.env.example`). Nunca usar la *secret key* en la app.
-6. Reiniciar Expo limpiando la caché: `npx expo start --clear`.
+2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql`, `supabase/migrations/20261015000000_reservas.sql`, `supabase/migrations/20261016000000_verificar_correo.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo», «RF05 · Zonas comunes y reservas de ejemplo»).
+3. **Authentication → Emails → SMTP Settings**: activar **Custom SMTP** con una cuenta de correo propia (por ejemplo Brevo o Gmail con contraseña de aplicación). El servicio de correo incluido en Supabase es solo para pruebas y no envía los códigos a los usuarios. La contraseña del SMTP se escribe solo en Supabase, nunca en el repositorio.
+4. **Authentication → Sign In / Providers → Email**: dejar **Confirm email** activado, con el código (OTP) de 6 dígitos y vencimiento de **600** segundos. Así nadie puede crear la cuenta de un correo pre-registrado sin el código que llega a ese correo.
+5. **Authentication → Emails**: cambiar las plantillas **Confirm signup**, **Magic Link** y **Reset Password** para que envíen el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos para crear la contraseña y para recuperarla).
+6. **Project Settings → API Keys**: copiar la *Project URL* y la *publishable key* en un archivo `.env.local` (ver `.env.example`). Nunca usar la *secret key* en la app.
+7. Reiniciar Expo limpiando la caché: `npx expo start --clear`.
 
-Con Supabase, las cuentas de prueba empiezan **pre-registradas**: la primera vez, cada persona escribe su correo y la app le pide crear su contraseña (usen las de la tabla de abajo). `nuevo@convive.com` se deja sin crear para probar ese flujo.
+Con Supabase, las cuentas de prueba empiezan **pre-registradas**: la primera vez, cada persona escribe su correo, recibe un código de 6 dígitos y con él crea su contraseña (usen las de la tabla de abajo). `nuevo@convive.com` se deja sin crear para probar ese flujo.
 
 ### Wompi (RF15)
 
@@ -88,6 +89,8 @@ El pago se hace en el **checkout real de Wompi**. Las llaves son **por conjunto*
 
 **Pruebas de base de datos de reservas (RF05):** en el SQL Editor, ejecutar `supabase/tests/rf05_reservas_test.sql`. Prueba la creación de la reserva con sus validaciones (fecha hasta 3 meses adelante, bloques de 1 hora, horario de la zona, franjas que ya empezaron y aforo), la verificación de disponibilidad (franjas cruzadas, pendientes que ocupan, canceladas que liberan), el estado confirmada o pendiente según la zona, que solo se reserve con una unidad asignada y en zonas del propio conjunto, y la consulta de disponibilidad. Deshace sus datos al final; si todo pasa, responde con «RF05 OK: 14 pruebas pasaron».
 
+**Pruebas de base de datos de la verificación del correo (RF01):** en el SQL Editor, ejecutar `supabase/tests/rf01_verificar_correo_test.sql`. Prueba que una cuenta pre-registrada solo queda con contraseña cuando su correo está verificado y tiene contraseña: pedir el código, o crear la cuenta con un correo ajeno sin verificarlo, la deja pendiente. Deshace sus datos al final; si todo pasa, responde con «RF01 OK: 6 pruebas pasaron».
+
 Pruebas en Sandbox: Wompi tiene datos de prueba para cada medio (p. ej. la tarjeta `4242 4242 4242 4242` es aprobada y la `4111 1111 1111 1111` es rechazada). El saldo baja solo cuando Wompi confirma el pago como **APROBADO**.
 
 > En el plan gratuito, Supabase pausa el proyecto tras una semana sin uso (se reactiva desde el panel) y el servidor de correo incluido envía pocos correos por hora.
@@ -105,7 +108,7 @@ En modo simulado, las cuentas ya tienen estas contraseñas (`src/services/auth.m
 
 Otros casos del inicio de sesión (RF01):
 
-- **Cuenta pre-registrada sin contraseña:** `nuevo@convive.com` → pantalla «Crea tu contraseña».
+- **Cuenta pre-registrada sin contraseña:** `nuevo@convive.com` → pantalla «Crea tu contraseña», que pide el código enviado al correo (en modo simulado es siempre `123456`).
 - **Correo no registrado:** cualquier otro correo → diálogo «Este correo no está registrado…».
 - **Bloqueo:** 5 contraseñas incorrectas bloquean la cuenta 15 minutos.
 - **Recuperar contraseña:** en modo simulado el código es siempre `123456` (vence a los 10 minutos); con Supabase llega por correo.
