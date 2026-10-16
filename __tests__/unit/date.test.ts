@@ -1,4 +1,5 @@
 import {
+  addDaysISO,
   addMonthsISO,
   formatDate,
   formatDateTime,
@@ -14,6 +15,12 @@ describe('utilidades de fecha', () => {
   it('convierte entre Date y «aaaa-mm-dd» en hora local', () => {
     expect(toISODate(new Date(2026, 0, 5))).toBe('2026-01-05');
     expect(fromISODate('2026-01-05')).toEqual(new Date(2026, 0, 5));
+  });
+
+  it('suma días pasando de mes y de año', () => {
+    expect(addDaysISO('2026-10-15', 3)).toBe('2026-10-18');
+    expect(addDaysISO('2026-10-31', 1)).toBe('2026-11-01');
+    expect(addDaysISO('2026-12-31', 1)).toBe('2027-01-01');
   });
 
   it('formatea como dd/mm/aaaa', () => {
