@@ -10,6 +10,16 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF05 – Reserva de zonas comunes:**
+  - Catálogo de zonas con su horario permitido, aforo y si la reserva requiere aprobación; al cambiar de zona se recarga la disponibilidad del calendario. Reemplaza los chips de ejemplo.
+  - Calendario de un solo día, desde el mes actual hasta 3 meses adelante; los días pasados y los días sin cupo se ven en gris y no se pueden elegir.
+  - Selector «Hora inicio / Hora fin» en bloques de 1 hora con solo las franjas libres dentro del horario de la zona (hoy, solo las que aún no empiezan). MSG-RF05-05 si la hora final queda antes de la inicial y MSG-RF05-06 si, al cambiar de zona, el horario queda fuera del permitido.
+  - «Número de asistentes» opcional, de 1 hasta el aforo (MSG-RF05-07).
+  - «Agendar reserva» se habilita con zona, fecha y horario, y pide confirmar (MSG-RF05-01). Al confirmar, el servidor vuelve a verificar la disponibilidad: MSG-RF05-02 si la zona no requiere aprobación y MSG-RF05-03 si la requiere. Si el día elegido queda sin cupo, MSG-RF05-08; si otra persona tomó la franja, se avisa y se recarga la disponibilidad.
+  - Los mensajes usan los diálogos y toasts de la app en lugar de `Alert`.
+  - Migración `20261015000000_reservas.sql`: tablas `zonas_comunes` y `reservas` con Row Level Security por conjunto y unidad; `disponibilidad_zona()` devuelve las franjas ocupadas (sin datos de quién reservó) y `crear_reserva()` valida fecha, horario, aforo y disponibilidad (RF06) en la hora de Colombia, atendiendo en orden dos reservas simultáneas de la misma zona y día.
+  - `seed.sql`: las zonas Salón social, Cancha y BBQ con reservas de ejemplo contadas desde hoy.
+  - Pruebas: pantalla, calendario, reglas y servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf05_reservas_test.sql`.
 - **Finanzas en Supabase (RF03 y RF04):**
   - Migración `20261012000000_finanzas.sql`: catálogo `categorias_financieras` y tabla `movimientos` (monto decimal(18,2), auditoría de quién y cuándo registró) con Row Level Security por conjunto.
   - `registrar_movimiento()` valida en el servidor la categoría (activa y del tipo elegido), el monto, la fecha (hora de Colombia), la descripción y el soporte; solo el administrador puede registrar.
