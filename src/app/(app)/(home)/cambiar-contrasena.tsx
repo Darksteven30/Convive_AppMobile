@@ -62,7 +62,7 @@ export default function CambiarContrasenaScreen() {
   };
 
   const save = async () => {
-    if (!canSave) return;
+    if (!canSave || saving) return;
     setSaving(true);
     try {
       await changePassword(current, password);
@@ -72,6 +72,9 @@ export default function CambiarContrasenaScreen() {
       setSaving(false);
       if (e instanceof AuthError && e.code === 'wrong_password') {
         setCurrentError(MSG.RF17.wrongCurrent);
+      } else if (e instanceof AuthError && e.code === 'locked') {
+        setCurrent('');
+        showDialog({ message: MSG.RF17.locked, actions: [{ label: 'Aceptar', primary: true }] });
       } else if (e instanceof AuthError && (e.code === 'same_password' || e.code === 'weak_password')) {
         setPasswordTouched(true);
       } else {

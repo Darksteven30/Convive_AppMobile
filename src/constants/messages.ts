@@ -143,6 +143,9 @@ export const MSG = {
     weak: 'La contraseña no cumple con los requisitos de seguridad.', // MSG-RF17-05
     leaveTitle: '¿Salir sin guardar?', // MSG-RF17-06
     leaveMessage: 'Los cambios se perderán.', // MSG-RF17-06
+    // Propuesto (no está en el documento): los intentos con la contraseña actual equivocada cuentan para el bloqueo de RF01.
+    locked:
+      'Por seguridad bloqueamos tu cuenta durante 15 minutos porque la contraseña actual no fue correcta varias veces. Intenta más tarde.',
   },
   general: {
     unexpected: 'Ocurrió un error inesperado. Intenta de nuevo en unos minutos.',
