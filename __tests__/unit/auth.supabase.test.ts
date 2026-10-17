@@ -33,7 +33,7 @@ const fail = (code: string) => Promise.resolve({ data: {}, error: new AuthApiErr
 
 const mockAuth = {
   signInWithPassword: jest.fn(),
-  signUp: jest.fn(),
+  signInWithOtp: jest.fn(),
   resetPasswordForEmail: jest.fn(),
   verifyOtp: jest.fn(),
   updateUser: jest.fn(),
@@ -63,6 +63,7 @@ beforeEach(() => {
   mockAuth.updateUser.mockImplementation(() => ok());
   mockAuth.resetPasswordForEmail.mockImplementation(() => ok());
   mockAuth.verifyOtp.mockImplementation(() => ok());
+  mockAuth.signInWithOtp.mockImplementation(() => ok());
 });
 
 async function expectAuthError(promise: Promise<unknown>, code: string, extra: object = {}) {
@@ -122,28 +123,50 @@ describe('signIn', () => {
   });
 });
 
-describe('createPassword', () => {
-  it('crea la cuenta de un correo pre-registrado y deja la sesión iniciada', async () => {
+describe('requestAccountCode (verificar el correo antes de crear la contraseña)', () => {
+  it('envía el código a un correo pre-registrado y crea su usuario de Auth si no existe', async () => {
     rpcResults.estado_correo = 'pending';
-    mockAuth.signUp.mockImplementation(() => ok({ session: { access_token: 't' } }));
+    await supabaseAuth.requestAccountCode(' Nuevo@Convive.com ');
+    expect(mockAuth.signInWithOtp).toHaveBeenCalledWith({
+      email: 'nuevo@convive.com',
+      options: { shouldCreateUser: true },
+    });
+  });
 
-    const user = await supabaseAuth.createPassword('nuevo@convive.com', 'NuevaClave1');
-    expect(mockAuth.signUp).toHaveBeenCalledWith({ email: 'nuevo@convive.com', password: 'NuevaClave1' });
+  it('no envía el código a correos no registrados o que ya tienen contraseña', async () => {
+    rpcResults.estado_correo = 'not_found';
+    await expectAuthError(supabaseAuth.requestAccountCode('nadie@convive.com'), 'not_found');
+    rpcResults.estado_correo = 'registered';
+    await expectAuthError(supabaseAuth.requestAccountCode('monica@gmail.com'), 'password_already_set');
+    expect(mockAuth.signInWithOtp).not.toHaveBeenCalled();
+  });
+});
+
+describe('createPassword', () => {
+  it('verifica el código del correo, define la contraseña y deja la sesión iniciada', async () => {
+    const user = await supabaseAuth.createPassword('Nuevo@convive.com', '123456', 'NuevaClave1');
+
+    expect(mockAuth.verifyOtp).toHaveBeenCalledWith({ email: 'nuevo@convive.com', token: '123456', type: 'email' });
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'NuevaClave1' });
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
     expect(user.name).toBe('Monica Galvis');
   });
 
-  it('rechaza correos no registrados o que ya tienen contraseña', async () => {
-    rpcResults.estado_correo = 'not_found';
-    await expectAuthError(supabaseAuth.createPassword('nadie@convive.com', 'NuevaClave1'), 'not_found');
-    rpcResults.estado_correo = 'registered';
-    await expectAuthError(supabaseAuth.createPassword('monica@gmail.com', 'NuevaClave1'), 'password_already_set');
-    expect(mockAuth.signUp).not.toHaveBeenCalled();
+  it('sin el código correcto no define ninguna contraseña (nadie se queda con la cuenta)', async () => {
+    mockAuth.verifyOtp.mockImplementation(() => fail('otp_expired'));
+    await expectAuthError(supabaseAuth.createPassword('nuevo@convive.com', '000000', 'NuevaClave1'), 'invalid_code');
+    expect(mockAuth.updateUser).not.toHaveBeenCalled();
   });
 
-  it('sin sesión (confirmación de correo activa) avisa con confirmation_required', async () => {
-    rpcResults.estado_correo = 'pending';
-    mockAuth.signUp.mockImplementation(() => ok({ session: null }));
-    await expectAuthError(supabaseAuth.createPassword('nuevo@convive.com', 'NuevaClave1'), 'confirmation_required');
+  it('rechaza una contraseña débil antes de gastar el código', async () => {
+    await expectAuthError(supabaseAuth.createPassword('nuevo@convive.com', '123456', 'corta'), 'weak_password');
+    expect(mockAuth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('si no se puede guardar la contraseña cierra la sesión temporal', async () => {
+    mockAuth.updateUser.mockImplementation(() => fail('weak_password'));
+    await expectAuthError(supabaseAuth.createPassword('nuevo@convive.com', '123456', 'NuevaClave1'), 'weak_password');
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 });
 

@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { SessionProvider, useSession } from '@/context/SessionContext';
-import { resetMockAuthState } from '@/services/auth.service';
+import { MOCK_RESET_CODE, requestAccountCode, resetMockAuthState } from '@/services/auth.service';
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -48,7 +48,10 @@ describe('SessionContext', () => {
     const { result } = await renderHook(() => useSession(), { wrapper });
 
     await act(async () => {
-      const pending = result.current.createPassword('nuevo@convive.com', 'NuevaClave1');
+      const sent = requestAccountCode('nuevo@convive.com');
+      await jest.runAllTimersAsync();
+      await sent;
+      const pending = result.current.createPassword('nuevo@convive.com', MOCK_RESET_CODE, 'NuevaClave1');
       await jest.runAllTimersAsync();
       await pending;
     });

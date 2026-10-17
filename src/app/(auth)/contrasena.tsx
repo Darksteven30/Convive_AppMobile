@@ -8,8 +8,8 @@ import { TextLink } from '@/components/ui/TextLink';
 import { MSG } from '@/constants/messages';
 import { useFeedback } from '@/context/FeedbackContext';
 import { useSession } from '@/context/SessionContext';
-import { useSendResetCode } from '@/hooks/useSendResetCode';
-import { AuthError } from '@/services/auth.service';
+import { useSendEmailCode } from '@/hooks/useSendEmailCode';
+import { AuthError, requestPasswordReset } from '@/services/auth.service';
 import { PASSWORD_MIN_LENGTH } from '@/utils/validation';
 
 /**
@@ -20,7 +20,7 @@ export default function ContrasenaScreen() {
   const { email = '' } = useLocalSearchParams<{ email: string }>();
   const { signIn } = useSession();
   const { showDialog, showToast } = useFeedback();
-  const { send: sendResetCode, sending } = useSendResetCode(email);
+  const { send: sendResetCode, sending } = useSendEmailCode(email, requestPasswordReset);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
