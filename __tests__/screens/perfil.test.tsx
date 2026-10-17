@@ -203,6 +203,19 @@ describe('RF17 · Cambiar contraseña', () => {
     expect(screen.queryByText(MSG.RF17.wrongCurrent)).toBeNull();
   });
 
+  it('al quinto intento con la contraseña actual equivocada avisa que la cuenta quedó bloqueada', async () => {
+    await openCambiarContrasena();
+
+    await fill(nueva, 'NuevaClave1');
+    await fill(confirmar, 'NuevaClave1');
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await fill(actual, 'Equivocada1');
+      await press(guardar());
+    }
+
+    expect(screen.getByText(MSG.RF17.locked)).toBeTruthy();
+  });
+
   it('MSG-RF17-01: guarda, vuelve al perfil y la nueva contraseña es la que sirve para entrar', async () => {
     const app = await openCambiarContrasena();
 
