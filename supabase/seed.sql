@@ -110,3 +110,74 @@ select u.id, pg.concepto_id, pg.descripcion, pg.monto, (pg.monto * 100)::bigint,
   join public.conjuntos c on c.id = u.conjunto_id and c.nombre = 'Conjunto Residencial Convive'
   join public.perfiles p on p.email = 'monica@gmail.com'
 on conflict (referencia) do nothing;
+
+-- ---------------------------------------------------------------------------------------------
+-- RF03 / RF04 · Movimientos de ejemplo (requiere 20261012000000_finanzas.sql)
+-- Los mismos 13 movimientos de julio a octubre de 2026 del modo simulado (finance.mock.ts), para
+-- que los reportes tengan datos que filtrar. Los registra la administración (admin@convive.com).
+-- Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.movimientos (conjunto_id, tipo, categoria_id, monto, fecha, descripcion, registrado_por, created_at)
+select c.id, m.tipo::public.tipo_movimiento, m.categoria_id, m.monto, m.fecha::date, m.descripcion, p.id,
+       (m.fecha || ' 09:00')::timestamp at time zone 'America/Bogota'
+  from (values
+         ('ingreso', 'ing-admin', 8250000.00, '2026-07-05', 'Recaudo cuotas de administración julio'),
+         ('egreso', 'egr-servicios', 980000.00, '2026-07-18', 'Energía y acueducto de zonas comunes'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-07-30', 'Nómina de julio del personal de aseo y portería'),
+         ('ingreso', 'ing-admin', 8300000.00, '2026-08-05', 'Recaudo cuotas de administración agosto'),
+         ('ingreso', 'ing-zonas', 450000.00, '2026-08-16', 'Alquiler del salón social'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-08-30', 'Nómina de agosto del personal de aseo y portería'),
+         ('egreso', 'egr-vigilancia', 2100000.00, '2026-08-31', 'Servicio de vigilancia de agosto'),
+         ('ingreso', 'ing-admin', 8400000.00, '2026-09-05', 'Recaudo cuotas de administración septiembre'),
+         ('egreso', 'egr-mantenimiento', 1250000.00, '2026-09-12', 'Mantenimiento preventivo del ascensor'),
+         ('ingreso', 'ing-multas', 180000.00, '2026-09-20', 'Intereses de mora de septiembre'),
+         ('egreso', 'egr-nomina', 3200000.00, '2026-09-30', 'Nómina de septiembre del personal de aseo y portería'),
+         ('ingreso', 'ing-admin', 2150000.00, '2026-10-01', 'Recaudo parcial cuotas de administración octubre'),
+         ('egreso', 'egr-aseo', 320000.00, '2026-10-01', 'Insumos de limpieza para zonas comunes')
+       ) as m (tipo, categoria_id, monto, fecha, descripcion)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles p on p.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.movimientos x
+    where x.conjunto_id = c.id and x.fecha = m.fecha::date and x.descripcion = m.descripcion
+ );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF05 · Zonas comunes y reservas de ejemplo (requiere 20261015000000_reservas.sql)
+-- Las mismas zonas del modo simulado (reservations.mock.ts). El Salón social requiere aprobación.
+-- Reservas de la casa 56 contadas desde hoy: la Cancha queda sin cupo dentro de 3 días (torneo).
+-- Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.zonas_comunes (conjunto_id, nombre, hora_apertura, hora_cierre, aforo, requiere_aprobacion, orden)
+select c.id, z.nombre, z.apertura::time, z.cierre::time, z.aforo, z.aprobacion, z.orden
+  from (values
+         ('Salón social', '08:00', '22:00', 50, true, 1),
+         ('Cancha', '06:00', '22:00', 12, false, 2),
+         ('BBQ', '10:00', '20:00', 20, false, 3)
+       ) as z (nombre, apertura, cierre, aforo, aprobacion, orden)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+on conflict (conjunto_id, nombre) do update
+  set hora_apertura = excluded.hora_apertura, hora_cierre = excluded.hora_cierre, aforo = excluded.aforo,
+      requiere_aprobacion = excluded.requiere_aprobacion, orden = excluded.orden;
+
+insert into public.reservas (conjunto_id, zona_id, unidad_id, reservado_por, fecha, hora_inicio, hora_fin, estado)
+select c.id, z.id, u.id, p.id, (now() at time zone 'America/Bogota')::date + r.dias, r.inicio::time, r.fin::time,
+       case when z.requiere_aprobacion then 'pendiente' else 'confirmada' end::public.estado_reserva
+  from (values
+         ('Cancha', 1, '08:00', '10:00'),
+         ('Cancha', 3, '06:00', '22:00'),
+         ('BBQ', 1, '12:00', '16:00'),
+         ('Salón social', 2, '18:00', '22:00')
+       ) as r (zona, dias, inicio, fin)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.zonas_comunes z on z.conjunto_id = c.id and z.nombre = r.zona
+  join public.unidades u on u.conjunto_id = c.id and u.nombre = '56'
+  join public.perfiles p on p.email = 'monica@gmail.com'
+ where not exists (
+   select 1 from public.reservas x
+    where x.zona_id = z.id
+      and x.fecha = (now() at time zone 'America/Bogota')::date + r.dias
+      and x.hora_inicio = r.inicio::time
+ );

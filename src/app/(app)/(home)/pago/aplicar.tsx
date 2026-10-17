@@ -71,6 +71,12 @@ export default function PagoAplicarScreen() {
   const goToConfirmation = (reference: string) =>
     router.replace({ pathname: '/pago/confirmacion', params: { reference } });
 
+  // Cerró Wompi sin pagar: la transacción se cancela y no hubo cobro.
+  const cancelCheckout = (reference: string) => {
+    if (user) cancelPayment(user, reference).catch(() => undefined);
+    showToast('info', MSG.RF12.cancelled);
+  };
+
   // RF15: al volver de Wompi se pregunta al servidor qué pasó (el estado nunca se toma del navegador).
   const verifyPayment = async (created: PaymentCheckout) => {
     if (!user) return;
@@ -78,9 +84,15 @@ export default function PagoAplicarScreen() {
     try {
       const result = await checkPaymentStatus(user, created.reference);
       if (!result.inWompi) {
-        // No hay transacción en Wompi: cerró el checkout sin pagar.
-        await cancelPayment(user, created.reference).catch(() => undefined);
-        showToast('info', MSG.RF12.cancelled);
+        // Wompi aún no tiene la transacción: cerró sin pagar o todavía está pagando, y solo la persona
+        // lo sabe. Si no responde, el pago sigue PENDIENTE y la conciliación lo cancela a los 30 min.
+        showDialog({
+          message: MSG.RF15.notInWompi,
+          actions: [
+            { label: 'Cancelar pago', onPress: () => cancelCheckout(created.reference) },
+            { label: 'Ya terminé', primary: true, onPress: () => verifyPayment(created) },
+          ],
+        });
         return;
       }
       goToConfirmation(created.reference);
@@ -93,17 +105,22 @@ export default function PagoAplicarScreen() {
   };
 
   const openRealCheckout = async (created: PaymentCheckout, url: string, tab: Window | null) => {
-    if (Platform.OS !== 'web') {
-      // Navegador dentro de la app: la promesa termina cuando la persona lo cierra.
-      await WebBrowser.openBrowserAsync(url);
-      await verifyPayment(created);
-      return;
-    }
     const askWhenFinished = () =>
       showDialog({
         message: MSG.RF15.finishInWompi,
         actions: [{ label: 'Ya terminé', primary: true, onPress: () => verifyPayment(created) }],
       });
+    if (Platform.OS !== 'web') {
+      // Navegador dentro de la app. En iOS la promesa termina cuando la persona lo cierra; en Android
+      // termina apenas se abre ({ type: 'opened' }), así que, como en web, se espera a «Ya terminé».
+      const result = await WebBrowser.openBrowserAsync(url);
+      if (result.type === WebBrowser.WebBrowserResultType.OPENED) {
+        askWhenFinished();
+      } else {
+        await verifyPayment(created);
+      }
+      return;
+    }
     if (tab) {
       tab.location.href = url;
       askWhenFinished();
@@ -159,13 +176,10 @@ export default function PagoAplicarScreen() {
     }
   };
 
-  // Cerró la ventana de Wompi sin pagar: la transacción se cancela y no hubo cobro.
+  // Cerró la ventana simulada de Wompi sin pagar.
   const closeCheckout = () => {
-    if (user && checkout) {
-      cancelPayment(user, checkout.reference).catch(() => undefined);
-    }
+    if (checkout) cancelCheckout(checkout.reference);
     setCheckout(null);
-    showToast('info', MSG.RF12.cancelled);
   };
 
   // Terminó en la ventana simulada: queda registrado «en Wompi» y, como con el Wompi real, el estado

@@ -13,7 +13,7 @@ type SessionContextValue = {
   dismissSessionExpired: () => void;
   signIn: (email: string, password: string) => Promise<User>;
   /** Crea la primera contraseña de una cuenta pre-registrada e inicia sesión. */
-  createPassword: (email: string, password: string) => Promise<User>;
+  createPassword: (email: string, code: string, password: string) => Promise<User>;
   /** RF17: cambia la contraseña del usuario en sesión. */
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   /** RF16: actualiza el teléfono del usuario en sesión. */
@@ -68,8 +68,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return authenticated;
   }, []);
 
-  const createPassword = useCallback(async (email: string, password: string) => {
-    const authenticated = await authService.createPassword(email, password);
+  const createPassword = useCallback(async (email: string, code: string, password: string) => {
+    const authenticated = await authService.createPassword(email, code, password);
     setUser(authenticated);
     return authenticated;
   }, []);

@@ -73,6 +73,14 @@ describe('validateMovement (reglas de RF03)', () => {
     expect(validateMovement({ ...valid, categoryId: 'ing-admin' }, TODAY).categoryId).toBeDefined();
   });
 
+  it('valida la categoría contra el catálogo que cargó la pantalla (o la deja al servidor con null)', () => {
+    const catalog = [{ id: 'egr-nueva', name: 'Nueva', type: 'egreso' as const, active: true }];
+    expect(validateMovement({ ...valid, categoryId: 'egr-nueva' }, TODAY, catalog).categoryId).toBeUndefined();
+    expect(validateMovement({ ...valid, categoryId: 'egr-aseo' }, TODAY, catalog).categoryId).toBeDefined();
+    expect(validateMovement({ ...valid, categoryId: 'no-existe' }, TODAY, null).categoryId).toBeUndefined();
+    expect(validateMovement({ ...valid, categoryId: '' }, TODAY, null).categoryId).toBe(MSG.RF03.categoryRequired);
+  });
+
   it('MSG-RF03-04: la fecha no puede ser posterior a hoy', () => {
     expect(validateMovement({ ...valid, date: TODAY }, TODAY).date).toBeUndefined();
     expect(validateMovement({ ...valid, date: '2026-10-03' }, TODAY).date).toBe(MSG.RF03.futureDate);
@@ -122,6 +130,7 @@ describe('createMovement', () => {
     const saved = await run(createMovement({ ...valid, description: '  Compra de insumos de aseo  ' }, admin));
 
     expect(saved.description).toBe('Compra de insumos de aseo');
+    expect(saved.categoryName).toBe('Aseo');
     expect(saved.createdBy).toEqual({ id: 'u2', name: 'David Muñoz' });
     // La hora de registro es la del "servidor" al guardar (incluye la latencia simulada).
     const savedAt = new Date(saved.createdAt).getTime() - new Date(2026, 9, 2, 10, 0).getTime();
@@ -191,7 +200,7 @@ describe('validateReportFilters (reglas de RF04)', () => {
 
 describe('computeTotals', () => {
   it('suma ingresos y egresos y calcula el saldo', () => {
-    const base = { categoryId: 'x', date: TODAY, description: 'xxxxx', createdBy: { id: 'u2', name: 'D' }, createdAt: '' };
+    const base = { categoryId: 'x', categoryName: 'X', date: TODAY, description: 'xxxxx', createdBy: { id: 'u2', name: 'D' }, createdAt: '' };
     const totals = computeTotals([
       { ...base, id: 'a', type: 'ingreso', amount: 1000 },
       { ...base, id: 'b', type: 'egreso', amount: 300.5 },
@@ -221,6 +230,7 @@ describe('getFinancialReport', () => {
     expect(report.movements.map((movement) => movement.date)).toEqual(['2026-10-01', '2026-10-01']);
     expect(report.totals).toEqual({ income: 2_150_000, expenses: 320_000, balance: 1_830_000 });
     expect(report.generatedBy).toEqual({ id: 'u2', name: 'David Muñoz' });
+    expect(report.categoryName).toBe('Todas');
   });
 
   it('incluye los extremos del rango', async () => {
@@ -235,6 +245,8 @@ describe('getFinancialReport', () => {
     expect(report.movements).toHaveLength(3);
     expect(report.movements.every((movement) => movement.categoryId === 'egr-nomina')).toBe(true);
     expect(report.totals).toEqual({ income: 0, expenses: 9_600_000, balance: -9_600_000 });
+    expect(report.categoryName).toBe('Nómina');
+    expect(report.movements[0].categoryName).toBe('Nómina');
   });
 
   it('incluye los movimientos registrados después (RF03)', async () => {

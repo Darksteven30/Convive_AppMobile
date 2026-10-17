@@ -54,11 +54,13 @@ export default function NuevoMovimientoScreen() {
   // Al cambiar el tipo se recarga la lista de categorías de ese tipo.
   useEffect(() => {
     let active = true;
-    listCategories(type).then((items) => active && setCategories(items));
+    listCategories(type)
+      .then((items) => active && setCategories(items))
+      .catch(() => active && showToast('error', MSG.general.unexpected));
     return () => {
       active = false;
     };
-  }, [type]);
+  }, [type, showToast]);
 
   const draft = { type, categoryId: categoryId ?? '', amount: amount ?? 0, date, description, attachment };
   const requiredComplete = !!categoryId && amount !== null && description.trim().length > 0;
@@ -66,7 +68,7 @@ export default function NuevoMovimientoScreen() {
     categoryId !== null || amountText !== '' || description !== '' || attachment !== null || date !== today;
 
   const showFieldError = (field: keyof MovementErrors) => {
-    const fieldError = validateMovement(draft, today)[field];
+    const fieldError = validateMovement(draft, today, categories)[field];
     setErrors((current) => ({ ...current, [field]: fieldError }));
   };
 
@@ -102,7 +104,7 @@ export default function NuevoMovimientoScreen() {
   };
 
   const save = async () => {
-    const validation = validateMovement(draft, today);
+    const validation = validateMovement(draft, today, categories);
     setErrors(validation);
     if (!user || Object.keys(validation).length > 0) return;
 

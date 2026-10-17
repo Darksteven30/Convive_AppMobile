@@ -40,6 +40,7 @@ const movement = (overrides: Partial<Movement>): Movement => ({
   id: 'm1',
   type: 'ingreso',
   categoryId: 'ing-admin',
+  categoryName: 'Cuotas de administración',
   amount: 1_000_000,
   date: '2026-10-01',
   description: 'Recaudo de octubre',
@@ -50,9 +51,10 @@ const movement = (overrides: Partial<Movement>): Movement => ({
 
 const report: FinancialReport = {
   filters: { from: '2026-10-01', to: '2026-10-15', categoryId: ALL_CATEGORIES },
+  categoryName: 'Todas',
   movements: [
     movement({}),
-    movement({ id: 'm2', type: 'egreso', categoryId: 'egr-aseo', amount: 250_000.5, description: 'Aseo <zonas> & jardines' }),
+    movement({ id: 'm2', type: 'egreso', categoryId: 'egr-aseo', categoryName: 'Aseo', amount: 250_000.5, description: 'Aseo <zonas> & jardines' }),
   ],
   totals: { income: 1_000_000, expenses: 250_000.5, balance: 749_999.5 },
   generatedAt: new Date(2026, 9, 15, 18, 19).toISOString(),

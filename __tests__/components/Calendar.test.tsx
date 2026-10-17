@@ -12,7 +12,7 @@ afterEach(() => jest.useRealTimers());
 
 let lastRange: DateRange = { start: null, end: null };
 
-function Harness(props: Pick<ComponentProps<typeof Calendar>, 'mode' | 'isDateDisabled'>) {
+function Harness(props: Pick<ComponentProps<typeof Calendar>, 'mode' | 'isDateDisabled' | 'minDate' | 'maxDate'>) {
   const [range, setRange] = useState<DateRange>({ start: null, end: null });
   lastRange = range;
   return <Calendar value={range} onChange={setRange} {...props} />;
@@ -109,5 +109,36 @@ describe('Calendar', () => {
 
     await fireEvent.press(day(15));
     expect(lastRange.start).toEqual(today);
+  });
+
+  it('con minDate y maxDate, las flechas no pasan de esos meses y los días fuera del rango no se eligen', async () => {
+    // RF05: desde hoy hasta el último día del tercer mes siguiente.
+    await render(<Harness mode="single" minDate={new Date(2025, 8, 15)} maxDate={new Date(2025, 11, 31)} />);
+
+    expect(screen.getByLabelText('Mes anterior')).toBeDisabled();
+    await fireEvent.press(screen.getByLabelText('Mes anterior'));
+    expect(screen.getByText('Sep')).toBeTruthy();
+
+    await fireEvent.press(day(14));
+    expect(lastRange.start).toBeNull();
+    await fireEvent.press(day(15));
+    expect(lastRange.start).toEqual(new Date(2025, 8, 15));
+
+    await fireEvent.press(screen.getByLabelText('Mes siguiente'));
+    await fireEvent.press(screen.getByLabelText('Mes siguiente'));
+    await fireEvent.press(screen.getByLabelText('Mes siguiente'));
+    expect(screen.getByText('Dic')).toBeTruthy();
+    expect(screen.getByLabelText('Mes siguiente')).toBeDisabled();
+    await fireEvent.press(screen.getByLabelText('Mes siguiente'));
+    expect(screen.getByText('Dic')).toBeTruthy();
+    expect(screen.getByLabelText('Mes anterior')).toBeEnabled();
+  });
+
+  it('si el mes actual queda antes de minDate, empieza en el mes de minDate', async () => {
+    await render(<Harness minDate={new Date(2025, 10, 3)} />);
+
+    expect(screen.getByText('Nov')).toBeTruthy();
+    expect(screen.getByLabelText('2 de Nov de 2025')).toBeDisabled();
+    expect(screen.getByLabelText('3 de Nov de 2025')).toBeEnabled();
   });
 });

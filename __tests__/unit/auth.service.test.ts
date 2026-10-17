@@ -4,6 +4,7 @@ import {
   MOCK_RESET_CODE,
   createPassword,
   lookupEmail,
+  requestAccountCode,
   requestPasswordReset,
   resetMockAuthState,
   resetPassword,
@@ -106,19 +107,41 @@ describe('signIn', () => {
 });
 
 describe('createPassword', () => {
-  it('asigna la primera contraseña y devuelve el usuario', async () => {
-    const user = await run(createPassword('nuevo@convive.com', 'NuevaClave1'));
+  it('con el código enviado al correo asigna la primera contraseña y devuelve el usuario', async () => {
+    await run(requestAccountCode('nuevo@convive.com'));
+    const user = await run(createPassword('nuevo@convive.com', MOCK_RESET_CODE, 'NuevaClave1'));
     expect(user.name).toBe('Laura Gómez');
     expect(await run(lookupEmail('nuevo@convive.com'))).toBe('registered');
     expect((await run(signIn('nuevo@convive.com', 'NuevaClave1'))).id).toBe(user.id);
   });
 
-  it('no permite reemplazar una contraseña existente', async () => {
-    await expectAuthError(createPassword('monica@gmail.com', 'OtraClave1'), 'password_already_set');
+  it('sin el código del correo nadie puede crear la contraseña de una cuenta pre-registrada', async () => {
+    // Sin pedir el código, o con un código equivocado.
+    await expectAuthError(createPassword('nuevo@convive.com', MOCK_RESET_CODE, 'NuevaClave1'), 'invalid_code');
+    await run(requestAccountCode('nuevo@convive.com'));
+    await expectAuthError(createPassword('nuevo@convive.com', '000000', 'NuevaClave1'), 'invalid_code');
+    expect(await run(lookupEmail('nuevo@convive.com'))).toBe('pending');
+  });
+
+  it('el código vence a los 10 minutos', async () => {
+    await run(requestAccountCode('nuevo@convive.com'));
+    jest.advanceTimersByTime(10 * 60 * 1000 + 1);
+    await expectAuthError(createPassword('nuevo@convive.com', MOCK_RESET_CODE, 'NuevaClave1'), 'invalid_code');
+  });
+
+  it('rechaza una contraseña que no cumple las reglas', async () => {
+    await run(requestAccountCode('nuevo@convive.com'));
+    await expectAuthError(createPassword('nuevo@convive.com', MOCK_RESET_CODE, 'corta'), 'weak_password');
+  });
+
+  it('no envía código ni permite reemplazar una contraseña existente', async () => {
+    await expectAuthError(requestAccountCode('monica@gmail.com'), 'password_already_set');
+    await expectAuthError(createPassword('monica@gmail.com', MOCK_RESET_CODE, 'OtraClave1'), 'password_already_set');
   });
 
   it('rechaza correos inexistentes', async () => {
-    await expectAuthError(createPassword('nadie@convive.com', 'OtraClave1'), 'not_found');
+    await expectAuthError(requestAccountCode('nadie@convive.com'), 'not_found');
+    await expectAuthError(createPassword('nadie@convive.com', MOCK_RESET_CODE, 'OtraClave1'), 'not_found');
   });
 });
 

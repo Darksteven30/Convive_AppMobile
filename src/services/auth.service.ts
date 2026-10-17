@@ -17,6 +17,7 @@ export const restoresSession = isSupabaseEnabled;
 
 export const lookupEmail: AuthBackend['lookupEmail'] = (...args) => backend.lookupEmail(...args);
 export const signIn: AuthBackend['signIn'] = (...args) => backend.signIn(...args);
+export const requestAccountCode: AuthBackend['requestAccountCode'] = (...args) => backend.requestAccountCode(...args);
 export const createPassword: AuthBackend['createPassword'] = (...args) => backend.createPassword(...args);
 export const requestPasswordReset: AuthBackend['requestPasswordReset'] = (...args) => backend.requestPasswordReset(...args);
 export const resetPassword: AuthBackend['resetPassword'] = (...args) => backend.resetPassword(...args);

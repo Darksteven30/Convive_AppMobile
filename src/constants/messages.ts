@@ -53,6 +53,28 @@ export const MSG = {
     endAfterToday: 'La fecha final no puede ser posterior a hoy.',
     forbidden: 'No tienes permisos para consultar los reportes financieros.',
   },
+  RF05: {
+    confirmTitle: '¿Confirmas tu reserva?', // MSG-RF05-01
+    confirmMessage: (zone: string, date: string, start: string, end: string) =>
+      `${zone} · ${date} · ${start} – ${end}`, // MSG-RF05-01
+    confirmed: (zone: string, date: string, start: string, end: string) =>
+      `¡Reserva confirmada! ${zone} el ${date} de ${start} a ${end}.`, // MSG-RF05-02
+    pendingApproval: 'Tu solicitud fue enviada. Te avisaremos cuando la administración la apruebe.', // MSG-RF05-03
+    zoneRequired: 'Selecciona una zona común.', // MSG-RF05-04
+    endBeforeStart: 'La hora final debe ser posterior a la hora inicial.', // MSG-RF05-05
+    outsideSchedule: (opens: string, closes: string) =>
+      `Esta zona solo se puede reservar entre ${opens} y ${closes}.`, // MSG-RF05-06
+    overCapacity: (zone: string, capacity: number) =>
+      `El aforo máximo de ${zone} es de ${capacity} personas.`, // MSG-RF05-07
+    dayFull: 'No hay horarios disponibles para este día. Elige otra fecha.', // MSG-RF05-08
+    // Propuestos (no están en el documento):
+    dateOutOfRange: 'Elige una fecha desde hoy y hasta 3 meses adelante.',
+    timeRequired: 'Selecciona la hora de inicio y la hora final.',
+    pastTime: 'Esa franja ya pasó. Elige una hora posterior.',
+    slotTaken: 'Ese horario ya fue reservado. Elige otra franja.',
+    attendeesInvalid: 'El número de asistentes debe ser al menos 1.',
+    forbidden: 'Tu cuenta no tiene una unidad asignada para hacer reservas.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
@@ -97,8 +119,11 @@ export const MSG = {
     notFound: 'No encontramos este pago.',
   },
   RF15: {
-    // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web).
-    finishInWompi: 'Completa el pago en la pestaña de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',
+    // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web) o en
+    // el navegador del celular.
+    finishInWompi: 'Completa el pago en la ventana de Wompi. Cuando termines, vuelve aquí y pulsa «Ya terminé».',
+    notInWompi:
+      'Todavía no vemos tu pago en Wompi. Si cerraste la ventana sin pagar, cancélalo; si aún estás pagando, termina y pulsa «Ya terminé».',
     popupBlocked: 'Tu navegador bloqueó la ventana de Wompi. Pulsa «Ir a Wompi» para abrirla.',
     statusUnknown:
       'No pudimos confirmar tu pago todavía. Lo revisaremos automáticamente en unos minutos; no vuelvas a pagar este concepto.',
