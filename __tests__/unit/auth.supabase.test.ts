@@ -56,7 +56,7 @@ jest.mock('@/lib/supabase', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  rpcResults = { minutos_bloqueo: 0, registrar_intento: 5, estado_correo: 'registered' };
+  rpcResults = { minutos_bloqueo: 0, registrar_intento_fallido: 5, estado_correo: 'registered' };
   profile = profileRow;
   authListener = null;
   mockAuth.signInWithPassword.mockImplementation(() => ok());
@@ -83,7 +83,8 @@ describe('signIn', () => {
     const user = await supabaseAuth.signIn('monica@gmail.com', 'Residente123');
 
     expect(mockAuth.signInWithPassword).toHaveBeenCalledWith({ email: 'monica@gmail.com', password: 'Residente123' });
-    expect(mockRpc).toHaveBeenCalledWith('registrar_intento', { p_email: 'monica@gmail.com', p_exitoso: true });
+    // El contador se borra con la sesión ya iniciada (limpiar_intentos solo es de authenticated).
+    expect(mockRpc).toHaveBeenCalledWith('limpiar_intentos', undefined);
     expect(user).toEqual({
       id: 'p1',
       name: 'Monica Galvis',
@@ -105,15 +106,16 @@ describe('signIn', () => {
 
   it('MSG-RF01-04: con contraseña incorrecta registra el intento y devuelve los que quedan', async () => {
     mockAuth.signInWithPassword.mockImplementation(() => fail('invalid_credentials'));
-    rpcResults.registrar_intento = 3;
+    rpcResults.registrar_intento_fallido = 3;
 
     await expectAuthError(supabaseAuth.signIn('monica@gmail.com', 'mala'), 'invalid_credentials', { remainingAttempts: 3 });
-    expect(mockRpc).toHaveBeenCalledWith('registrar_intento', { p_email: 'monica@gmail.com', p_exitoso: false });
+    expect(mockRpc).toHaveBeenCalledWith('registrar_intento_fallido', { p_email: 'monica@gmail.com' });
+    expect(mockRpc).not.toHaveBeenCalledWith('limpiar_intentos', undefined);
   });
 
   it('MSG-RF01-05: el quinto intento fallido bloquea la cuenta', async () => {
     mockAuth.signInWithPassword.mockImplementation(() => fail('invalid_credentials'));
-    rpcResults.registrar_intento = 0;
+    rpcResults.registrar_intento_fallido = 0;
     await expectAuthError(supabaseAuth.signIn('monica@gmail.com', 'mala'), 'locked');
   });
 
@@ -206,10 +208,26 @@ describe('changePassword (RF17)', () => {
     expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'others' });
   });
 
-  it('MSG-RF17-02: contraseña actual incorrecta', async () => {
+  it('MSG-RF17-02: contraseña actual incorrecta, y el intento cuenta para el bloqueo', async () => {
     mockAuth.signInWithPassword.mockImplementation(() => fail('invalid_credentials'));
-    await expectAuthError(supabaseAuth.changePassword('monica@gmail.com', 'Mala1234', 'NuevaClave1'), 'wrong_password');
+    rpcResults.registrar_intento_fallido = 2;
+    await expectAuthError(supabaseAuth.changePassword('monica@gmail.com', 'Mala1234', 'NuevaClave1'), 'wrong_password', {
+      remainingAttempts: 2,
+    });
+    expect(mockRpc).toHaveBeenCalledWith('registrar_intento_fallido', { p_email: 'monica@gmail.com' });
     expect(mockAuth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('al quinto intento con la contraseña actual equivocada bloquea la cuenta', async () => {
+    mockAuth.signInWithPassword.mockImplementation(() => fail('invalid_credentials'));
+    rpcResults.registrar_intento_fallido = 0;
+    await expectAuthError(supabaseAuth.changePassword('monica@gmail.com', 'Mala1234', 'NuevaClave1'), 'locked');
+  });
+
+  it('con la cuenta bloqueada no verifica la contraseña actual', async () => {
+    rpcResults.minutos_bloqueo = 10;
+    await expectAuthError(supabaseAuth.changePassword('monica@gmail.com', 'Residente123', 'NuevaClave1'), 'locked');
+    expect(mockAuth.signInWithPassword).not.toHaveBeenCalled();
   });
 
   it('MSG-RF17-04 y 05: rechaza una contraseña igual o débil sin llamar a Supabase', async () => {
