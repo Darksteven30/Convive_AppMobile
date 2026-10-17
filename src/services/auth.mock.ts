@@ -129,13 +129,20 @@ export async function signIn(email: string, password: string): Promise<User> {
     return toUser(account);
   }
 
+  const remaining = registerFailedAttempt(key);
+  if (remaining === 0) throw new AuthError('locked');
+  throw new AuthError('invalid_credentials', remaining);
+}
+
+/** Suma un intento fallido y devuelve los que quedan (0 = la cuenta quedó bloqueada 15 minutos). */
+function registerFailedAttempt(key: string): number {
   const count = (failedAttempts.get(key)?.count ?? 0) + 1;
   if (count >= MAX_FAILED_ATTEMPTS) {
     failedAttempts.set(key, { count, lockedUntil: Date.now() + LOCK_DURATION_MS });
-    throw new AuthError('locked');
+    return 0;
   }
   failedAttempts.set(key, { count, lockedUntil: null });
-  throw new AuthError('invalid_credentials', MAX_FAILED_ATTEMPTS - count);
+  return MAX_FAILED_ATTEMPTS - count;
 }
 
 /** Envía (simula enviar) al correo pre-registrado un código de 6 dígitos válido por 10 minutos. */
@@ -193,11 +200,18 @@ export async function resetPassword(email: string, code: string, newPassword: st
  */
 export async function changePassword(email: string, currentPassword: string, newPassword: string): Promise<void> {
   await simulateNetwork();
-  const account = findAccount(email);
+  const key = normalizeEmail(email);
+  const account = findAccount(key);
   if (!account) throw new AuthError('not_found');
-  if (account.password !== currentPassword) throw new AuthError('wrong_password');
   if (newPassword === currentPassword) throw new AuthError('same_password');
   if (!meetsPasswordRules(newPassword)) throw new AuthError('weak_password');
+  // Los intentos con la contraseña actual equivocada también cuentan para el bloqueo.
+  if (isLocked(key)) throw new AuthError('locked');
+  if (account.password !== currentPassword) {
+    const remaining = registerFailedAttempt(key);
+    throw remaining === 0 ? new AuthError('locked') : new AuthError('wrong_password', remaining);
+  }
+  failedAttempts.delete(key);
   account.password = newPassword;
 }
 

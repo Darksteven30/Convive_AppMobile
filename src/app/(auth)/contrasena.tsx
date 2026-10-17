@@ -32,7 +32,8 @@ export default function ContrasenaScreen() {
   };
 
   const submit = async () => {
-    if (password.length < PASSWORD_MIN_LENGTH) return;
+    // Un segundo «Enter» mientras se verifica contaría dos intentos fallidos.
+    if (password.length < PASSWORD_MIN_LENGTH || loading) return;
     setError(null);
     setLoading(true);
     try {
