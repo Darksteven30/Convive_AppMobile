@@ -199,6 +199,18 @@ describe('changePassword (RF17)', () => {
     await expectAuthError(changePassword('monica@gmail.com', 'Equivocada1', 'NuevaClave1'), 'wrong_password');
   });
 
+  it('los intentos con la contraseña actual equivocada cuentan para el bloqueo de RF01', async () => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      await expectAuthError(
+        changePassword('monica@gmail.com', 'Equivocada1', 'NuevaClave1'),
+        attempt < 5 ? 'wrong_password' : 'locked',
+      );
+    }
+    // Bloqueada: ni con la contraseña correcta se puede cambiar ni iniciar sesión.
+    await expectAuthError(changePassword('monica@gmail.com', 'Residente123', 'NuevaClave1'), 'locked');
+    await expectAuthError(signIn('monica@gmail.com', 'Residente123'), 'locked');
+  });
+
   it('MSG-RF17-04: rechaza una nueva contraseña igual a la actual', async () => {
     await expectAuthError(changePassword('monica@gmail.com', 'Residente123', 'Residente123'), 'same_password');
   });
