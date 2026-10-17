@@ -83,10 +83,11 @@ describe('RF01 · paso 1: correo', () => {
     expect(screen.getByText('monica@gmail.com')).toBeTruthy();
   });
 
-  it('un correo pre-registrado sin contraseña va a «Crea tu contraseña»', async () => {
+  it('un correo pre-registrado sin contraseña recibe el código y va a «Crea tu contraseña»', async () => {
     const app = await renderApp('/');
     await submitEmail('nuevo@convive.com');
 
+    expect(screen.getByText(MSG.RF01.resetCodeSent('nuevo@convive.com'))).toBeTruthy();
     expect(app.getPathname()).toBe('/crear-contrasena');
     expect(screen.getByText('Crea tu contraseña')).toBeTruthy();
   });
@@ -196,10 +197,17 @@ describe('RF01 · pantalla principal según el rol', () => {
 });
 
 describe('RF01 · crear contraseña (cuenta pre-registrada)', () => {
-  it('exige las reglas de seguridad y que la confirmación coincida; luego inicia sesión', async () => {
+  const crear = () => screen.getByRole('button', { name: 'Crear contraseña' });
+
+  it('exige el código del correo, las reglas de seguridad y que la confirmación coincida; luego inicia sesión', async () => {
     const app = await renderApp('/');
     await submitEmail('nuevo@convive.com');
-    const crear = () => screen.getByRole('button', { name: 'Crear contraseña' });
+
+    // Sin el código de 6 dígitos no se puede crear la contraseña.
+    await fireEvent.changeText(screen.getByLabelText('Nueva contraseña'), 'NuevaClave1');
+    await fireEvent.changeText(screen.getByLabelText('Confirmar contraseña'), 'NuevaClave1');
+    expect(crear()).toBeDisabled();
+    await fireEvent.changeText(screen.getByLabelText('Código de verificación'), MOCK_RESET_CODE);
 
     await fireEvent.changeText(screen.getByLabelText('Nueva contraseña'), 'NuevaClave1');
     await fireEvent.changeText(screen.getByLabelText('Confirmar contraseña'), 'NuevaClave2');
@@ -212,6 +220,19 @@ describe('RF01 · crear contraseña (cuenta pre-registrada)', () => {
 
     await press(crear());
     expect(app.getPathname()).toBe('/inicio');
+  });
+
+  it('con un código equivocado no crea la contraseña y lo indica junto al campo', async () => {
+    const app = await renderApp('/');
+    await submitEmail('nuevo@convive.com');
+
+    await fireEvent.changeText(screen.getByLabelText('Código de verificación'), '000000');
+    await fireEvent.changeText(screen.getByLabelText('Nueva contraseña'), 'NuevaClave1');
+    await fireEvent.changeText(screen.getByLabelText('Confirmar contraseña'), 'NuevaClave1');
+    await press(crear());
+
+    expect(screen.getByText(MSG.RF01.resetCodeInvalid)).toBeTruthy();
+    expect(app.getPathname()).toBe('/crear-contrasena');
   });
 });
 

@@ -8,6 +8,44 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Agregado
+
+- **RF05 – Reserva de zonas comunes:**
+  - Catálogo de zonas con su horario permitido, aforo y si la reserva requiere aprobación; al cambiar de zona se recarga la disponibilidad del calendario. Reemplaza los chips de ejemplo.
+  - Calendario de un solo día, desde el mes actual hasta 3 meses adelante; los días pasados y los días sin cupo se ven en gris y no se pueden elegir.
+  - Selector «Hora inicio / Hora fin» en bloques de 1 hora con solo las franjas libres dentro del horario de la zona (hoy, solo las que aún no empiezan). MSG-RF05-05 si la hora final queda antes de la inicial y MSG-RF05-06 si, al cambiar de zona, el horario queda fuera del permitido.
+  - «Número de asistentes» opcional, de 1 hasta el aforo (MSG-RF05-07).
+  - «Agendar reserva» se habilita con zona, fecha y horario, y pide confirmar (MSG-RF05-01). Al confirmar, el servidor vuelve a verificar la disponibilidad: MSG-RF05-02 si la zona no requiere aprobación y MSG-RF05-03 si la requiere. Si el día elegido queda sin cupo, MSG-RF05-08; si otra persona tomó la franja, se avisa y se recarga la disponibilidad.
+  - Los mensajes usan los diálogos y toasts de la app en lugar de `Alert`.
+  - Migración `20261015000000_reservas.sql`: tablas `zonas_comunes` y `reservas` con Row Level Security por conjunto y unidad; `disponibilidad_zona()` devuelve las franjas ocupadas (sin datos de quién reservó) y `crear_reserva()` valida fecha, horario, aforo y disponibilidad (RF06) en la hora de Colombia, atendiendo en orden dos reservas simultáneas de la misma zona y día.
+  - `seed.sql`: las zonas Salón social, Cancha y BBQ con reservas de ejemplo contadas desde hoy.
+  - Pruebas: pantalla, calendario, reglas y servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf05_reservas_test.sql`.
+- **Finanzas en Supabase (RF03 y RF04):**
+  - Migración `20261012000000_finanzas.sql`: catálogo `categorias_financieras` y tabla `movimientos` (monto decimal(18,2), auditoría de quién y cuándo registró) con Row Level Security por conjunto.
+  - `registrar_movimiento()` valida en el servidor la categoría (activa y del tipo elegido), el monto, la fecha (hora de Colombia), la descripción y el soporte; solo el administrador puede registrar.
+  - `movimientos_financieros()` consulta los movimientos del conjunto con las reglas de RF04 (rango máximo de 12 meses, fecha final no posterior a hoy); administrador y junta directiva (solo lectura).
+  - El soporte (PDF, JPG o PNG de máx. 5 MB) se sube al bucket privado `soportes-financieros` de Supabase Storage, en la carpeta del conjunto; si el movimiento no se guarda, se borra.
+  - `seed.sql`: los 13 movimientos de ejemplo de julio a octubre de 2026.
+  - Pruebas: servicio con Supabase (Jest) y pruebas de base de datos en `supabase/tests/rf03_rf04_finanzas_test.sql`.
+
+### Cambiado
+
+- El servicio de finanzas sigue el mismo patrón que pagos: `finance.service.ts` usa Supabase si hay `.env.local` y, si no, el servicio simulado (`finance.mock.ts`), con los tipos y las validaciones compartidos.
+- Cada movimiento y cada reporte traen el nombre de su categoría, así la lista, el reporte y la exportación a PDF/Excel no dependen del catálogo simulado.
+- Finanzas, Nuevo movimiento y Reportes muestran «Ocurrió un error inesperado…» si no se pueden cargar los datos.
+
+### Corregido
+
+- **Seguridad – crear la contraseña de una cuenta pre-registrada (RF01):** la app creaba la cuenta sin comprobar que el correo fuera de quien la creaba, así que cualquiera que conociera un correo pre-registrado (incluso el de un administrador) se quedaba con su perfil, su rol y su unidad. Ahora:
+  - Al escribir un correo pre-registrado, la app envía un código de 6 dígitos a ese correo, y «Crea tu contraseña» lo pide (con «Reenviar código»). Sin el código no se define ninguna contraseña.
+  - Migración `20261016000000_verificar_correo.sql`: `estado_correo()` solo considera registrada una cuenta con el correo verificado y con contraseña, así que pedir el código o un intento con un correo ajeno no bloquea al dueño real. Pruebas en `supabase/tests/rf01_verificar_correo_test.sql`.
+  - La contraseña se valida antes de verificar el código, para no gastarlo si no cumple las reglas.
+  - Requiere configurar en Supabase un SMTP propio, activar «Confirm email» y poner el código `{{ .Token }}` en las plantillas «Confirm signup» y «Magic Link» (ver el README).
+- **Pago con Wompi en Android (RF12/RF13):** al abrir el checkout, la app consultaba el estado enseguida porque en Android el navegador avisa que se abrió, no que se cerró. Como Wompi aún no tenía la transacción, la app cancelaba el pago aunque la persona siguiera pagando, y así se podía pagar dos veces el mismo concepto. Ahora:
+  - En Android, como en web, la app espera a que la persona pulse «Ya terminé» para consultar el estado.
+  - Si Wompi todavía no tiene el pago, la app ya no lo cancela sola: pregunta si se quiere cancelar o si aún se está pagando. Si no hay respuesta, el pago sigue pendiente y la conciliación automática lo cancela a los 30 minutos.
+- Pruebas: con la caché de Jest vacía fallaban 113 de 481 pruebas en 10 suites. La primera prueba de cada suite que renderiza la app superaba el límite de 5 s de Jest mientras se transformaba el código, y su render inconcluso hacía fallar las siguientes. El límite pasa a 30 s (`testTimeout` en `package.json`); la prueba más lenta tarda unos 9 s con la caché vacía.
+
 ## [0.2.0] - 2026-10-08
 
 Primera versión con backend: autenticación y perfiles en Supabase, pagos en línea con Wompi Sandbox

@@ -6,6 +6,7 @@ import { resetMockAuthState } from '@/services/auth.service';
 import { resetMockFinanceState } from '@/services/finance.service';
 import { mockNetwork } from '@/services/mockNetwork';
 import { resetMockPaymentsState } from '@/services/payments.service';
+import { resetMockReservationsState } from '@/services/reservations.service';
 
 type Element = Parameters<typeof fireEvent.press>[0];
 
@@ -22,6 +23,7 @@ export async function renderApp(initialUrl = '/') {
   resetMockAuthState();
   resetMockFinanceState();
   resetMockPaymentsState();
+  resetMockReservationsState();
   mockNetwork.delayMs = 0;
   const rendered = renderRouter('./src/app', { initialUrl });
   await rendered;

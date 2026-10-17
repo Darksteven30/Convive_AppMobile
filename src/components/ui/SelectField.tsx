@@ -17,10 +17,22 @@ type Props = {
   onDismiss?: () => void;
   error?: string | null;
   disabled?: boolean;
+  /** Dónde se abre la lista (ver PickerModal). */
+  placement?: 'bottom' | 'center';
 };
 
 /** Lista desplegable: muestra la opción elegida y abre una hoja con las opciones. */
-export function SelectField({ label, placeholder = 'Selecciona', options, value, onChange, onDismiss, error, disabled }: Props) {
+export function SelectField({
+  label,
+  placeholder = 'Selecciona',
+  options,
+  value,
+  onChange,
+  onDismiss,
+  error,
+  disabled,
+  placement,
+}: Props) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
 
@@ -50,7 +62,7 @@ export function SelectField({ label, placeholder = 'Selecciona', options, value,
         </Text>
       ) : null}
 
-      <PickerModal visible={open} title={label} onClose={close}>
+      <PickerModal visible={open} title={label} onClose={close} placement={placement}>
         <ScrollView>
           {options.map((option) => {
             const isSelected = option.value === value;

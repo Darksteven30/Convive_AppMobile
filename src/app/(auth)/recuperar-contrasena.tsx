@@ -9,15 +9,15 @@ import { TextField } from '@/components/ui/TextField';
 import { TextLink } from '@/components/ui/TextLink';
 import { MSG } from '@/constants/messages';
 import { useFeedback } from '@/context/FeedbackContext';
-import { useSendResetCode } from '@/hooks/useSendResetCode';
-import { AuthError, resetPassword } from '@/services/auth.service';
+import { useSendEmailCode } from '@/hooks/useSendEmailCode';
+import { AuthError, requestPasswordReset, resetPassword } from '@/services/auth.service';
 import { meetsPasswordRules, RESET_CODE_LENGTH } from '@/utils/validation';
 
 /** RF01 · Recuperación: código de 6 dígitos enviado al correo (válido 10 min) y nueva contraseña. */
 export default function RecuperarContrasenaScreen() {
   const { email = '' } = useLocalSearchParams<{ email: string }>();
   const { showToast } = useFeedback();
-  const { send: resendCode, sending } = useSendResetCode(email);
+  const { send: resendCode, sending } = useSendEmailCode(email, requestPasswordReset);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
   const [password, setPassword] = useState('');

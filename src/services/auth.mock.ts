@@ -12,7 +12,7 @@ type MockAccount = User & { password: string | null };
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 const RESET_CODE_TTL_MS = 10 * 60 * 1000;
-/** En el mock el código de recuperación es fijo; el backend lo generará y enviará por correo. */
+/** En el mock los códigos (recuperación y verificación del correo) son fijos; Supabase los genera y envía por correo. */
 export const MOCK_RESET_CODE = '123456';
 
 const initialAccounts: MockAccount[] = [
@@ -82,12 +82,14 @@ const initialAccounts: MockAccount[] = [
 let accounts: MockAccount[] = [];
 let failedAttempts = new Map<string, { count: number; lockedUntil: number | null }>();
 let resetCodes = new Map<string, { code: string; expiresAt: number }>();
+let accountCodes = new Map<string, { code: string; expiresAt: number }>();
 
 /** Restaura los datos simulados (lo usan las pruebas para empezar cada caso desde cero). */
 export function resetMockAuthState() {
   accounts = initialAccounts.map((account) => ({ ...account }));
   failedAttempts = new Map();
   resetCodes = new Map();
+  accountCodes = new Map();
 }
 resetMockAuthState();
 
@@ -136,13 +138,30 @@ export async function signIn(email: string, password: string): Promise<User> {
   throw new AuthError('invalid_credentials', MAX_FAILED_ATTEMPTS - count);
 }
 
-/** Primera contraseña de una cuenta pre-registrada. Deja la sesión iniciada. */
-export async function createPassword(email: string, password: string): Promise<User> {
+/** Envía (simula enviar) al correo pre-registrado un código de 6 dígitos válido por 10 minutos. */
+export async function requestAccountCode(email: string): Promise<void> {
   await simulateNetwork();
   const account = findAccount(email);
   if (!account) throw new AuthError('not_found');
   if (account.password !== null) throw new AuthError('password_already_set');
+  accountCodes.set(account.email, { code: MOCK_RESET_CODE, expiresAt: Date.now() + RESET_CODE_TTL_MS });
+}
+
+/**
+ * Primera contraseña de una cuenta pre-registrada. El código comprueba que quien la crea es el dueño
+ * del correo (sin él, cualquiera que conociera el correo se quedaría con la cuenta). Deja la sesión iniciada.
+ */
+export async function createPassword(email: string, code: string, password: string): Promise<User> {
+  await simulateNetwork();
+  const key = normalizeEmail(email);
+  const account = findAccount(key);
+  if (!account) throw new AuthError('not_found');
+  if (account.password !== null) throw new AuthError('password_already_set');
+  if (!meetsPasswordRules(password)) throw new AuthError('weak_password');
+  const entry = accountCodes.get(key);
+  if (!entry || entry.code !== code || Date.now() > entry.expiresAt) throw new AuthError('invalid_code');
   account.password = password;
+  accountCodes.delete(key);
   return toUser(account);
 }
 
@@ -210,6 +229,7 @@ export function subscribeToSessionEnd(_listener: () => void): () => void {
 export const authBackend = {
   lookupEmail,
   signIn,
+  requestAccountCode,
   createPassword,
   requestPasswordReset,
   resetPassword,

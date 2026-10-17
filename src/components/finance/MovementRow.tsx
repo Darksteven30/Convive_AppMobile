@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, radius, spacing } from '@/constants/theme';
-import { findCategory, type Movement } from '@/services/finance.service';
+import type { Movement } from '@/services/finance.service';
 import { formatDate } from '@/utils/date';
 import { formatAmount } from '@/utils/money';
 
@@ -21,7 +21,7 @@ export function MovementRow({ movement }: { movement: Movement }) {
           {movement.description}
         </Text>
         <Text style={styles.muted}>
-          {formatDate(movement.date)} · {findCategory(movement.categoryId)?.name ?? 'Sin categoría'}
+          {formatDate(movement.date)} · {movement.categoryName}
           {movement.attachment ? ' · Con soporte' : ''}
         </Text>
       </View>

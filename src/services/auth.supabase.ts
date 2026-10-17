@@ -86,21 +86,43 @@ export async function signIn(email: string, password: string): Promise<User> {
   return loadProfile();
 }
 
-export async function createPassword(email: string, password: string): Promise<User> {
+/**
+ * Envía el código de 6 dígitos (plantilla «Magic Link» / «Confirm signup» con {{ .Token }}).
+ * Si aún no existe el usuario de Supabase Auth lo crea sin contraseña, y el trigger vincular_perfil
+ * lo enlaza con su perfil; la cuenta sigue «pending» hasta que verifique el código y cree la contraseña.
+ */
+export async function requestAccountCode(email: string): Promise<void> {
   const key = normalizeEmail(email);
   const status = await lookupEmail(key);
   if (status === 'not_found') throw new AuthError('not_found');
   if (status === 'registered') throw new AuthError('password_already_set');
 
-  // El trigger vincular_perfil enlaza el nuevo usuario con su perfil pre-registrado.
-  const { data, error } = await getSupabase().auth.signUp({ email: key, password });
+  const { error } = await getSupabase().auth.signInWithOtp({ email: key, options: { shouldCreateUser: true } });
+  if (error) throw error;
+}
+
+/**
+ * Antes se creaba la cuenta con signUp sin comprobar el correo: cualquiera que conociera un correo
+ * pre-registrado se quedaba con su perfil, rol y unidad. Ahora la contraseña solo se define después de
+ * verificar el código que llegó a ese correo.
+ */
+export async function createPassword(email: string, code: string, password: string): Promise<User> {
+  // Se valida antes de verifyOtp, que gasta el código.
+  if (!meetsPasswordRules(password)) throw new AuthError('weak_password');
+  const client = getSupabase();
+  const { error } = await client.auth.verifyOtp({ email: normalizeEmail(email), token: code, type: 'email' });
   if (error) {
-    if (errorCode(error) === 'user_already_exists') throw new AuthError('password_already_set');
-    if (errorCode(error) === 'weak_password') throw new AuthError('weak_password');
+    if (isAuthApiError(error)) throw new AuthError('invalid_code');
     throw error;
   }
-  // Si el proyecto exige confirmar el correo no hay sesión todavía.
-  if (!data.session) throw new AuthError('confirmation_required');
+
+  const { error: updateError } = await client.auth.updateUser({ password });
+  if (updateError) {
+    // Sin contraseña la cuenta sigue «pending»: puede pedir otro código y volver a intentarlo.
+    await signOutWith('local');
+    if (errorCode(updateError) === 'weak_password') throw new AuthError('weak_password');
+    throw updateError;
+  }
   return loadProfile();
 }
 
@@ -196,6 +218,7 @@ export function subscribeToSessionEnd(listener: () => void): () => void {
 export const authBackend = {
   lookupEmail,
   signIn,
+  requestAccountCode,
   createPassword,
   requestPasswordReset,
   resetPassword,

@@ -31,6 +31,13 @@ export function startOfMonthISO(value = todayISO()): string {
   return `${value.slice(0, 7)}-01`;
 }
 
+/** Suma días a una fecha: «2026-10-31» + 1 → «2026-11-01». */
+export function addDaysISO(value: string, days: number): string {
+  const date = fromISODate(value);
+  date.setDate(date.getDate() + days);
+  return toISODate(date);
+}
+
 /** Suma meses a una fecha; si el día no existe en el mes destino, pasa al siguiente (31 ene + 1 → 3 mar). */
 export function addMonthsISO(value: string, months: number): string {
   const date = fromISODate(value);
