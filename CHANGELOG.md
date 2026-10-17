@@ -36,6 +36,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Corregido
 
+- **Seguridad – bloqueo tras 5 intentos fallidos (RF01):**
+  - Antes, `registrar_intento()` estaba abierta a cualquiera, así que cualquiera podía borrar el contador de intentos de otra cuenta y probar contraseñas sin quedar bloqueado nunca. La migración `20261017000000_bloqueo_intentos.sql` la reemplaza por `registrar_intento_fallido()`, que solo suma intentos y solo de correos pre-registrados, y por `limpiar_intentos()`, que solo funciona con la sesión iniciada, borra únicamente el contador de la propia cuenta y no quita un bloqueo activo. Pruebas en `supabase/tests/rf01_bloqueo_intentos_test.sql`.
+  - Cambiar la contraseña (RF17) ya no permite adivinar la actual sin límite: esos intentos cuentan para el bloqueo y, al quinto, la app avisa que la cuenta quedó bloqueada.
+  - Pulsar «Enter» dos veces en «Ingresa tu contraseña» o en «Cambiar contraseña» ya no envía la solicitud dos veces (antes contaba dos intentos fallidos).
 - **Seguridad – crear la contraseña de una cuenta pre-registrada (RF01):** la app creaba la cuenta sin comprobar que el correo fuera de quien la creaba, así que cualquiera que conociera un correo pre-registrado (incluso el de un administrador) se quedaba con su perfil, su rol y su unidad. Ahora:
   - Al escribir un correo pre-registrado, la app envía un código de 6 dígitos a ese correo, y «Crea tu contraseña» lo pide (con «Reenviar código»). Sin el código no se define ninguna contraseña.
   - Migración `20261016000000_verificar_correo.sql`: `estado_correo()` solo considera registrada una cuenta con el correo verificado y con contraseña, así que pedir el código o un intento con un correo ajeno no bloquea al dueño real. Pruebas en `supabase/tests/rf01_verificar_correo_test.sql`.
