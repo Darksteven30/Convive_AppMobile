@@ -8,6 +8,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+## [0.3.0] - 2026-10-18
+
+Finanzas en Supabase (RF03 y RF04), reserva de zonas comunes con control de reservas duplicadas
+(RF05 y RF06) y correcciones de seguridad en la autenticación (verificación del correo al crear la
+contraseña y bloqueo por intentos que ya no se puede saltar) y en el pago con Wompi en Android. Sin
+configurar Supabase, la app sigue funcionando con datos simulados. 540 pruebas automatizadas.
+
 ### Agregado
 
 - **RF05 – Reserva de zonas comunes:**
@@ -36,6 +43,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Corregido
 
+- **Seguridad – bloqueo tras 5 intentos fallidos (RF01):**
+  - Antes, `registrar_intento()` estaba abierta a cualquiera, así que cualquiera podía borrar el contador de intentos de otra cuenta y probar contraseñas sin quedar bloqueado nunca. La migración `20261017000000_bloqueo_intentos.sql` la reemplaza por `registrar_intento_fallido()`, que solo suma intentos y solo de correos pre-registrados, y por `limpiar_intentos()`, que solo funciona con la sesión iniciada, borra únicamente el contador de la propia cuenta y no quita un bloqueo activo. Pruebas en `supabase/tests/rf01_bloqueo_intentos_test.sql`.
+  - Cambiar la contraseña (RF17) ya no permite adivinar la actual sin límite: esos intentos cuentan para el bloqueo y, al quinto, la app avisa que la cuenta quedó bloqueada.
+  - Pulsar «Enter» dos veces en «Ingresa tu contraseña» o en «Cambiar contraseña» ya no envía la solicitud dos veces (antes contaba dos intentos fallidos).
 - **Seguridad – crear la contraseña de una cuenta pre-registrada (RF01):** la app creaba la cuenta sin comprobar que el correo fuera de quien la creaba, así que cualquiera que conociera un correo pre-registrado (incluso el de un administrador) se quedaba con su perfil, su rol y su unidad. Ahora:
   - Al escribir un correo pre-registrado, la app envía un código de 6 dígitos a ese correo, y «Crea tu contraseña» lo pide (con «Reenviar código»). Sin el código no se define ninguna contraseña.
   - Migración `20261016000000_verificar_correo.sql`: `estado_correo()` solo considera registrada una cuenta con el correo verificado y con contraseña, así que pedir el código o un intento con un correo ajeno no bloquea al dueño real. Pruebas en `supabase/tests/rf01_verificar_correo_test.sql`.
@@ -45,6 +56,16 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
   - En Android, como en web, la app espera a que la persona pulse «Ya terminé» para consultar el estado.
   - Si Wompi todavía no tiene el pago, la app ya no lo cancela sola: pregunta si se quiere cancelar o si aún se está pagando. Si no hay respuesta, el pago sigue pendiente y la conciliación automática lo cancela a los 30 minutos.
 - Pruebas: con la caché de Jest vacía fallaban 113 de 481 pruebas en 10 suites. La primera prueba de cada suite que renderiza la app superaba el límite de 5 s de Jest mientras se transformaba el código, y su render inconcluso hacía fallar las siguientes. El límite pasa a 30 s (`testTimeout` en `package.json`); la prueba más lenta tarda unos 9 s con la caché vacía.
+
+### Limitaciones conocidas
+
+- El resumen General (RF14) y las noticias de Inicio (RF18) siguen con datos simulados.
+- Wompi está en modo Sandbox (pagos de prueba, sin dinero real).
+- Crear la contraseña y recuperarla por correo requieren configurar un SMTP propio, «Confirm email» y las plantillas con código en Supabase (ver el README).
+- Inicio de sesión con Google y Apple pendiente (requiere credenciales y un development build).
+- Pendientes: PQRS (RF07, RF08), notificaciones push (RF09) y visitantes (RF10).
+- Errores conocidos por corregir (revisión de código del 2026-10-15): un pago aprobado puede cambiar después a rechazado si llegan eventos de Wompi fuera de orden (RF15); un saldo menor a $ 1.500 no se puede pagar (RF11); «hoy» se toma de la hora del dispositivo y no de la de Colombia (RF03/RF04).
+- El plan gratuito de Supabase pausa el proyecto tras 7 días sin uso; hay que reactivarlo antes de cada demo.
 
 ## [0.2.0] - 2026-10-08
 
@@ -164,6 +185,7 @@ registro de ingresos y egresos (RF03). Los datos y la autenticación son simulad
 - Sin integración con Wompi ni notificaciones.
 - RF02, RF04 a RF18 pendientes o parciales.
 
-[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.2.0...develop
+[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.3.0...develop
+[0.3.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.1.0

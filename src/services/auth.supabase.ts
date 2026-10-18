@@ -75,14 +75,15 @@ export async function signIn(email: string, password: string): Promise<User> {
   const { error } = await getSupabase().auth.signInWithPassword({ email: key, password });
   if (error) {
     if (errorCode(error) === 'invalid_credentials') {
-      const remaining = await rpc<number>('registrar_intento', { p_email: key, p_exitoso: false });
+      const remaining = await rpc<number>('registrar_intento_fallido', { p_email: key });
       throw remaining <= 0 ? new AuthError('locked') : new AuthError('invalid_credentials', remaining);
     }
     if (errorCode(error) === 'email_not_confirmed') throw new AuthError('confirmation_required');
     throw error;
   }
 
-  await rpc('registrar_intento', { p_email: key, p_exitoso: true });
+  // Solo con la sesión iniciada se puede borrar el contador, y solo el de la propia cuenta.
+  await rpc('limpiar_intentos');
   return loadProfile();
 }
 
@@ -161,13 +162,20 @@ export async function changePassword(email: string, currentPassword: string, new
   if (newPassword === currentPassword) throw new AuthError('same_password');
   if (!meetsPasswordRules(newPassword)) throw new AuthError('weak_password');
 
+  const key = normalizeEmail(email);
+  // La contraseña actual se verifica volviendo a autenticar al usuario; esos intentos también
+  // cuentan para el bloqueo, para que no se pueda adivinar con el celular desbloqueado.
+  if ((await rpc<number>('minutos_bloqueo', { p_email: key })) > 0) throw new AuthError('locked');
   const client = getSupabase();
-  // Se verifica la contraseña actual volviendo a autenticar al usuario.
-  const { error: authError } = await client.auth.signInWithPassword({ email: normalizeEmail(email), password: currentPassword });
+  const { error: authError } = await client.auth.signInWithPassword({ email: key, password: currentPassword });
   if (authError) {
-    if (errorCode(authError) === 'invalid_credentials') throw new AuthError('wrong_password');
+    if (errorCode(authError) === 'invalid_credentials') {
+      const remaining = await rpc<number>('registrar_intento_fallido', { p_email: key });
+      throw remaining <= 0 ? new AuthError('locked') : new AuthError('wrong_password', remaining);
+    }
     throw authError;
   }
+  await rpc('limpiar_intentos');
 
   const { error } = await client.auth.updateUser({ password: newPassword });
   if (error) {
