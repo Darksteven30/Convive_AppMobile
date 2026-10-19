@@ -16,6 +16,7 @@ export const MSG = {
       `Te enviamos un código a ${email}. Revisa también la carpeta de spam.`, // MSG-RF01-07
     // Propuestos (no están en el documento):
     resetCodeInvalid: 'El código no es válido o ya venció. Solicita uno nuevo.',
+    resetSamePassword: 'La nueva contraseña debe ser diferente a la anterior. Pulsa «Reenviar código» e intenta de nuevo.',
     passwordUpdated: 'Tu contraseña se actualizó. Inicia sesión con tu nueva contraseña.',
     passwordsDontMatch: 'Las contraseñas no coinciden.',
     socialUnavailable: 'El inicio de sesión con Google y Apple estará disponible próximamente.',
