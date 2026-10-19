@@ -8,6 +8,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Corregido
+
+- **Reglas de contraseña (RF01/RF17):**
+  - «Recuperar contraseña» valida las reglas antes de verificar el código, así una contraseña débil ya no lo gasta.
+  - Si la nueva contraseña es igual a la anterior, la app lo explica y pide un código nuevo, en lugar de mostrar «Ocurrió un error inesperado». Ya no se envía dos veces al pulsar «Enter» mientras se guarda.
+  - Supabase exige ahora un mínimo de 8 caracteres en el servidor (ver el README). La mayúscula y el número o símbolo los sigue validando la app, porque los requisitos de Supabase no admiten la regla de RF17.
+
 ## [0.3.0] - 2026-10-18
 
 Finanzas en Supabase (RF03 y RF04), reserva de zonas comunes con control de reservas duplicadas
