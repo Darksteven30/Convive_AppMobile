@@ -167,6 +167,19 @@ describe('recuperación de contraseña', () => {
     await expectAuthError(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'NuevaClave1'), 'invalid_code');
   });
 
+  it('rechaza una contraseña débil sin gastar el código', async () => {
+    await run(requestPasswordReset('monica@gmail.com'));
+    await expectAuthError(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'corta'), 'weak_password');
+    // El código sigue sirviendo con una contraseña válida.
+    await run(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'NuevaClave1'));
+  });
+
+  it('rechaza la misma contraseña anterior y, como en Supabase, el código queda usado', async () => {
+    await run(requestPasswordReset('monica@gmail.com'));
+    await expectAuthError(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'Residente123'), 'same_password');
+    await expectAuthError(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'NuevaClave1'), 'invalid_code');
+  });
+
   it('el código solo sirve una vez', async () => {
     await run(requestPasswordReset('monica@gmail.com'));
     await run(resetPassword('monica@gmail.com', MOCK_RESET_CODE, 'NuevaClave1'));

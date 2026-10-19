@@ -192,6 +192,17 @@ describe('recuperación de contraseña', () => {
     expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
+  it('rechaza una contraseña que no cumple las reglas antes de gastar el código', async () => {
+    await expectAuthError(supabaseAuth.resetPassword('monica@gmail.com', '123456', 'sinmayuscula1'), 'weak_password');
+    expect(mockAuth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('si la nueva es igual a la anterior lo indica y cierra la sesión temporal', async () => {
+    mockAuth.updateUser.mockImplementation(() => fail('same_password'));
+    await expectAuthError(supabaseAuth.resetPassword('monica@gmail.com', '123456', 'NuevaClave1'), 'same_password');
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('con un código inválido o vencido no cambia nada', async () => {
     mockAuth.verifyOtp.mockImplementation(() => fail('otp_expired'));
     await expectAuthError(supabaseAuth.resetPassword('monica@gmail.com', '000000', 'NuevaClave1'), 'invalid_code');

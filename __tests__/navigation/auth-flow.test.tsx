@@ -273,6 +273,19 @@ describe('RF01 · recuperar contraseña', () => {
     expect(screen.getByText(MSG.RF01.resetCodeInvalid)).toBeTruthy();
   });
 
+  it('si la nueva contraseña es la misma anterior lo indica y pide un código nuevo', async () => {
+    const app = await goToRecovery();
+    await fireEvent.changeText(screen.getByLabelText('Código de verificación'), MOCK_RESET_CODE);
+    await fireEvent.changeText(screen.getByLabelText('Nueva contraseña'), 'Residente123');
+    await fireEvent.changeText(screen.getByLabelText('Confirmar contraseña'), 'Residente123');
+    await press(screen.getByRole('button', { name: 'Guardar contraseña' }));
+
+    expect(screen.getByText(MSG.RF01.resetSamePassword)).toBeTruthy();
+    expect(screen.queryByText(MSG.general.unexpected)).toBeNull();
+    expect(screen.getByLabelText('Código de verificación').props.value).toBe('');
+    expect(app.getPathname()).toBe('/recuperar-contrasena');
+  });
+
   it('con el código correcto cambia la contraseña y permite entrar con la nueva', async () => {
     const app = await goToRecovery();
     await fillRecovery(MOCK_RESET_CODE);
