@@ -34,6 +34,10 @@ export default function HomeLayout() {
       <Stack.Protected guard={hasPermission(role, 'panel')}>
         <Stack.Screen name="panel" options={sectionOptions} />
       </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'gestionPqrs')}>
+        <Stack.Screen name="gestion-pqrs/index" options={sectionOptions} />
+        <Stack.Screen name="gestion-pqrs/[id]" />
+      </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'finanzas')}>
         <Stack.Screen name="finanzas/index" />
         <Stack.Screen name="finanzas/nuevo" />

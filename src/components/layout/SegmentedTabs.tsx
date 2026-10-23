@@ -5,16 +5,31 @@ import { Chip } from '@/components/ui/Chip';
 import { hasPermission, type Permission } from '@/constants/permissions';
 import { spacing } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
+import type { Role } from '@/services/auth.service';
 
 export type SectionKey = 'panel' | 'visitantes' | 'inicio' | 'pagos' | 'reservas' | 'pqrs' | 'general';
 
-const sections: { key: SectionKey; label: string; href: Href; permission?: Permission }[] = [
+type Section = {
+  key: SectionKey;
+  label: string;
+  href: Href;
+  permission?: Permission;
+  /** Otra pantalla para quien tiene ese permiso (p. ej. el administrador atiende las PQRS, RF08). */
+  managerHref?: { permission: Permission; href: Href };
+};
+
+const sections: Section[] = [
   { key: 'panel', label: 'Panel', href: '/panel', permission: 'panel' },
   { key: 'visitantes', label: 'Visitantes', href: '/visitantes', permission: 'visitantes' },
   { key: 'inicio', label: 'Inicio', href: '/inicio' },
   { key: 'pagos', label: 'Pagos', href: '/pagos', permission: 'pagos' },
   { key: 'reservas', label: 'Reservas', href: '/reservas' },
-  { key: 'pqrs', label: 'PQRS', href: '/pqrs' },
+  {
+    key: 'pqrs',
+    label: 'PQRS',
+    href: '/pqrs',
+    managerHref: { permission: 'gestionPqrs', href: '/gestion-pqrs' },
+  },
   { key: 'general', label: 'General', href: '/general', permission: 'general' },
 ];
 
@@ -22,6 +37,11 @@ type Props = {
   /** Sección activa; se omite en pantallas secundarias como Perfil. */
   active?: SectionKey;
 };
+
+function hrefFor(section: Section, role: Role | null): Href {
+  const manager = section.managerHref;
+  return manager && hasPermission(role, manager.permission) ? manager.href : section.href;
+}
 
 /** Pestañas superiores de la sección principal, filtradas según el rol. */
 export function SegmentedTabs({ active }: Props) {
@@ -40,7 +60,7 @@ export function SegmentedTabs({ active }: Props) {
           key={section.key}
           label={section.label}
           selected={section.key === active}
-          onPress={() => section.key !== active && router.replace(section.href)}
+          onPress={() => section.key !== active && router.replace(hrefFor(section, role))}
         />
       ))}
     </ScrollView>

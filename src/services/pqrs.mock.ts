@@ -1,23 +1,32 @@
-// Servicio de PQRS simulado (mock) para RF07. Se usa cuando la app no tiene configurado Supabase
-// (y siempre en las pruebas). Replica las PQRS de ejemplo de supabase/seed.sql y las validaciones
-// de radicar_pqrs() en el servidor. Las fotos se quedan en el dispositivo (no se suben).
+// Servicio de PQRS simulado (mock) para RF07 y RF08. Se usa cuando la app no tiene configurado
+// Supabase (y siempre en las pruebas). Replica las PQRS de ejemplo de supabase/seed.sql y las
+// validaciones de radicar_pqrs() y cambiar_estado_pqrs() en el servidor. Las fotos se quedan en el
+// dispositivo (no se suben).
 
 import type { User } from '@/services/auth.types';
 import { simulateNetwork } from '@/services/mockNetwork';
 import {
+  PQRS_STATUS_LABELS,
   PqrsError,
+  formatPqrsNumber,
   newestFirst,
+  statusChangeMessage,
   type PqrsBackend,
   type PqrsDetail,
   type PqrsInput,
+  type PqrsResponse,
   type PqrsSummary,
+  type StatusChangeInput,
 } from '@/services/pqrs.types';
-import { validatePqrs } from '@/services/pqrs.validation';
+import { validatePqrs, validateStatusChange } from '@/services/pqrs.validation';
 
-type StoredPqrs = PqrsDetail & { ownerId: string };
+type StoredPqrs = PqrsDetail & { ownerId: string; owner: string; unit: string | null };
 
-/** Aviso a la administración al radicar (la pantalla de notificaciones es RF09). */
-export type AdminNotification = { recipientId: string; title: string; message: string; pqrsId: string };
+/**
+ * Aviso que crea el servidor (la pantalla y el envío push son RF09): a la administración al
+ * radicar (RF07) y al propietario cuando cambia el estado (RF08).
+ */
+export type MockNotification = { recipientId: string; title: string; message: string; pqrsId: string };
 
 /** Quienes reciben el aviso: la administración del conjunto (admin@convive.com). */
 const ADMIN_IDS = ['u2'];
@@ -27,6 +36,8 @@ const seedPqrs: StoredPqrs[] = [
   {
     id: 'pq-1',
     ownerId: 'u1',
+    owner: 'Monica Galvis',
+    unit: '56',
     number: 1,
     type: 'reclamo',
     description: 'Fuga de agua en el techo del parqueadero, frente a la casa 56.',
@@ -53,6 +64,8 @@ const seedPqrs: StoredPqrs[] = [
   {
     id: 'pq-2',
     ownerId: 'u1',
+    owner: 'Monica Galvis',
+    unit: '56',
     number: 2,
     type: 'queja',
     description: 'Ruido de música después de las 11 p. m. en la torre 4 casi todos los fines de semana.',
@@ -72,6 +85,8 @@ const seedPqrs: StoredPqrs[] = [
   {
     id: 'pq-3',
     ownerId: 'u1',
+    owner: 'Monica Galvis',
+    unit: '56',
     number: 3,
     type: 'reporte_dano',
     description: 'El portón vehicular no cierra completamente y queda abierto unos centímetros.',
@@ -83,7 +98,7 @@ const seedPqrs: StoredPqrs[] = [
 ];
 
 let pqrs: StoredPqrs[] = [];
-let notifications: AdminNotification[] = [];
+let notifications: MockNotification[] = [];
 let nextNumber = 4;
 let nextId = 1;
 
@@ -96,9 +111,14 @@ export function resetMockPqrsState() {
 }
 resetMockPqrsState();
 
-/** Avisos enviados a la administración (solo para las pruebas). */
-export function mockAdminNotifications(): AdminNotification[] {
+/** Avisos creados (solo para las pruebas). */
+export function mockNotifications(): MockNotification[] {
   return [...notifications];
+}
+
+/** Avisos enviados a la administración al radicar (solo para las pruebas). */
+export function mockAdminNotifications(): MockNotification[] {
+  return notifications.filter((item) => ADMIN_IDS.includes(item.recipientId));
 }
 
 const toSummary = ({ id, number, type, description, status, createdAt }: StoredPqrs): PqrsSummary => ({
@@ -110,6 +130,11 @@ const toSummary = ({ id, number, type, description, status, createdAt }: StoredP
   createdAt,
 });
 
+/** En la vista del administrador también va quién la radicó y su unidad. */
+const toAdminSummary = (item: StoredPqrs): PqrsSummary => ({ ...toSummary(item), owner: item.owner, unit: item.unit });
+
+const isAdmin = (user: User) => user.role === 'administrador';
+
 async function listMyPqrs(user: User): Promise<PqrsSummary[]> {
   await simulateNetwork(0.5);
   return pqrs.filter((item) => item.ownerId === user.id).map(toSummary).sort(newestFirst);
@@ -118,10 +143,11 @@ async function listMyPqrs(user: User): Promise<PqrsSummary[]> {
 async function getPqrsDetail(id: string, user: User): Promise<PqrsDetail> {
   await simulateNetwork(0.5);
   const item = pqrs.find((candidate) => candidate.id === id);
-  if (!item || (item.ownerId !== user.id && user.role !== 'administrador')) {
+  if (!item || (item.ownerId !== user.id && !isAdmin(user))) {
     throw new PqrsError('not_found');
   }
-  return { ...toSummary(item), photos: [...item.photos], responses: [...item.responses] };
+  const summary = isAdmin(user) ? toAdminSummary(item) : toSummary(item);
+  return { ...summary, photos: [...item.photos], responses: [...item.responses] };
 }
 
 async function createPqrs(input: PqrsInput, user: User): Promise<PqrsSummary> {
@@ -133,6 +159,8 @@ async function createPqrs(input: PqrsInput, user: User): Promise<PqrsSummary> {
   const item: StoredPqrs = {
     id: `pq-new-${nextId++}`,
     ownerId: user.id,
+    owner: user.name,
+    unit: user.house || null,
     number: nextNumber++,
     type: input.type,
     description: input.description.trim(),
@@ -154,8 +182,57 @@ async function createPqrs(input: PqrsInput, user: User): Promise<PqrsSummary> {
   return toSummary(item);
 }
 
+async function listConjuntoPqrs(user: User): Promise<PqrsSummary[]> {
+  await simulateNetwork(0.5);
+  if (!isAdmin(user)) {
+    throw new PqrsError('forbidden');
+  }
+  return pqrs.map(toAdminSummary).sort(newestFirst);
+}
+
+async function changePqrsStatus(input: StatusChangeInput, user: User): Promise<PqrsResponse> {
+  await simulateNetwork();
+  if (!isAdmin(user)) {
+    throw new PqrsError('forbidden');
+  }
+  const item = pqrs.find((candidate) => candidate.id === input.pqrsId);
+  if (!item) {
+    throw new PqrsError('not_found');
+  }
+  // Se valida contra el estado guardado: si otra persona ya lo cambió, la transición no aplica.
+  const errors = validateStatusChange({ ...input, currentStatus: item.status });
+  if (Object.keys(errors).length > 0) {
+    throw new PqrsError('validation', errors);
+  }
+
+  const response: PqrsResponse = {
+    id: `r-new-${nextId++}`,
+    author: user.name,
+    message: input.comment.trim() || statusChangeMessage(input.status),
+    status: input.status,
+    createdAt: new Date().toISOString(),
+  };
+  pqrs = pqrs.map((candidate) =>
+    candidate.id === item.id
+      ? { ...candidate, status: input.status, responses: [...candidate.responses, response] }
+      : candidate,
+  );
+  notifications = [
+    ...notifications,
+    {
+      recipientId: item.ownerId,
+      title: 'Tu PQRS cambió de estado',
+      message: `Tu solicitud ${formatPqrsNumber(item.number)} ahora está «${PQRS_STATUS_LABELS[input.status]}».`,
+      pqrsId: item.id,
+    },
+  ];
+  return response;
+}
+
 export const pqrsBackend = {
   listMyPqrs,
   getPqrsDetail,
   createPqrs,
+  listConjuntoPqrs,
+  changePqrsStatus,
 } satisfies PqrsBackend;

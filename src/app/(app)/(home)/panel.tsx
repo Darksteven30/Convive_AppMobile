@@ -12,7 +12,7 @@ import { formatAmount } from '@/utils/money';
 
 /**
  * Pantalla principal del administrador (RF01): indicadores de cartera y PQRS pendientes.
- * Desde aquí se accede a Finanzas (RF03) y a Reportes (RF04); RF08 se agregará cuando tenga mockup.
+ * Desde aquí se accede a las PQRS del conjunto (RF08), a Finanzas (RF03) y a Reportes (RF04).
  */
 export default function PanelScreen() {
   const { portfolioDue, unitsInArrears, totalUnits, pendingPqrs } = adminSummary;
@@ -42,7 +42,7 @@ export default function PanelScreen() {
           <Text style={styles.count}>{pendingPqrs}</Text>
           <Text style={styles.muted}>solicitudes sin responder</Text>
         </View>
-        <Button label="Ver PQRS" variant="outline" pill onPress={() => router.push('/pqrs')} />
+        <Button label="Ver PQRS" variant="outline" pill onPress={() => router.push('/gestion-pqrs')} />
       </Card>
 
       <Card title="Finanzas">

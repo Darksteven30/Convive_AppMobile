@@ -91,6 +91,18 @@ export const MSG = {
     notFound: 'No encontramos esta solicitud.',
     noResponses: 'Aún no hay respuestas. Te notificaremos cuando la administración responda.',
   },
+  RF08: {
+    updated: 'Estado actualizado. Se notificó al propietario.', // MSG-RF08-01
+    commentRequired: 'Agrega una respuesta para marcar la solicitud como resuelta.', // MSG-RF08-02
+    invalidTransition: (current: string, next: string) =>
+      `No es posible cambiar el estado de ${current} a ${next}.`, // MSG-RF08-03
+    forbidden: 'No tienes permisos para realizar esta acción.', // MSG-RF08-04
+    // Propuestos (no están en el documento):
+    statusRequired: 'Selecciona el nuevo estado.',
+    commentLength: 'La respuesta debe tener entre 10 y 500 caracteres.',
+    finalStatus: 'Esta solicitud está resuelta: es un estado final y no admite más cambios.',
+    empty: 'Aún no hay PQRS radicadas en el conjunto.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
