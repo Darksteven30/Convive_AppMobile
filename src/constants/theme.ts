@@ -18,7 +18,16 @@ export const colors = {
   warning: '#F59E0B',
   toastSuccess: '#16A34A',
   toastInfo: '#1F2937',
+  // RF07: chips de estado de las PQRS (fondo suave y texto oscuro del mismo tono).
+  statusPendingBg: '#FEF3C7',
+  statusPendingText: '#92400E',
+  statusInProgressBg: '#DBEAFE',
+  statusInProgressText: '#1E40AF',
+  statusResolvedBg: '#DCFCE7',
+  statusResolvedText: '#166534',
   overlay: 'rgba(0, 0, 0, 0.45)',
+  // RF07: fondo de la foto ampliada.
+  photoViewer: 'rgba(0, 0, 0, 0.92)',
   tabInactive: '#8E8E93',
 } as const;
 

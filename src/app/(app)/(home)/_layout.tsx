@@ -18,6 +18,8 @@ export default function HomeLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="inicio" options={sectionOptions} />
       <Stack.Screen name="reservas" options={sectionOptions} />
+      <Stack.Screen name="pqrs/index" options={sectionOptions} />
+      <Stack.Screen name="pqrs/[id]" />
 
       {/* Guards por rol: ver src/constants/permissions.ts */}
       <Stack.Protected guard={hasPermission(role, 'pagos')}>

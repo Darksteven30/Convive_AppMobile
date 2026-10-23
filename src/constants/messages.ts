@@ -76,6 +76,21 @@ export const MSG = {
     attendeesInvalid: 'El número de asistentes debe ser al menos 1.',
     forbidden: 'Tu cuenta no tiene una unidad asignada para hacer reservas.',
   },
+  RF07: {
+    filed: (number: string) =>
+      `Tu solicitud fue radicada con el número ${number}. Te notificaremos cuando haya una respuesta.`, // MSG-RF07-01
+    typeRequired: 'Selecciona el tipo de solicitud.', // MSG-RF07-02
+    descriptionShort: 'La descripción debe tener al menos 20 caracteres.', // MSG-RF07-03
+    invalidFormat: 'Solo se permiten imágenes JPG o PNG.', // MSG-RF07-04
+    tooLarge: 'La imagen supera el tamaño máximo de 5 MB.', // MSG-RF07-05
+    tooManyPhotos: 'Puedes adjuntar máximo 3 fotos.', // MSG-RF07-06
+    photoRequired: 'Adjunta al menos una foto del daño.', // MSG-RF07-07
+    permissionDenied: 'Convive necesita acceso a la cámara o a tus fotos para adjuntar imágenes.', // MSG-RF07-08
+    empty: 'Aún no has radicado solicitudes.', // MSG-RF07-09
+    // Propuestos (no están en el documento):
+    notFound: 'No encontramos esta solicitud.',
+    noResponses: 'Aún no hay respuestas. Te notificaremos cuando la administración responda.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02

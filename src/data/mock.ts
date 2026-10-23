@@ -6,14 +6,6 @@ export const news = [
   { id: 'n3', title: 'Cambio horario piscina' },
 ];
 
-export type Pqrs = { id: string; code: string; title: string };
-
-export const pqrsList: Pqrs[] = [
-  { id: 'p231', code: '#0231', title: 'Daño portón' },
-  { id: 'p225', code: '#0225', title: 'Ruido torre 4' },
-  { id: 'p198', code: '#0198', title: 'Fuga de agua' },
-];
-
 export const financialSummary = {
   balance: 10000000,
   income: 10000000,
