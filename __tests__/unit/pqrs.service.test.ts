@@ -1,17 +1,23 @@
 import { MSG } from '@/constants/messages';
 import type { User } from '@/services/auth.service';
 import {
+  NEXT_STATUSES,
+  changePqrsStatus,
   createPqrs,
   formatPqrsNumber,
   getPqrsDetail,
+  listConjuntoPqrs,
   listMyPqrs,
   mockAdminNotifications,
+  mockNotifications,
   photoError,
   pqrsTypeLabel,
   resetMockPqrsState,
   validatePqrs,
+  validateStatusChange,
   type Photo,
   type PqrsInput,
+  type StatusChangeInput,
 } from '@/services/pqrs.service';
 
 const MB = 1024 * 1024;
@@ -151,5 +157,122 @@ describe('RF07 · servicio simulado', () => {
 
     expect(mockAdminNotifications()).toEqual([]);
     expect(await run(listMyPqrs(user()))).toHaveLength(3);
+  });
+});
+
+describe('RF08 · reglas del cambio de estado', () => {
+  it('el flujo es Pendiente → En proceso → Resuelto y «Resuelto» es final', () => {
+    expect(NEXT_STATUSES).toEqual({ pendiente: ['en_proceso'], en_proceso: ['resuelto'], resuelto: [] });
+  });
+
+  it('acepta solo las transiciones del flujo (MSG-RF08-03)', () => {
+    expect(validateStatusChange({ currentStatus: 'pendiente', status: 'en_proceso', comment: '' })).toEqual({});
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'resuelto', comment: 'Ya se reparó el portón.' })).toEqual({});
+
+    expect(validateStatusChange({ currentStatus: 'pendiente', status: 'resuelto', comment: 'Ya se reparó el portón.' }).status).toBe(
+      MSG.RF08.invalidTransition('Pendiente', 'Resuelto'),
+    );
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'pendiente', comment: '' }).status).toBe(
+      MSG.RF08.invalidTransition('En proceso', 'Pendiente'),
+    );
+    expect(validateStatusChange({ currentStatus: 'resuelto', status: 'en_proceso', comment: '' }).status).toBe(
+      MSG.RF08.invalidTransition('Resuelto', 'En proceso'),
+    );
+    expect(validateStatusChange({ currentStatus: 'pendiente', comment: '' }).status).toBe(MSG.RF08.statusRequired);
+  });
+
+  it('el comentario es obligatorio al resolver (MSG-RF08-02) y, si se escribe, tiene de 10 a 500 caracteres', () => {
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'resuelto', comment: '   ' }).comment).toBe(
+      MSG.RF08.commentRequired,
+    );
+    expect(validateStatusChange({ currentStatus: 'pendiente', status: 'en_proceso', comment: 'Corto' }).comment).toBe(
+      MSG.RF08.commentLength,
+    );
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'resuelto', comment: 'x'.repeat(501) }).comment).toBe(
+      MSG.RF08.commentLength,
+    );
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'resuelto', comment: `  ${'x'.repeat(10)}  ` }).comment).toBeUndefined();
+    expect(validateStatusChange({ currentStatus: 'en_proceso', status: 'resuelto', comment: 'x'.repeat(500) }).comment).toBeUndefined();
+  });
+});
+
+describe('RF08 · servicio simulado', () => {
+  const admin = user({ id: 'u2', name: 'David Muñoz', house: 'Administración', role: 'administrador' });
+  const toProcess: StatusChangeInput = { pqrsId: 'pq-3', currentStatus: 'pendiente', status: 'en_proceso', comment: '' };
+
+  it('el administrador ve todas las PQRS del conjunto con quién las radicó', async () => {
+    const list = await run(listConjuntoPqrs(admin));
+
+    expect(list.map((item) => item.number)).toEqual([3, 2, 1]);
+    expect(list[0]).toMatchObject({ owner: 'Monica Galvis', unit: '56' });
+  });
+
+  it.each(['residente', 'junta_directiva', 'vigilancia'] as const)('%s no puede listar ni cambiar estados (MSG-RF08-04)', async (role) => {
+    await expectError(listConjuntoPqrs(user({ role })), 'forbidden');
+    await expectError(changePqrsStatus(toProcess, user({ role })), 'forbidden');
+    expect((await run(getPqrsDetail('pq-3', user()))).status).toBe('pendiente');
+  });
+
+  it('cambia el estado, deja la respuesta con usuario y fecha y avisa al propietario', async () => {
+    const response = await run(changePqrsStatus(toProcess, admin));
+
+    expect(response).toMatchObject({
+      author: 'David Muñoz',
+      message: 'Cambió el estado a En proceso.',
+      status: 'en_proceso',
+      // Fecha y hora del cambio (la latencia simulada suma unos milisegundos).
+      createdAt: expect.stringMatching(new RegExp(`^${new Date(2026, 9, 22, 10, 0).toISOString().slice(0, 16)}`)),
+    });
+    const detail = await run(getPqrsDetail('pq-3', user()));
+    expect(detail.status).toBe('en_proceso');
+    expect(detail.responses).toEqual([response]);
+    expect(mockNotifications()).toEqual([
+      {
+        recipientId: 'u1',
+        title: 'Tu PQRS cambió de estado',
+        message: 'Tu solicitud #0003 ahora está «En proceso».',
+        pqrsId: 'pq-3',
+      },
+    ]);
+  });
+
+  it('al resolver guarda el comentario y luego no admite más cambios', async () => {
+    await run(changePqrsStatus(toProcess, admin));
+    const resolved = await run(
+      changePqrsStatus({ pqrsId: 'pq-3', currentStatus: 'en_proceso', status: 'resuelto', comment: '  Se ajustó el motor del portón.  ' }, admin),
+    );
+
+    expect(resolved.message).toBe('Se ajustó el motor del portón.');
+    await expectError(
+      changePqrsStatus({ pqrsId: 'pq-3', currentStatus: 'resuelto', status: 'en_proceso', comment: '' }, admin),
+      'validation',
+      { status: MSG.RF08.invalidTransition('Resuelto', 'En proceso') },
+    );
+  });
+
+  it('valida contra el estado guardado, no contra el que creía la pantalla', async () => {
+    await run(changePqrsStatus(toProcess, admin));
+
+    // La pantalla aún creía que estaba «Pendiente».
+    await expectError(changePqrsStatus(toProcess, admin), 'validation', {
+      status: MSG.RF08.invalidTransition('En proceso', 'En proceso'),
+    });
+    expect((await run(getPqrsDetail('pq-3', admin))).responses).toHaveLength(1);
+  });
+
+  it('rechaza resolver sin respuesta y PQRS inexistentes', async () => {
+    await expectError(
+      changePqrsStatus({ pqrsId: 'pq-2', currentStatus: 'en_proceso', status: 'resuelto', comment: '' }, admin),
+      'validation',
+      { comment: MSG.RF08.commentRequired },
+    );
+    await expectError(changePqrsStatus({ ...toProcess, pqrsId: 'no-existe' }, admin), 'not_found');
+    expect(mockNotifications()).toEqual([]);
+    expect(mockAdminNotifications()).toEqual([]);
+  });
+
+  it('el detalle trae quién la radicó solo para el administrador', async () => {
+    expect((await run(getPqrsDetail('pq-3', admin))).owner).toBe('Monica Galvis');
+    expect((await run(getPqrsDetail('pq-3', user()))).owner).toBeUndefined();
   });
 });
