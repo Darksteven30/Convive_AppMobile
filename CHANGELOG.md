@@ -10,6 +10,15 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF08 – Cambio de estado de PQRS / daño:**
+  - «Ver PQRS» del Panel abre ahora las PQRS del conjunto (antes abría la vista del residente): todas las solicitudes con su estado, quién las radicó y su unidad. Para el administrador, la pestaña PQRS también abre esta pantalla (el residente sigue viendo su lista y el formulario para radicar). Solo el administrador puede entrar.
+  - Detalle para el administrador con radicado, tipo, descripción, fotos que se amplían al tocarlas e historial de respuestas (el mismo que ve el propietario).
+  - Selector «Estado» con solo las transiciones válidas: Pendiente → En proceso → Resuelto. «Resuelto» es final y ya no muestra el selector. MSG-RF08-03 si otra persona cambió el estado mientras tanto.
+  - «Comentario / respuesta» de 10 a 500 caracteres con contador, obligatorio al pasar a «Resuelto» (MSG-RF08-02); queda en el historial que ve el propietario.
+  - «Guardar» registra el cambio con el usuario y la fecha/hora y muestra MSG-RF08-01. MSG-RF08-04 si quien guarda no es administrador.
+  - Migración `20261023000000_cambio_estado_pqrs.sql`: `pqrs_conjunto()` (lista del administrador), `cambiar_estado_pqrs()` (valida rol, conjunto, flujo y comentario; bloquea la PQRS mientras la cambia; deja la respuesta en el historial y crea el aviso para el propietario en `notificaciones`, listo para el envío push de RF09) y `detalle_pqrs()` ahora trae quién la radicó cuando la consulta el administrador.
+  - El detalle de la PQRS (datos, fotos e historial) es un componente compartido entre la vista del propietario y la del administrador.
+  - Pruebas: transiciones, comentario y permisos por rol en la pantalla y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf08_cambio_estado_pqrs_test.sql`.
 - **RF07 – Radicación de PQRS y reportes de daño con fotos:**
   - Lista de las PQRS propias de la más reciente a la más antigua, con un chip de estado (Pendiente, En proceso o Resuelto) en lugar de la estrella, y estado vacío MSG-RF07-09. Reemplaza las 3 PQRS fijas de la maqueta.
   - Detalle de cada PQRS (al tocar «›») con sus fotos y el historial de respuestas de la administración.
