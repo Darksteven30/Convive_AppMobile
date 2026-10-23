@@ -181,3 +181,35 @@ select c.id, z.id, u.id, p.id, (now() at time zone 'America/Bogota')::date + r.d
       and x.fecha = (now() at time zone 'America/Bogota')::date + r.dias
       and x.hora_inicio = r.inicio::time
  );
+-- ---------------------------------------------------------------------------------------------
+-- RF07 · PQRS de ejemplo (requiere 20261022000000_pqrs.sql)
+-- Las mismas del modo simulado (pqrs.mock.ts): tres PQRS de la casa 56 (monica@gmail.com), una
+-- resuelta y otra en proceso con respuestas de la administración, y un reporte de daño pendiente.
+-- La siguiente que se radique en el conjunto será la #0004. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.pqrs (conjunto_id, radicado, radicado_por, unidad_id, tipo, descripcion, estado, created_at, updated_at)
+select c.id, q.radicado, p.id, p.unidad_id, q.tipo::public.tipo_pqrs, q.descripcion, q.estado::public.estado_pqrs,
+       q.creada::timestamptz, q.creada::timestamptz
+  from (values
+         (1, 'reclamo', 'Fuga de agua en el techo del parqueadero, frente a la casa 56.', 'resuelto', '2026-08-20 09:10-05'),
+         (2, 'queja', 'Ruido de música después de las 11 p. m. en la torre 4 casi todos los fines de semana.', 'en_proceso', '2026-09-17 21:40-05'),
+         (3, 'reporte_dano', 'El portón vehicular no cierra completamente y queda abierto unos centímetros.', 'pendiente', '2026-10-05 07:15-05')
+       ) as q (radicado, tipo, descripcion, estado, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles p on p.email = 'monica@gmail.com'
+on conflict (conjunto_id, radicado) do nothing;
+
+insert into public.pqrs_respuestas (pqrs_id, autor_id, mensaje, estado, created_at)
+select q.id, a.id, r.mensaje, r.estado::public.estado_pqrs, r.creada::timestamptz
+  from (values
+         (1, 'Recibimos tu reclamo. El plomero revisa la fuga el viernes.', 'en_proceso', '2026-08-21 10:00-05'),
+         (1, 'Se cambió el tubo dañado y se selló el techo. Gracias por avisar.', 'resuelto', '2026-08-23 12:30-05'),
+         (2, 'Enviamos un llamado de atención a la unidad y la vigilancia hará rondas los sábados.', 'en_proceso', '2026-09-19 08:00-05')
+       ) as r (radicado, mensaje, estado, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.pqrs q on q.conjunto_id = c.id and q.radicado = r.radicado
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.pqrs_respuestas x where x.pqrs_id = q.id and x.mensaje = r.mensaje
+ );
