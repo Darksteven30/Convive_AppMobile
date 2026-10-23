@@ -229,3 +229,143 @@ describe('PQRS con Supabase · radicar', () => {
     await expect(supabasePqrs.createPqrs(valid, resident)).rejects.toBe(error);
   });
 });
+
+describe('PQRS con Supabase · cambio de estado (RF08)', () => {
+  const admin: User = { ...resident, id: 'p-admin', name: 'David Muñoz', house: 'Administración', role: 'administrador' };
+  const toResolve = {
+    pqrsId: 'pqrs-2',
+    currentStatus: 'en_proceso' as const,
+    status: 'resuelto' as const,
+    comment: '  Se ajustó el motor del portón.  ',
+  };
+
+  it('lista las PQRS del conjunto con quién las radicó', async () => {
+    rpcResults.pqrs_conjunto = {
+      data: [
+        {
+          id: 'a',
+          radicado: 3,
+          tipo: 'reporte_dano',
+          descripcion: 'El portón no cierra.',
+          estado: 'pendiente',
+          created_at: '2026-10-05T12:15:00+00:00',
+          radicado_por: 'Monica Galvis',
+          unidad: '56',
+        },
+      ],
+      error: null,
+    };
+
+    const list = await supabasePqrs.listConjuntoPqrs(admin);
+
+    expect(mockRpc).toHaveBeenCalledWith('pqrs_conjunto');
+    expect(list).toEqual([
+      {
+        id: 'a',
+        number: 3,
+        type: 'reporte_dano',
+        description: 'El portón no cierra.',
+        status: 'pendiente',
+        createdAt: '2026-10-05T12:15:00+00:00',
+        owner: 'Monica Galvis',
+        unit: '56',
+      },
+    ]);
+  });
+
+  it('sin rol de administrador → forbidden', async () => {
+    rpcResults.pqrs_conjunto = { data: null, error: { message: 'sin_permiso' } };
+
+    await expect(supabasePqrs.listConjuntoPqrs(resident)).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('envía el cambio con el comentario sin espacios y devuelve la respuesta del historial', async () => {
+    rpcResults.cambiar_estado_pqrs = {
+      data: [
+        {
+          id: 'r1',
+          autor: 'David Muñoz',
+          mensaje: 'Se ajustó el motor del portón.',
+          estado: 'resuelto',
+          created_at: '2026-10-23T15:00:00+00:00',
+        },
+      ],
+      error: null,
+    };
+
+    const response = await supabasePqrs.changePqrsStatus(toResolve, admin);
+
+    expect(mockRpc).toHaveBeenCalledWith('cambiar_estado_pqrs', {
+      p_id: 'pqrs-2',
+      p_estado: 'resuelto',
+      p_comentario: 'Se ajustó el motor del portón.',
+    });
+    expect(response).toEqual({
+      id: 'r1',
+      author: 'David Muñoz',
+      message: 'Se ajustó el motor del portón.',
+      status: 'resuelto',
+      createdAt: '2026-10-23T15:00:00+00:00',
+    });
+  });
+
+  it('sin comentario envía null para que el servidor escriba el texto del cambio', async () => {
+    rpcResults.cambiar_estado_pqrs = {
+      data: [{ id: 'r1', autor: 'David Muñoz', mensaje: 'Cambió el estado a En proceso.', estado: 'en_proceso', created_at: 'x' }],
+      error: null,
+    };
+
+    await supabasePqrs.changePqrsStatus(
+      { pqrsId: 'pqrs-3', currentStatus: 'pendiente', status: 'en_proceso', comment: '  ' },
+      admin,
+    );
+
+    expect(mockRpc).toHaveBeenCalledWith('cambiar_estado_pqrs', expect.objectContaining({ p_comentario: null }));
+  });
+
+  it('no llama al servidor con una transición o un comentario inválidos', async () => {
+    await expect(supabasePqrs.changePqrsStatus({ ...toResolve, currentStatus: 'pendiente' }, admin)).rejects.toMatchObject({
+      code: 'validation',
+      fieldErrors: { status: MSG.RF08.invalidTransition('Pendiente', 'Resuelto') },
+    });
+    await expect(supabasePqrs.changePqrsStatus({ ...toResolve, comment: '' }, admin)).rejects.toMatchObject({
+      code: 'validation',
+      fieldErrors: { comment: MSG.RF08.commentRequired },
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['sin_permiso', null, 'forbidden', {}],
+    ['no_encontrada', null, 'not_found', {}],
+    ['transicion_invalida', 'resuelto|resuelto', 'validation', { status: MSG.RF08.invalidTransition('Resuelto', 'Resuelto') }],
+    ['comentario_obligatorio', null, 'validation', { comment: MSG.RF08.commentRequired }],
+    ['comentario_invalido', null, 'validation', { comment: MSG.RF08.commentLength }],
+  ])('traduce el error %s del servidor', async (message, details, code, fieldErrors) => {
+    rpcResults.cambiar_estado_pqrs = { data: null, error: { message, details } };
+
+    await expect(supabasePqrs.changePqrsStatus(toResolve, admin)).rejects.toMatchObject({ code, fieldErrors });
+  });
+
+  it('el detalle del administrador trae quién la radicó', async () => {
+    rpcResults.detalle_pqrs = {
+      data: {
+        id: 'a',
+        radicado: 3,
+        tipo: 'queja',
+        descripcion: 'd',
+        estado: 'pendiente',
+        created_at: 'x',
+        radicado_por: 'Monica Galvis',
+        unidad: '56',
+        fotos: [],
+        respuestas: [],
+      },
+      error: null,
+    };
+
+    const detail = await supabasePqrs.getPqrsDetail('a', admin);
+
+    expect(detail).toMatchObject({ owner: 'Monica Galvis', unit: '56' });
+  });
+});

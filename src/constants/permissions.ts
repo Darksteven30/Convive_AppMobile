@@ -17,6 +17,8 @@ const permissions = {
   general: ['administrador', 'junta_directiva', 'residente'],
   // Panel de administración con indicadores de cartera y PQRS pendientes.
   panel: ['administrador'],
+  // Atender las PQRS del conjunto y cambiar su estado (RF08).
+  gestionPqrs: ['administrador'],
   // Registro de ingresos y egresos (RF03).
   finanzas: ['administrador'],
   // Reportes financieros filtrables (RF04); la junta directiva los consulta en solo lectura.

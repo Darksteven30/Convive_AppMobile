@@ -56,6 +56,9 @@ export type PqrsSummary = {
   description: string;
   status: PqrsStatus;
   createdAt: string;
+  /** RF08: quién la radicó y su unidad (solo en la vista del administrador). */
+  owner?: string;
+  unit?: string | null;
 };
 
 /** Respuesta de la administración (o cambio de estado) en el historial de la PQRS. */
@@ -74,7 +77,30 @@ export type PqrsDetail = PqrsSummary & {
   responses: PqrsResponse[];
 };
 
-export type PqrsField = 'type' | 'description' | 'photos';
+// ---------------------------------------------------------------------------------------------
+// RF08 · Cambio de estado (administrador)
+// ---------------------------------------------------------------------------------------------
+
+/** Flujo Pendiente → En proceso → Resuelto: cada estado solo pasa al siguiente. Resuelto es final. */
+export const NEXT_STATUSES: Record<PqrsStatus, PqrsStatus[]> = {
+  pendiente: ['en_proceso'],
+  en_proceso: ['resuelto'],
+  resuelto: [],
+};
+
+export const COMMENT_MIN = 10;
+export const COMMENT_MAX = 500;
+
+export type StatusChangeInput = {
+  pqrsId: string;
+  /** Estado actual que ve el administrador (para detectar cambios hechos por otra persona). */
+  currentStatus: PqrsStatus;
+  status: PqrsStatus;
+  /** Comentario / respuesta para el propietario: obligatorio al pasar a «Resuelto». */
+  comment: string;
+};
+
+export type PqrsField = 'type' | 'description' | 'photos' | 'status' | 'comment';
 export type PqrsErrors = Partial<Record<PqrsField, string>>;
 
 export class PqrsError extends Error {
@@ -95,7 +121,17 @@ export type PqrsBackend = {
   getPqrsDetail(id: string, user: User): Promise<PqrsDetail>;
   /** Sube las fotos, asigna el radicado, deja la PQRS «Pendiente» y avisa a la administración. */
   createPqrs(input: PqrsInput, user: User): Promise<PqrsSummary>;
+  /** RF08: todas las PQRS del conjunto (solo administrador), de la más reciente a la más antigua. */
+  listConjuntoPqrs(user: User): Promise<PqrsSummary[]>;
+  /**
+   * RF08: cambia el estado con su comentario, deja la respuesta en el historial con usuario y
+   * fecha/hora y crea el aviso para el propietario (RF09). Falla con PqrsError.
+   */
+  changePqrsStatus(input: StatusChangeInput, user: User): Promise<PqrsResponse>;
 };
+
+/** Texto del cambio de estado cuando el administrador no escribe un comentario. */
+export const statusChangeMessage = (status: PqrsStatus) => `Cambió el estado a ${PQRS_STATUS_LABELS[status]}.`;
 
 /** 232 → «#0232». */
 export const formatPqrsNumber = (number: number) => `#${String(number).padStart(4, '0')}`;
