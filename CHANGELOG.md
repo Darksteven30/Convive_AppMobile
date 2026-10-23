@@ -8,6 +8,20 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Agregado
+
+- **RF07 – Radicación de PQRS y reportes de daño con fotos:**
+  - Lista de las PQRS propias de la más reciente a la más antigua, con un chip de estado (Pendiente, En proceso o Resuelto) en lugar de la estrella, y estado vacío MSG-RF07-09. Reemplaza las 3 PQRS fijas de la maqueta.
+  - Detalle de cada PQRS (al tocar «›») con sus fotos y el historial de respuestas de la administración.
+  - «Tipo» pasa a ser una lista desplegable: Petición, Queja, Reclamo, Sugerencia y Reporte de daño (MSG-RF07-02). Descripción de 20 a 1.000 caracteres con contador (MSG-RF07-03).
+  - Fotos desde la cámara o la galería: JPG o PNG de máx. 5 MB, hasta 3, con miniaturas y una «x» para quitarlas (MSG-RF07-04/05/06). Obligatoria en el reporte de daño (MSG-RF07-07). Si se niega el permiso, MSG-RF07-08 con «Ir a ajustes».
+  - «Radicar» se habilita con los campos obligatorios; asigna el radicado consecutivo del conjunto, deja la PQRS «Pendiente», avisa a la administración y muestra MSG-RF07-01.
+  - La pestaña PQRS aparece en las pestañas superiores y queda resaltada en su pantalla.
+  - Migración `20261022000000_pqrs.sql`: tablas `pqrs`, `pqrs_fotos`, `pqrs_respuestas` y `notificaciones` con Row Level Security; `radicar_pqrs()` valida en el servidor el tipo, la descripción y las fotos (formato y tamaño leídos de Storage, solo las subidas por quien radica), asigna el consecutivo y crea el aviso para la administración; `mis_pqrs()` y `detalle_pqrs()` consultan la lista y el detalle. Bucket privado `pqrs-fotos` (máx. 5 MB, JPG o PNG) en la carpeta del conjunto.
+  - Las fotos se comprimen antes de subirlas (máx. 1600 px por lado, JPEG al 70 %) con `expo-image-manipulator`; si la PQRS no se radica, se borran las fotos subidas.
+  - `seed.sql`: tres PQRS de ejemplo de la casa 56 con respuestas de la administración.
+  - Pruebas: pantalla, reglas, compresión y servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf07_pqrs_test.sql`.
+
 ### Corregido
 
 - **Reglas de contraseña (RF01/RF17):**
