@@ -6,7 +6,7 @@ import { hasPermission, type Permission } from '@/constants/permissions';
 import { spacing } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
 
-export type SectionKey = 'panel' | 'visitantes' | 'inicio' | 'pagos' | 'reservas' | 'general';
+export type SectionKey = 'panel' | 'visitantes' | 'inicio' | 'pagos' | 'reservas' | 'pqrs' | 'general';
 
 const sections: { key: SectionKey; label: string; href: Href; permission?: Permission }[] = [
   { key: 'panel', label: 'Panel', href: '/panel', permission: 'panel' },
@@ -14,11 +14,12 @@ const sections: { key: SectionKey; label: string; href: Href; permission?: Permi
   { key: 'inicio', label: 'Inicio', href: '/inicio' },
   { key: 'pagos', label: 'Pagos', href: '/pagos', permission: 'pagos' },
   { key: 'reservas', label: 'Reservas', href: '/reservas' },
+  { key: 'pqrs', label: 'PQRS', href: '/pqrs' },
   { key: 'general', label: 'General', href: '/general', permission: 'general' },
 ];
 
 type Props = {
-  /** Sección activa; se omite en pantallas secundarias como PQRS. */
+  /** Sección activa; se omite en pantallas secundarias como Perfil. */
   active?: SectionKey;
 };
 
