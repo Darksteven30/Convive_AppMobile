@@ -33,6 +33,7 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Corregido
 
+- Pruebas de reservas con Supabase (`reservations.supabase.test.ts`): usaban la fecha fija 20/10/2026 sin fijar «hoy», así que desde el 21/10 la app la rechazaba por ser pasada y fallaban 10 pruebas. Ahora fijan la fecha del sistema, como las demás pruebas de reservas.
 - **Reglas de contraseña (RF01/RF17):**
   - «Recuperar contraseña» valida las reglas antes de verificar el código, así una contraseña débil ya no lo gasta.
   - Si la nueva contraseña es igual a la anterior, la app lo explica y pide un código nuevo, en lugar de mostrar «Ocurrió un error inesperado». Ya no se envía dos veces al pulsar «Enter» mientras se guarda.
