@@ -53,10 +53,15 @@ export function formatMonthYear(date: Date): string {
   return `${month[0].toUpperCase()}${month.slice(1)} ${date.getFullYear()}`;
 }
 
-/** Fecha y hora para comprobantes y reportes: «09 sep 2026 - 06:19 p. m.» (documento, 7.2). */
-export function formatDateTime(date: Date): string {
+/** Hora en formato de 12 horas: «06:19 p. m.» (documento, 7.2). */
+export function formatTime(date: Date): string {
   const hours = date.getHours();
   const suffix = hours < 12 ? 'a. m.' : 'p. m.';
   const hours12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
+  return `${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
+}
+
+/** Fecha y hora para comprobantes y reportes: «09 sep 2026 - 06:19 p. m.» (documento, 7.2). */
+export function formatDateTime(date: Date): string {
+  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${formatTime(date)}`;
 }

@@ -213,3 +213,26 @@ select q.id, a.id, r.mensaje, r.estado::public.estado_pqrs, r.creada::timestampt
  where not exists (
    select 1 from public.pqrs_respuestas x where x.pqrs_id = q.id and x.mensaje = r.mensaje
  );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF10 · Visitas de ejemplo (requiere 20261030000000_visitantes.sql)
+-- Las mismas del modo simulado (visitors.mock.ts), registradas por la portería
+-- (vigilancia@convive.com): Ana María Restrepo (CC 1012345678) ya salió de la casa 56, así que al
+-- escribir su documento se autocompleta el nombre; Carlos Mejía (CC 79876543) sigue dentro con el
+-- carro ABC123 en la casa 12. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.visitas (conjunto_id, nombre, tipo_documento, numero_documento, unidad_id, placa, entrada, salida, entrada_por, salida_por)
+select c.id, v.nombre, 'CC'::public.tipo_documento, v.documento, u.id, v.placa, v.entrada::timestamptz, v.salida::timestamptz, g.id,
+       case when v.salida is not null then g.id end
+  from (values
+         ('Ana María Restrepo', '1012345678', '56', null, '2026-10-28 10:00-05', '2026-10-28 12:30-05'),
+         ('Carlos Mejía', '79876543', '12', 'ABC123', '2026-10-29 08:20-05', null)
+       ) as v (nombre, documento, unidad, placa, entrada, salida)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.unidades u on u.conjunto_id = c.id and u.nombre = v.unidad
+  join public.perfiles g on g.email = 'vigilancia@convive.com'
+ where not exists (
+   select 1 from public.visitas x
+    where x.conjunto_id = c.id and x.numero_documento = v.documento and x.entrada = v.entrada::timestamptz
+ );

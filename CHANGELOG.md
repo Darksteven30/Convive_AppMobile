@@ -10,6 +10,15 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF10 – Registro de ingreso y salida de visitantes:**
+  - La pantalla Visitantes de la vigilancia suma «Registrar ingreso» y «Visitantes dentro» sobre «Visitantes esperados hoy» (RF01).
+  - «Nombre completo» de 3 a 80 caracteres, solo letras y espacios. «Tipo de documento» CC (por defecto), CE, TI o Pasaporte, y «Número de documento» de 5 a 12 dígitos (teclado numérico) o, si es pasaporte, de 5 a 15 letras o números en mayúsculas (MSG-RF10-04). Si el documento ya tiene registros, se autocompleta el nombre.
+  - «Unidad que autoriza» con buscador (sin importar tildes ni mayúsculas, también por la dirección) y obligatoria (MSG-RF10-05). «Placa del vehículo» opcional, en mayúsculas, AAA123 (carro) o AAA12A (moto) (MSG-RF10-06).
+  - «Registrar entrada» guarda la hora del servidor (no editable) y muestra MSG-RF10-01. Un documento no puede tener dos entradas activas.
+  - «Visitantes dentro» con nombre, unidad, hora de entrada y placa; «Registrar salida» guarda la hora de salida y muestra MSG-RF10-02. Si la visita ya no tiene una entrada activa (otro vigilante registró la salida), MSG-RF10-03 y la lista se recarga.
+  - El selector de lista (`SelectField`) admite buscador y un texto secundario por opción; el botón admite un nombre accesible propio.
+  - Migración `20261030000000_visitantes.sql`: tabla `visitas` con Row Level Security (solo la vigilancia del conjunto la lee) e índice que impide dos entradas activas del mismo documento; `registrar_entrada_visitante()` valida en el servidor nombre, documento, unidad y placa y pone la hora de entrada; `registrar_salida_visitante()` bloquea la visita y pone la hora de salida solo si sigue activa; `visitantes_dentro()`, `buscar_visitante()` (autocompletar) y `unidades_visita()` para la pantalla. Cada registro guarda quién lo hizo.
+  - Pruebas: validaciones, autocompletado, buscador de unidades, entrada y salida en la pantalla y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf10_visitantes_test.sql`.
 - **RF08 – Cambio de estado de PQRS / daño:**
   - «Ver PQRS» del Panel abre ahora las PQRS del conjunto (antes abría la vista del residente): todas las solicitudes con su estado, quién las radicó y su unidad. Para el administrador, la pestaña PQRS también abre esta pantalla (el residente sigue viendo su lista y el formulario para radicar). Solo el administrador puede entrar.
   - Detalle para el administrador con radicado, tipo, descripción, fotos que se amplían al tocarlas e historial de respuestas (el mismo que ve el propietario).
