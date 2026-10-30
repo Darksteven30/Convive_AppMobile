@@ -4,6 +4,7 @@ import {
   formatDate,
   formatDateTime,
   formatMonthYear,
+  formatTime,
   fromISODate,
   isFutureDate,
   startOfMonthISO,
@@ -55,6 +56,12 @@ describe('utilidades de fecha', () => {
     expect(formatDateTime(new Date(2026, 8, 9, 18, 19))).toBe('09 sep 2026 - 06:19 p. m.');
     expect(formatDateTime(new Date(2026, 0, 1, 0, 5))).toBe('01 ene 2026 - 12:05 a. m.');
     expect(formatDateTime(new Date(2026, 0, 1, 12, 0))).toBe('01 ene 2026 - 12:00 p. m.');
+  });
+
+  it('formatea la hora de entrada y salida de visitantes («08:20 a. m.», RF10)', () => {
+    expect(formatTime(new Date(2026, 9, 29, 8, 20))).toBe('08:20 a. m.');
+    expect(formatTime(new Date(2026, 9, 29, 0, 0))).toBe('12:00 a. m.');
+    expect(formatTime(new Date(2026, 9, 29, 23, 59))).toBe('11:59 p. m.');
   });
 });
 
