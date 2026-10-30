@@ -103,6 +103,19 @@ export const MSG = {
     finalStatus: 'Esta solicitud está resuelta: es un estado final y no admite más cambios.',
     empty: 'Aún no hay PQRS radicadas en el conjunto.',
   },
+  RF10: {
+    entryRegistered: (name: string, unit: string, time: string) => `Entrada registrada: ${name} → ${unit}, ${time}`, // MSG-RF10-01
+    exitRegistered: (name: string, time: string) => `Salida registrada: ${name}, ${time}`, // MSG-RF10-02
+    noActiveEntry: 'Este visitante no tiene una entrada activa. No se puede registrar la salida.', // MSG-RF10-03
+    documentInvalid: 'Ingresa un número de documento válido.', // MSG-RF10-04
+    unitRequired: 'Selecciona la unidad que autoriza el ingreso.', // MSG-RF10-05
+    plateInvalid: 'La placa debe tener el formato AAA123 (carro) o AAA12A (moto).', // MSG-RF10-06
+    // Propuestos (no están en el documento):
+    nameInvalid: 'Ingresa el nombre completo: de 3 a 80 caracteres, solo letras y espacios.',
+    alreadyInside: 'Este visitante ya tiene una entrada activa. Registra su salida antes de una nueva entrada.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    empty: 'No hay visitantes dentro del conjunto.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
