@@ -65,3 +65,10 @@ export function formatTime(date: Date): string {
 export function formatDateTime(date: Date): string {
   return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${formatTime(date)}`;
 }
+
+/** Fecha «aaaa-mm-dd» a una hora en punto del dispositivo, como instante ISO: («2026-11-09», 6) → «2026-11-09T11:00:00.000Z» en Colombia. */
+export function dateAtHourISO(value: string, hour: number): string {
+  const date = fromISODate(value);
+  date.setHours(hour);
+  return date.toISOString();
+}
