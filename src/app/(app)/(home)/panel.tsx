@@ -12,7 +12,8 @@ import { formatAmount } from '@/utils/money';
 
 /**
  * Pantalla principal del administrador (RF01): indicadores de cartera y PQRS pendientes.
- * Desde aquí se accede a las PQRS del conjunto (RF08), a Finanzas (RF03) y a Reportes (RF04).
+ * Desde aquí se accede a las PQRS del conjunto (RF08), a Finanzas (RF03), a Reportes (RF04) y a los
+ * comunicados (RF19).
  */
 export default function PanelScreen() {
   const { portfolioDue, unitsInArrears, totalUnits, pendingPqrs } = adminSummary;
@@ -51,6 +52,14 @@ export default function PanelScreen() {
           <Button label="Registrar movimiento" variant="success" pill onPress={() => router.push('/finanzas/nuevo')} />
           <Button label="Ver movimientos" variant="outline" pill onPress={() => router.push('/finanzas')} />
           <Button label="Reportes" variant="outline" pill onPress={() => router.push('/reportes')} />
+        </View>
+      </Card>
+
+      <Card title="Comunicados">
+        <Text style={styles.muted}>Publica noticias y comunicados para todo el conjunto; se ven en Inicio.</Text>
+        <View style={styles.actions}>
+          <Button label="Publicar comunicado" variant="success" pill onPress={() => router.push('/gestion-noticias/nuevo')} />
+          <Button label="Ver comunicados" variant="outline" pill onPress={() => router.push('/gestion-noticias')} />
         </View>
       </Card>
 

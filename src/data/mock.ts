@@ -1,11 +1,5 @@
 // Datos de ejemplo para la maqueta. Se reemplazarán por llamadas al backend.
 
-export const news = [
-  { id: 'n1', title: 'Mantenimiento de ascensor' },
-  { id: 'n2', title: 'Asamblea general' },
-  { id: 'n3', title: 'Cambio horario piscina' },
-];
-
 export const financialSummary = {
   balance: 10000000,
   income: 10000000,

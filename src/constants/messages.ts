@@ -116,6 +116,25 @@ export const MSG = {
     forbidden: 'No tienes permisos para realizar esta acción.',
     empty: 'No hay visitantes dentro del conjunto.',
   },
+  // RF19 es una propuesta: ninguno de sus mensajes está todavía en el documento.
+  RF19: {
+    published: 'Comunicado publicado. Se notificó a las personas del conjunto.',
+    updated: 'Comunicado actualizado.',
+    deleted: 'Comunicado eliminado.',
+    deleteTitle: '¿Eliminar el comunicado?',
+    deleteMessage: 'Dejará de verse en Inicio. Esta acción no se puede deshacer.',
+    discardTitle: '¿Descartar los cambios?',
+    discardMessage: 'Los datos ingresados se perderán.',
+    titleInvalid: 'El título debe tener entre 5 y 60 caracteres.',
+    bodyInvalid: 'El mensaje debe tener entre 10 y 2.000 caracteres.',
+    visibleUntilPast: 'La fecha y hora deben ser posteriores a este momento.',
+    visibleUntilHourRequired: 'Selecciona la hora hasta la que se verá.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    notFound: 'Este comunicado ya no está disponible.',
+    empty: 'Aún no hay comunicados.',
+    emptyActive: 'No hay comunicados vigentes. Los anteriores están en el histórico.',
+    loadFailed: 'No pudimos cargar las noticias.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02

@@ -10,6 +10,19 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF19 – Noticias y comunicados (propuesto):**
+  - «Últimas noticias» de Inicio muestra los 3 comunicados vigentes más recientes del conjunto, para todos los roles, en lugar de las 3 noticias fijas de la maqueta. Al tocar uno se abre en una ventana centrada sobre Inicio (sigue siendo la ruta `/noticias/[id]`, para que la push de RF09 la pueda abrir) con quién lo publicó, la fecha y el mensaje completo (e «Editado el…» si se editó); se cierra con «✕» o tocando fuera. Estado vacío y «Reintentar» si no cargan.
+  - Panel → «Publicar comunicado»: título de 5 a 60 caracteres y mensaje de 10 a 2.000, ambos con contador y mensaje en línea al salir del campo. Al cancelar con datos pide confirmación.
+  - Panel → «Ver comunicados»: lista todos los comunicados del conjunto; al tocar uno se edita o se elimina (con confirmación). Solo el administrador entra.
+  - «Visible hasta» (opcional, fecha y hora en punto) al publicar o editar: al pasar esa hora el comunicado sale solo de Inicio, sin eliminarse, y queda en «Histórico de noticias» con la etiqueta «Vencido». «Quitar fecha» lo deja sin vencimiento. La fecha y hora deben ser futuras.
+  - Botón «Histórico de noticias» en Inicio, para todos los roles: todos los comunicados del conjunto, vigentes y vencidos, del más reciente al más antiguo.
+  - El campo de fecha (`DateField`) admite quedar vacío y una fecha mínima.
+  - Por ahora cada comunicado es para todo el conjunto: la segmentación por torre/bloque queda pendiente hasta que las unidades tengan ese dato.
+  - Mensajes propuestos en `MSG.RF19` (aún no están en el documento).
+  - Migración `20261102000000_noticias.sql`: tabla `noticias` con Row Level Security (cada persona lee los comunicados de su conjunto) y auditoría de quién publicó y editó; `noticias_conjunto()` y `detalle_noticia()` para consultar; `publicar_noticia()`, `editar_noticia()` y `eliminar_noticia()` validan en el servidor el rol, el conjunto, el título y el mensaje. Al publicar se crea el aviso «Nuevo comunicado» en `notificaciones` para las demás personas del conjunto (listo para el envío push de RF09); al editar se actualiza y al eliminar se borra.
+  - `seed.sql`: tres comunicados de ejemplo publicados por la administración, y uno vencido («Piscina cerrada este fin de semana») para el histórico.
+  - Migración `20261103000000_vigencia_noticias.sql`: columna `visible_hasta`; `noticias_conjunto()` puede traer solo los vigentes (Inicio) o todos (histórico); `publicar_noticia()` y `editar_noticia()` reciben «visible hasta» y lo validan en el servidor (`vigencia_invalida`).
+  - Pruebas: validaciones, publicación, edición, eliminación y permisos por rol en las pantallas y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf19_noticias_test.sql`.
 - **RF10 – Registro de ingreso y salida de visitantes:**
   - La pantalla Visitantes de la vigilancia suma «Registrar ingreso» y «Visitantes dentro» sobre «Visitantes esperados hoy» (RF01).
   - «Nombre completo» de 3 a 80 caracteres, solo letras y espacios. «Tipo de documento» CC (por defecto), CE, TI o Pasaporte, y «Número de documento» de 5 a 12 dígitos (teclado numérico) o, si es pasaporte, de 5 a 15 letras o números en mayúsculas (MSG-RF10-04). Si el documento ya tiene registros, se autocompleta el nombre.

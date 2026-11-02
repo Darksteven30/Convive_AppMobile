@@ -1,12 +1,12 @@
 import { hasPermission, homeRouteFor, roleLabels, type Permission } from '@/constants/permissions';
 import type { Role } from '@/services/auth.service';
 
-// Matriz de acceso esperada según el RF01 (y RF03/RF04 para finanzas y reportes, RF08 para atender PQRS).
+// Matriz de acceso esperada según el RF01 (y RF03/RF04 para finanzas y reportes, RF08 para atender PQRS, RF19 para los comunicados).
 const expected: Record<Role, Record<Permission, boolean>> = {
-  administrador: { pagos: true, general: true, panel: true, gestionPqrs: true, finanzas: true, reportes: true, visitantes: false },
-  junta_directiva: { pagos: true, general: true, panel: false, gestionPqrs: false, finanzas: false, reportes: true, visitantes: false },
-  residente: { pagos: true, general: true, panel: false, gestionPqrs: false, finanzas: false, reportes: false, visitantes: false },
-  vigilancia: { pagos: false, general: false, panel: false, gestionPqrs: false, finanzas: false, reportes: false, visitantes: true },
+  administrador: { pagos: true, general: true, panel: true, gestionPqrs: true, finanzas: true, reportes: true, visitantes: false, gestionNoticias: true },
+  junta_directiva: { pagos: true, general: true, panel: false, gestionPqrs: false, finanzas: false, reportes: true, visitantes: false, gestionNoticias: false },
+  residente: { pagos: true, general: true, panel: false, gestionPqrs: false, finanzas: false, reportes: false, visitantes: false, gestionNoticias: false },
+  vigilancia: { pagos: false, general: false, panel: false, gestionPqrs: false, finanzas: false, reportes: false, visitantes: true, gestionNoticias: false },
 };
 
 describe('hasPermission', () => {

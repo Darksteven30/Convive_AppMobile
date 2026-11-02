@@ -236,3 +236,45 @@ select c.id, v.nombre, 'CC'::public.tipo_documento, v.documento, u.id, v.placa, 
    select 1 from public.visitas x
     where x.conjunto_id = c.id and x.numero_documento = v.documento and x.entrada = v.entrada::timestamptz
  );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF19 · Comunicados de ejemplo (requiere 20261102000000_noticias.sql)
+-- Los mismos del modo simulado (news.mock.ts), publicados por la administración
+-- (admin@convive.com) para todo el conjunto. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.noticias (conjunto_id, titulo, cuerpo, publicada_por, created_at)
+select c.id, n.titulo, n.cuerpo, a.id, n.creada::timestamptz
+  from (values
+         ('Mantenimiento de ascensor',
+          'El jueves 5 de noviembre, de 8:00 a. m. a 12:00 m., se hará el mantenimiento preventivo del ascensor. Durante ese horario usen las escaleras.',
+          '2026-10-30 09:00-05'),
+         ('Asamblea general',
+          'Los invitamos a la asamblea general de propietarios el sábado 14 de noviembre a las 9:00 a. m. en el salón social. Se revisará el presupuesto de 2027.',
+          '2026-10-27 18:00-05'),
+         ('Cambio horario piscina',
+          'Desde el lunes 2 de noviembre la piscina abre de martes a domingo, de 9:00 a. m. a 7:00 p. m. Los lunes se cierra por mantenimiento.',
+          '2026-10-24 10:00-05')
+       ) as n (titulo, cuerpo, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.noticias x where x.conjunto_id = c.id and x.titulo = n.titulo
+ );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF19 · Comunicado vencido de ejemplo (requiere 20261103000000_vigencia_noticias.sql)
+-- «Piscina cerrada este fin de semana» fue visible hasta el lunes 2 de noviembre a las 6:00 a. m.:
+-- ya no sale en Inicio, pero sí en «Histórico de noticias». Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.noticias (conjunto_id, titulo, cuerpo, publicada_por, created_at, visible_hasta)
+select c.id, 'Piscina cerrada este fin de semana',
+       'El sábado 31 de octubre y el domingo 1 de noviembre la piscina estará cerrada por mantenimiento. El lunes vuelve a abrir en su horario normal.',
+       a.id, '2026-10-29 17:00-05'::timestamptz, '2026-11-02 06:00-05'::timestamptz
+  from public.conjuntos c
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where c.nombre = 'Conjunto Residencial Convive'
+   and not exists (
+     select 1 from public.noticias x where x.conjunto_id = c.id and x.titulo = 'Piscina cerrada este fin de semana'
+   );
