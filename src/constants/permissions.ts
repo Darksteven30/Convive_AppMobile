@@ -25,6 +25,8 @@ const permissions = {
   reportes: ['administrador', 'junta_directiva'],
   // Registro de visitantes (RF10).
   visitantes: ['vigilancia'],
+  // Publicar, editar y eliminar comunicados (RF19). Todos los roles los leen en Inicio.
+  gestionNoticias: ['administrador'],
 } satisfies Record<string, Role[]>;
 
 export type Permission = keyof typeof permissions;
