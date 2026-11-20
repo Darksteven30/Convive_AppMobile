@@ -54,6 +54,14 @@ export default function HomeLayout() {
         <Stack.Screen name="gestion-noticias/nuevo" />
         <Stack.Screen name="gestion-noticias/[id]" />
       </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'gestionUsuarios')}>
+        <Stack.Screen name="gestion-usuarios/index" />
+        <Stack.Screen name="gestion-usuarios/nuevo" />
+        <Stack.Screen name="gestion-usuarios/[id]" />
+        <Stack.Screen name="gestion-unidades/index" />
+        <Stack.Screen name="gestion-unidades/nueva" />
+        <Stack.Screen name="gestion-unidades/[id]" />
+      </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'visitantes')}>
         <Stack.Screen name="visitantes" options={sectionOptions} />
       </Stack.Protected>
