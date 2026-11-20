@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 
 import { resetMockAuthState } from '@/services/auth.service';
+import { resetMockCommunityState } from '@/services/community.service';
 import { resetMockFinanceState } from '@/services/finance.service';
 import { mockNetwork } from '@/services/mockNetwork';
 import { resetMockNewsState } from '@/services/news.service';
@@ -24,6 +25,7 @@ type Element = Parameters<typeof fireEvent.press>[0];
  */
 export async function renderApp(initialUrl = '/') {
   resetMockAuthState();
+  resetMockCommunityState();
   resetMockFinanceState();
   resetMockNewsState();
   resetMockPaymentsState();
