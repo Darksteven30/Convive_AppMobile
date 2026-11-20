@@ -27,6 +27,8 @@ const permissions = {
   visitantes: ['vigilancia'],
   // Publicar, editar y eliminar comunicados (RF19). Todos los roles los leen en Inicio.
   gestionNoticias: ['administrador'],
+  // Pre-registrar personas y administrar las unidades del conjunto (RF20).
+  gestionUsuarios: ['administrador'],
 } satisfies Record<string, Role[]>;
 
 export type Permission = keyof typeof permissions;

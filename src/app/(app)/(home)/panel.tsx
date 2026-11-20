@@ -12,8 +12,8 @@ import { formatAmount } from '@/utils/money';
 
 /**
  * Pantalla principal del administrador (RF01): indicadores de cartera y PQRS pendientes.
- * Desde aquí se accede a las PQRS del conjunto (RF08), a Finanzas (RF03), a Reportes (RF04) y a los
- * comunicados (RF19).
+ * Desde aquí se accede a las PQRS del conjunto (RF08), a Finanzas (RF03), a Reportes (RF04), a los
+ * comunicados (RF19) y a la administración de usuarios y unidades (RF20).
  */
 export default function PanelScreen() {
   const { portfolioDue, unitsInArrears, totalUnits, pendingPqrs } = adminSummary;
@@ -60,6 +60,14 @@ export default function PanelScreen() {
         <View style={styles.actions}>
           <Button label="Publicar comunicado" variant="success" pill onPress={() => router.push('/gestion-noticias/nuevo')} />
           <Button label="Ver comunicados" variant="outline" pill onPress={() => router.push('/gestion-noticias')} />
+        </View>
+      </Card>
+
+      <Card title="Usuarios y unidades">
+        <Text style={styles.muted}>Pre-registra a las personas del conjunto con su rol y su unidad, y administra las unidades.</Text>
+        <View style={styles.actions}>
+          <Button label="Personas" variant="outline" pill onPress={() => router.push('/gestion-usuarios')} />
+          <Button label="Unidades" variant="outline" pill onPress={() => router.push('/gestion-unidades')} />
         </View>
       </Card>
 

@@ -135,6 +135,34 @@ export const MSG = {
     emptyActive: 'No hay comunicados vigentes. Los anteriores están en el histórico.',
     loadFailed: 'No pudimos cargar las noticias.',
   },
+  // RF20 es una propuesta: ninguno de sus mensajes está todavía en el documento.
+  RF20: {
+    unitSaved: 'Unidad guardada.',
+    personPreregistered: (email: string) =>
+      `Persona pre-registrada. Cuando entre con ${email} creará su contraseña.`,
+    personUpdated: 'Datos actualizados.',
+    preregistrationDeleted: 'Pre-registro eliminado.',
+    deleteTitle: '¿Eliminar el pre-registro?',
+    deleteMessage: 'La persona ya no podrá crear su cuenta con este correo.',
+    discardTitle: '¿Descartar los cambios?',
+    discardMessage: 'Los datos ingresados se perderán.',
+    unitNameInvalid: 'El nombre de la unidad debe tener entre 1 y 40 caracteres.',
+    unitAddressInvalid: 'La dirección puede tener hasta 120 caracteres.',
+    unitDuplicate: 'Ya existe una unidad con ese nombre.',
+    personNameInvalid: 'El nombre debe tener entre 3 y 80 caracteres.',
+    emailInvalid: 'Ingresa un correo válido, por ejemplo nombre@dominio.com.',
+    emailDuplicate: 'Este correo ya está registrado.',
+    emailLocked: 'El correo no se puede cambiar porque la persona ya creó su cuenta.',
+    roleRequired: 'Selecciona el rol.',
+    unitRequired: 'Selecciona la unidad de la persona.',
+    ownRole: 'No puedes cambiar tu propio rol.',
+    lastAdmin: 'El conjunto debe tener al menos un administrador.',
+    hasAccount: 'Esta persona ya creó su cuenta: su registro no se puede eliminar.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    notFound: 'Este registro ya no está disponible.',
+    emptyUnits: 'Aún no hay unidades registradas.',
+    emptyPeople: 'Aún no hay personas registradas.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
