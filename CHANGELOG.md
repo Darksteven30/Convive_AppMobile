@@ -10,6 +10,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF20 – Administración de usuarios y unidades (propuesto):**
+  - Panel → «Usuarios y unidades», solo para el administrador. Atiende la precondición de RF01 (la administración pre-registra cada correo con su unidad y su rol) y la regla de RF16 (el correo y la unidad solo los cambia la administración), que antes se hacían a mano con `seed.sql`.
+  - **Personas:** lista del conjunto con rol, unidad y quién aún no crea su cuenta («Sin cuenta»). «Pre-registrar persona» con nombre, correo, teléfono opcional, rol y unidad (obligatoria para residentes y junta directiva). Al editar, el correo solo cambia mientras la persona no tenga cuenta; el administrador no cambia su propio rol y el conjunto no se queda sin administrador. Un pre-registro sin cuenta se puede eliminar, con confirmación.
+  - **Unidades:** lista con cuántas personas tiene cada una; crear y editar (nombre único en el conjunto y dirección opcional). No se eliminan, para no perder sus pagos, reservas y visitas.
+  - Componentes `PersonForm`, `UnitForm` y `CommunityRow`. Mensajes propuestos en `MSG.RF20` (aún no están en el documento).
+  - Migración `20261120000000_usuarios_unidades.sql`: `unidades_admin()` y `guardar_unidad()` para las unidades; `usuarios_conjunto()`, `preregistrar_usuario()`, `editar_usuario()` y `eliminar_preregistro()` para las personas. Todas validan en el servidor que sea el administrador y su conjunto, normalizan los datos y aplican las reglas de correo, rol y unidad.
+  - Pruebas: validaciones, pre-registro, edición, eliminación, unidades y permisos por rol en las pantallas y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf20_usuarios_unidades_test.sql`.
 - **RF19 – Noticias y comunicados (propuesto):**
   - «Últimas noticias» de Inicio muestra los 3 comunicados vigentes más recientes del conjunto, para todos los roles, en lugar de las 3 noticias fijas de la maqueta. Al tocar uno se abre en una ventana centrada sobre Inicio (sigue siendo la ruta `/noticias/[id]`, para que la push de RF09 la pueda abrir) con quién lo publicó, la fecha y el mensaje completo (e «Editado el…» si se editó); se cierra con «✕» o tocando fuera. Estado vacío y «Reintentar» si no cargan.
   - Panel → «Publicar comunicado»: título de 5 a 60 caracteres y mensaje de 10 a 2.000, ambos con contador y mensaje en línea al salir del campo. Al cancelar con datos pide confirmación.
