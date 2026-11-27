@@ -66,7 +66,7 @@ function toPaymentError(error: RpcError): PaymentError {
   const message = error.message ?? '';
   if (message.includes('pago_pendiente')) return new PaymentError('pending', error.details || undefined);
   if (message.includes('wompi_no_disponible')) return new PaymentError('unavailable');
-  if (/concepto_invalido|valor_invalido|descripcion_invalida|sin_unidad/.test(message)) {
+  if (/concepto_invalido|valor_invalido|descripcion_invalida|sin_unidad|saldo_menor_minimo|abono_deja_saldo_menor_minimo/.test(message)) {
     return new PaymentError('invalid');
   }
   return new PaymentError('failed');

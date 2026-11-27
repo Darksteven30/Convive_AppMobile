@@ -174,6 +174,31 @@ describe('RF11 · Selección del concepto de pago', () => {
     expect(app.getPathname()).toBe('/pago/aplicar');
   });
 
+  it('RF11: un abono que dejaría menos de $ 1.500 pendientes no se permite', async () => {
+    await openSelectionAsResident();
+    await press(screen.getByText('Cuota administración'));
+
+    await typeAmount('34000');
+    expect(screen.getByText(MSG.RF11.remainderBelowMinimum('$ 33.500,00', '$ 35.000,00'))).toBeTruthy();
+    expect(continuar()).toBeDisabled();
+
+    await typeAmount('33500');
+    expect(continuar()).toBeEnabled();
+  });
+
+  it('RF11: un saldo menor a $ 1.500 indica pagarlo en la administración', async () => {
+    const app = await signInResident();
+    setMockBalance('56', 'administracion', 500);
+    await press(screen.getByText('Abonar'));
+    expect(app.getPathname()).toBe('/pago/seleccion');
+
+    expect(screen.getByText(`Saldo pendiente: $ 500,00 · ${MSG.RF11.payAtOfficeShort}`)).toBeTruthy();
+    await press(screen.getByText('Cuota administración'));
+    expect(screen.getByText(MSG.RF11.payAtOffice('$ 1.500,00'))).toBeTruthy();
+    expect(screen.queryByLabelText('Valor a pagar')).toBeNull();
+    expect(continuar()).toBeDisabled();
+  });
+
   it('MSG-RF11-03: el valor no puede superar el saldo del concepto', async () => {
     await openSelectionAsResident();
     await press(screen.getByText('Otros conceptos'));
