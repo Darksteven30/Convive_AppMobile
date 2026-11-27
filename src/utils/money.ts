@@ -43,3 +43,16 @@ export function formatAmount(value: number): string {
   const [integer, decimals] = Math.abs(value).toFixed(2).split('.');
   return `${value < 0 ? '-' : ''}$ ${withThousands(integer)},${decimals}`;
 }
+
+/**
+ * Formato corto para espacios pequeños, como el centro de una dona (RF14): «$ 4,5 M», «$ 450 mil»,
+ * «$ 980». Para el valor exacto se usa formatAmount.
+ */
+export function formatCompactAmount(value: number): string {
+  const sign = value < 0 ? '-' : '';
+  const abs = Math.abs(value);
+  const short = (n: number) => (Math.round(n * 10) / 10).toString().replace('.', ',');
+  if (abs >= 1_000_000) return `${sign}$ ${short(abs / 1_000_000)} M`;
+  if (abs >= 1_000) return `${sign}$ ${short(abs / 1_000)} mil`;
+  return `${sign}$ ${withThousands(Math.round(abs).toString())}`;
+}
