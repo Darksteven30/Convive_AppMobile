@@ -8,6 +8,79 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Agregado
+
+- **App instalable con EAS Build:** `eas.json` con los perfiles `development` (cliente de desarrollo), `preview` (APK para probar en celulares Android) y `production` (AAB para Google Play, con número de versión automático). Identificador de la app: `com.darksteven30.convive` (Android y iOS). El README explica cómo configurar las variables de Supabase en EAS y cómo instalar el APK.
+- **RF14 – Resumen financiero (General) con datos reales:**
+  - Selector de periodo: «Este mes» (por defecto), «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado» con fecha inicial y final (máximo 12 meses; MSG-RF14-02 si la inicial es mayor que la final).
+  - «Saldo actual general» = saldo inicial del conjunto + ingresos − egresos registrados hasta hoy (no depende del periodo). «Total ingresos» y «Total egresos» del periodo.
+  - Gráficas con datos reales: movimiento de fondos por mes, egresos por categoría, PQRS radicadas por tipo (con el conteo por estado) y reservas hechas por zona (confirmadas y pendientes). Sin datos, cada gráfica muestra su estado vacío (MSG-RF14-01); si no se puede cargar, MSG-RF14-03 con «Reintentar».
+  - Saldo inicial del conjunto: lo define el administrador en Panel → Finanzas (empieza en $ 0).
+  - Migración `20261126000000_resumen_general.sql`: columna `saldo_inicial` en `conjuntos`, `resumen_general()` (solo totales agregados del conjunto: el residente no ve movimientos ni datos de otras unidades; vigilancia no tiene acceso), `saldo_inicial_conjunto()` y `configurar_saldo_inicial()` (solo el administrador). Pruebas en `supabase/tests/rf14_resumen_general_test.sql`.
+  - Se quitan los datos de ejemplo de General de `src/data/mock.ts`.
+  - Interacción de las gráficas: al tocar una barra se ve su valor exacto («Sep · Egresos: $ 1.250.000,00»); al tocar un segmento de una dona o su fila de la leyenda, la categoría, el valor y el porcentaje. Cada dona muestra el total en el centro. Una flecha ↓ debajo de cada sección lleva a la siguiente gráfica.
+- **RF20 – Administración de usuarios y unidades (propuesto):**
+  - Panel → «Usuarios y unidades», solo para el administrador. Atiende la precondición de RF01 (la administración pre-registra cada correo con su unidad y su rol) y la regla de RF16 (el correo y la unidad solo los cambia la administración), que antes se hacían a mano con `seed.sql`.
+  - **Personas:** lista del conjunto con rol, unidad y quién aún no crea su cuenta («Sin cuenta»). «Pre-registrar persona» con nombre, correo, teléfono opcional, rol y unidad (obligatoria para residentes y junta directiva). Al editar, el correo solo cambia mientras la persona no tenga cuenta; el administrador no cambia su propio rol y el conjunto no se queda sin administrador. Un pre-registro sin cuenta se puede eliminar, con confirmación.
+  - **Unidades:** lista con cuántas personas tiene cada una; crear y editar (nombre único en el conjunto y dirección opcional). No se eliminan, para no perder sus pagos, reservas y visitas.
+  - Componentes `PersonForm`, `UnitForm` y `CommunityRow`. Mensajes propuestos en `MSG.RF20` (aún no están en el documento).
+  - Migración `20261120000000_usuarios_unidades.sql`: `unidades_admin()` y `guardar_unidad()` para las unidades; `usuarios_conjunto()`, `preregistrar_usuario()`, `editar_usuario()` y `eliminar_preregistro()` para las personas. Todas validan en el servidor que sea el administrador y su conjunto, normalizan los datos y aplican las reglas de correo, rol y unidad.
+  - Pruebas: validaciones, pre-registro, edición, eliminación, unidades y permisos por rol en las pantallas y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf20_usuarios_unidades_test.sql`.
+- **RF19 – Noticias y comunicados (propuesto):**
+  - «Últimas noticias» de Inicio muestra los 3 comunicados vigentes más recientes del conjunto, para todos los roles, en lugar de las 3 noticias fijas de la maqueta. Al tocar uno se abre en una ventana centrada sobre Inicio (sigue siendo la ruta `/noticias/[id]`, para que la push de RF09 la pueda abrir) con quién lo publicó, la fecha y el mensaje completo (e «Editado el…» si se editó); se cierra con «✕» o tocando fuera. Estado vacío y «Reintentar» si no cargan.
+  - Panel → «Publicar comunicado»: título de 5 a 60 caracteres y mensaje de 10 a 2.000, ambos con contador y mensaje en línea al salir del campo. Al cancelar con datos pide confirmación.
+  - Panel → «Ver comunicados»: lista todos los comunicados del conjunto; al tocar uno se edita o se elimina (con confirmación). Solo el administrador entra.
+  - «Visible hasta» (opcional, fecha y hora en punto) al publicar o editar: al pasar esa hora el comunicado sale solo de Inicio, sin eliminarse, y queda en «Histórico de noticias» con la etiqueta «Vencido». «Quitar fecha» lo deja sin vencimiento. La fecha y hora deben ser futuras.
+  - Botón «Histórico de noticias» en Inicio, para todos los roles: todos los comunicados del conjunto, vigentes y vencidos, del más reciente al más antiguo.
+  - El campo de fecha (`DateField`) admite quedar vacío y una fecha mínima.
+  - Por ahora cada comunicado es para todo el conjunto: la segmentación por torre/bloque queda pendiente hasta que las unidades tengan ese dato.
+  - Mensajes propuestos en `MSG.RF19` (aún no están en el documento).
+  - Migración `20261102000000_noticias.sql`: tabla `noticias` con Row Level Security (cada persona lee los comunicados de su conjunto) y auditoría de quién publicó y editó; `noticias_conjunto()` y `detalle_noticia()` para consultar; `publicar_noticia()`, `editar_noticia()` y `eliminar_noticia()` validan en el servidor el rol, el conjunto, el título y el mensaje. Al publicar se crea el aviso «Nuevo comunicado» en `notificaciones` para las demás personas del conjunto (listo para el envío push de RF09); al editar se actualiza y al eliminar se borra.
+  - `seed.sql`: tres comunicados de ejemplo publicados por la administración, y uno vencido («Piscina cerrada este fin de semana») para el histórico.
+  - Migración `20261103000000_vigencia_noticias.sql`: columna `visible_hasta`; `noticias_conjunto()` puede traer solo los vigentes (Inicio) o todos (histórico); `publicar_noticia()` y `editar_noticia()` reciben «visible hasta» y lo validan en el servidor (`vigencia_invalida`).
+  - Pruebas: validaciones, publicación, edición, eliminación y permisos por rol en las pantallas y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf19_noticias_test.sql`.
+- **RF10 – Registro de ingreso y salida de visitantes:**
+  - La pantalla Visitantes de la vigilancia suma «Registrar ingreso» y «Visitantes dentro» sobre «Visitantes esperados hoy» (RF01).
+  - «Nombre completo» de 3 a 80 caracteres, solo letras y espacios. «Tipo de documento» CC (por defecto), CE, TI o Pasaporte, y «Número de documento» de 5 a 12 dígitos (teclado numérico) o, si es pasaporte, de 5 a 15 letras o números en mayúsculas (MSG-RF10-04). Si el documento ya tiene registros, se autocompleta el nombre.
+  - «Unidad que autoriza» con buscador (sin importar tildes ni mayúsculas, también por la dirección) y obligatoria (MSG-RF10-05). «Placa del vehículo» opcional, en mayúsculas, AAA123 (carro) o AAA12A (moto) (MSG-RF10-06).
+  - «Registrar entrada» guarda la hora del servidor (no editable) y muestra MSG-RF10-01. Un documento no puede tener dos entradas activas.
+  - «Visitantes dentro» con nombre, unidad, hora de entrada y placa; «Registrar salida» guarda la hora de salida y muestra MSG-RF10-02. Si la visita ya no tiene una entrada activa (otro vigilante registró la salida), MSG-RF10-03 y la lista se recarga.
+  - El selector de lista (`SelectField`) admite buscador y un texto secundario por opción; el botón admite un nombre accesible propio.
+  - Migración `20261030000000_visitantes.sql`: tabla `visitas` con Row Level Security (solo la vigilancia del conjunto la lee) e índice que impide dos entradas activas del mismo documento; `registrar_entrada_visitante()` valida en el servidor nombre, documento, unidad y placa y pone la hora de entrada; `registrar_salida_visitante()` bloquea la visita y pone la hora de salida solo si sigue activa; `visitantes_dentro()`, `buscar_visitante()` (autocompletar) y `unidades_visita()` para la pantalla. Cada registro guarda quién lo hizo.
+  - Pruebas: validaciones, autocompletado, buscador de unidades, entrada y salida en la pantalla y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf10_visitantes_test.sql`.
+- **RF08 – Cambio de estado de PQRS / daño:**
+  - «Ver PQRS» del Panel abre ahora las PQRS del conjunto (antes abría la vista del residente): todas las solicitudes con su estado, quién las radicó y su unidad. Para el administrador, la pestaña PQRS también abre esta pantalla (el residente sigue viendo su lista y el formulario para radicar). Solo el administrador puede entrar.
+  - Detalle para el administrador con radicado, tipo, descripción, fotos que se amplían al tocarlas e historial de respuestas (el mismo que ve el propietario).
+  - Selector «Estado» con solo las transiciones válidas: Pendiente → En proceso → Resuelto. «Resuelto» es final y ya no muestra el selector. MSG-RF08-03 si otra persona cambió el estado mientras tanto.
+  - «Comentario / respuesta» de 10 a 500 caracteres con contador, obligatorio al pasar a «Resuelto» (MSG-RF08-02); queda en el historial que ve el propietario.
+  - «Guardar» registra el cambio con el usuario y la fecha/hora y muestra MSG-RF08-01. MSG-RF08-04 si quien guarda no es administrador.
+  - Migración `20261023000000_cambio_estado_pqrs.sql`: `pqrs_conjunto()` (lista del administrador), `cambiar_estado_pqrs()` (valida rol, conjunto, flujo y comentario; bloquea la PQRS mientras la cambia; deja la respuesta en el historial y crea el aviso para el propietario en `notificaciones`, listo para el envío push de RF09) y `detalle_pqrs()` ahora trae quién la radicó cuando la consulta el administrador.
+  - El detalle de la PQRS (datos, fotos e historial) es un componente compartido entre la vista del propietario y la del administrador.
+  - Pruebas: transiciones, comentario y permisos por rol en la pantalla y en los servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf08_cambio_estado_pqrs_test.sql`.
+- **RF07 – Radicación de PQRS y reportes de daño con fotos:**
+  - Lista de las PQRS propias de la más reciente a la más antigua, con un chip de estado (Pendiente, En proceso o Resuelto) en lugar de la estrella, y estado vacío MSG-RF07-09. Reemplaza las 3 PQRS fijas de la maqueta.
+  - Detalle de cada PQRS (al tocar «›») con sus fotos y el historial de respuestas de la administración.
+  - «Tipo» pasa a ser una lista desplegable: Petición, Queja, Reclamo, Sugerencia y Reporte de daño (MSG-RF07-02). Descripción de 20 a 1.000 caracteres con contador (MSG-RF07-03).
+  - Fotos desde la cámara o la galería: JPG o PNG de máx. 5 MB, hasta 3, con miniaturas y una «x» para quitarlas (MSG-RF07-04/05/06). Obligatoria en el reporte de daño (MSG-RF07-07). Si se niega el permiso, MSG-RF07-08 con «Ir a ajustes».
+  - «Radicar» se habilita con los campos obligatorios; asigna el radicado consecutivo del conjunto, deja la PQRS «Pendiente», avisa a la administración y muestra MSG-RF07-01.
+  - La pestaña PQRS aparece en las pestañas superiores y queda resaltada en su pantalla.
+  - Migración `20261022000000_pqrs.sql`: tablas `pqrs`, `pqrs_fotos`, `pqrs_respuestas` y `notificaciones` con Row Level Security; `radicar_pqrs()` valida en el servidor el tipo, la descripción y las fotos (formato y tamaño leídos de Storage, solo las subidas por quien radica), asigna el consecutivo y crea el aviso para la administración; `mis_pqrs()` y `detalle_pqrs()` consultan la lista y el detalle. Bucket privado `pqrs-fotos` (máx. 5 MB, JPG o PNG) en la carpeta del conjunto.
+  - Las fotos se comprimen antes de subirlas (máx. 1600 px por lado, JPEG al 70 %) con `expo-image-manipulator`; si la PQRS no se radica, se borran las fotos subidas.
+  - `seed.sql`: tres PQRS de ejemplo de la casa 56 con respuestas de la administración.
+  - Pruebas: pantalla, reglas, compresión y servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf07_pqrs_test.sql`.
+
+### Cambiado
+
+- Paquetes de Expo actualizados a las versiones del SDK 57 (`npx expo install --fix`): `expo` 57.0.34, `expo-router` 57.0.32 y otros. `react-native-reanimated` (4.5.1) y `react-native-worklets` (0.10.1) quedan declarados en las versiones del SDK: `expo-router` instalaba una versión de reanimated que exige React Native 0.87. `expo-doctor` pasa 21/21.
+
+### Corregido
+
+- Pruebas de reservas con Supabase (`reservations.supabase.test.ts`): usaban la fecha fija 20/10/2026 sin fijar «hoy», así que desde el 21/10 la app la rechazaba por ser pasada y fallaban 10 pruebas. Ahora fijan la fecha del sistema, como las demás pruebas de reservas.
+- **Reglas de contraseña (RF01/RF17):**
+  - «Recuperar contraseña» valida las reglas antes de verificar el código, así una contraseña débil ya no lo gasta.
+  - Si la nueva contraseña es igual a la anterior, la app lo explica y pide un código nuevo, en lugar de mostrar «Ocurrió un error inesperado». Ya no se envía dos veces al pulsar «Enter» mientras se guarda.
+  - Supabase exige ahora un mínimo de 8 caracteres en el servidor (ver el README). La mayúscula y el número o símbolo los sigue validando la app, porque los requisitos de Supabase no admiten la regla de RF17.
+
 ## [0.3.0] - 2026-10-18
 
 Finanzas en Supabase (RF03 y RF04), reserva de zonas comunes con control de reservas duplicadas

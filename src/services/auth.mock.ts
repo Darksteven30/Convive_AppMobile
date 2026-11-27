@@ -184,13 +184,16 @@ export async function requestPasswordReset(email: string): Promise<void> {
 export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
   await simulateNetwork();
   const key = normalizeEmail(email);
+  if (!meetsPasswordRules(newPassword)) throw new AuthError('weak_password');
   const entry = resetCodes.get(key);
   const account = findAccount(key);
   if (!account || !entry || entry.code !== code || Date.now() > entry.expiresAt) {
     throw new AuthError('invalid_code');
   }
-  account.password = newPassword;
+  // Como en Supabase, el código ya se usó: si la contraseña es la misma, hay que pedir otro.
   resetCodes.delete(key);
+  if (account.password === newPassword) throw new AuthError('same_password');
+  account.password = newPassword;
   failedAttempts.delete(key);
 }
 

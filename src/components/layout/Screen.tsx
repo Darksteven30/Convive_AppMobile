@@ -1,6 +1,6 @@
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import { colors, layout, spacing } from '@/constants/theme';
 
@@ -11,16 +11,19 @@ type Props = {
   /** «Deslizar hacia abajo» para volver a consultar los datos (p. ej. Pagos, RF02). */
   onRefresh?: () => void;
   refreshing?: boolean;
+  /** Referencia al área desplazable, para desplazarla desde la pantalla (p. ej. la flecha ↓ de RF14). */
+  scrollRef?: Ref<ScrollView>;
   children: ReactNode;
 };
 
 /** Contenedor base de cada pantalla: área segura, encabezado y contenido desplazable. */
-export function Screen({ header, footer, onRefresh, refreshing = false, children }: Props) {
+export function Screen({ header, footer, onRefresh, refreshing = false, scrollRef, children }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.column}>
         {header ? <View style={styles.header}>{header}</View> : null}
         <ScrollView
+          ref={scrollRef}
           testID="screen-scroll"
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"

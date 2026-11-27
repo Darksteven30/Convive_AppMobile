@@ -136,6 +136,9 @@ export async function requestPasswordReset(email: string): Promise<void> {
 }
 
 export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+  // Se valida antes de verifyOtp, que gasta el código. El servidor solo exige el mínimo de 8 caracteres
+  // (sus requisitos no admiten «un número o un símbolo»), así que la mayúscula y el resto se validan aquí.
+  if (!meetsPasswordRules(newPassword)) throw new AuthError('weak_password');
   const client = getSupabase();
   const { error } = await client.auth.verifyOtp({ email: normalizeEmail(email), token: code, type: 'recovery' });
   if (error) {

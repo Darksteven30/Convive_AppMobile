@@ -7,9 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.darksteven30.convive"
     },
     "android": {
+      "package": "com.darksteven30.convive",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -35,6 +37,13 @@
       "expo-sqlite",
       "expo-web-browser"
     ],
-    "scheme": "convive"
+    "scheme": "convive",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4d2d1d68-e3bd-410a-8160-cbbf6d10433b"
+      }
+    },
+    "owner": "darkstevens-team"
   }
 }

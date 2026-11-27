@@ -54,13 +54,21 @@ const resident: User = {
   role: 'residente',
 };
 
+// La app valida que la fecha esté entre hoy y 3 meses adelante: se fija «hoy» para que la fecha de
+// las pruebas no quede en el pasado con el paso de los días (como en reservations.service.test.ts).
+const NOW = new Date(2026, 9, 15, 10, 30);
+
 const valid: ReservationInput = { zoneId: 'zona-uuid', date: '2026-10-20', start: 10, end: 12, attendees: 8 };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.useFakeTimers();
+  jest.setSystemTime(NOW);
   rpcResults = {};
   tableResults = {};
 });
+
+afterEach(() => jest.useRealTimers());
 
 describe('Reservas con Supabase · zonas y disponibilidad', () => {
   it('pide las zonas activas y las ordena como el catálogo, con las horas como números', async () => {

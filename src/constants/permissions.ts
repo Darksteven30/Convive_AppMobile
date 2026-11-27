@@ -17,12 +17,18 @@ const permissions = {
   general: ['administrador', 'junta_directiva', 'residente'],
   // Panel de administración con indicadores de cartera y PQRS pendientes.
   panel: ['administrador'],
+  // Atender las PQRS del conjunto y cambiar su estado (RF08).
+  gestionPqrs: ['administrador'],
   // Registro de ingresos y egresos (RF03).
   finanzas: ['administrador'],
   // Reportes financieros filtrables (RF04); la junta directiva los consulta en solo lectura.
   reportes: ['administrador', 'junta_directiva'],
   // Registro de visitantes (RF10).
   visitantes: ['vigilancia'],
+  // Publicar, editar y eliminar comunicados (RF19). Todos los roles los leen en Inicio.
+  gestionNoticias: ['administrador'],
+  // Pre-registrar personas y administrar las unidades del conjunto (RF20).
+  gestionUsuarios: ['administrador'],
 } satisfies Record<string, Role[]>;
 
 export type Permission = keyof typeof permissions;

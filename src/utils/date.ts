@@ -47,16 +47,34 @@ export function addMonthsISO(value: string, months: number): string {
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
+/** Mes corto para las gráficas (RF14): «2026-11» → «Nov». */
+export function formatShortMonth(month: string): string {
+  const name = MONTHS[Number(month.slice(5, 7)) - 1] ?? '';
+  return `${name.slice(0, 1).toUpperCase()}${name.slice(1)}`;
+}
+
 /** Periodo del historial de pagos (RF02, «mmm aaaa»): «Ago 2026». */
 export function formatMonthYear(date: Date): string {
   const month = MONTHS[date.getMonth()];
   return `${month[0].toUpperCase()}${month.slice(1)} ${date.getFullYear()}`;
 }
 
-/** Fecha y hora para comprobantes y reportes: «09 sep 2026 - 06:19 p. m.» (documento, 7.2). */
-export function formatDateTime(date: Date): string {
+/** Hora en formato de 12 horas: «06:19 p. m.» (documento, 7.2). */
+export function formatTime(date: Date): string {
   const hours = date.getHours();
   const suffix = hours < 12 ? 'a. m.' : 'p. m.';
   const hours12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
+  return `${pad(hours12)}:${pad(date.getMinutes())} ${suffix}`;
+}
+
+/** Fecha y hora para comprobantes y reportes: «09 sep 2026 - 06:19 p. m.» (documento, 7.2). */
+export function formatDateTime(date: Date): string {
+  return `${pad(date.getDate())} ${MONTHS[date.getMonth()]} ${date.getFullYear()} - ${formatTime(date)}`;
+}
+
+/** Fecha «aaaa-mm-dd» a una hora en punto del dispositivo, como instante ISO: («2026-11-09», 6) → «2026-11-09T11:00:00.000Z» en Colombia. */
+export function dateAtHourISO(value: string, hour: number): string {
+  const date = fromISODate(value);
+  date.setHours(hour);
+  return date.toISOString();
 }

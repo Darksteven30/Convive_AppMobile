@@ -16,6 +16,7 @@ export const MSG = {
       `Te enviamos un código a ${email}. Revisa también la carpeta de spam.`, // MSG-RF01-07
     // Propuestos (no están en el documento):
     resetCodeInvalid: 'El código no es válido o ya venció. Solicita uno nuevo.',
+    resetSamePassword: 'La nueva contraseña debe ser diferente a la anterior. Pulsa «Reenviar código» e intenta de nuevo.',
     passwordUpdated: 'Tu contraseña se actualizó. Inicia sesión con tu nueva contraseña.',
     passwordsDontMatch: 'Las contraseñas no coinciden.',
     socialUnavailable: 'El inicio de sesión con Google y Apple estará disponible próximamente.',
@@ -75,6 +76,93 @@ export const MSG = {
     attendeesInvalid: 'El número de asistentes debe ser al menos 1.',
     forbidden: 'Tu cuenta no tiene una unidad asignada para hacer reservas.',
   },
+  RF07: {
+    filed: (number: string) =>
+      `Tu solicitud fue radicada con el número ${number}. Te notificaremos cuando haya una respuesta.`, // MSG-RF07-01
+    typeRequired: 'Selecciona el tipo de solicitud.', // MSG-RF07-02
+    descriptionShort: 'La descripción debe tener al menos 20 caracteres.', // MSG-RF07-03
+    invalidFormat: 'Solo se permiten imágenes JPG o PNG.', // MSG-RF07-04
+    tooLarge: 'La imagen supera el tamaño máximo de 5 MB.', // MSG-RF07-05
+    tooManyPhotos: 'Puedes adjuntar máximo 3 fotos.', // MSG-RF07-06
+    photoRequired: 'Adjunta al menos una foto del daño.', // MSG-RF07-07
+    permissionDenied: 'Convive necesita acceso a la cámara o a tus fotos para adjuntar imágenes.', // MSG-RF07-08
+    empty: 'Aún no has radicado solicitudes.', // MSG-RF07-09
+    // Propuestos (no están en el documento):
+    notFound: 'No encontramos esta solicitud.',
+    noResponses: 'Aún no hay respuestas. Te notificaremos cuando la administración responda.',
+  },
+  RF08: {
+    updated: 'Estado actualizado. Se notificó al propietario.', // MSG-RF08-01
+    commentRequired: 'Agrega una respuesta para marcar la solicitud como resuelta.', // MSG-RF08-02
+    invalidTransition: (current: string, next: string) =>
+      `No es posible cambiar el estado de ${current} a ${next}.`, // MSG-RF08-03
+    forbidden: 'No tienes permisos para realizar esta acción.', // MSG-RF08-04
+    // Propuestos (no están en el documento):
+    statusRequired: 'Selecciona el nuevo estado.',
+    commentLength: 'La respuesta debe tener entre 10 y 500 caracteres.',
+    finalStatus: 'Esta solicitud está resuelta: es un estado final y no admite más cambios.',
+    empty: 'Aún no hay PQRS radicadas en el conjunto.',
+  },
+  RF10: {
+    entryRegistered: (name: string, unit: string, time: string) => `Entrada registrada: ${name} → ${unit}, ${time}`, // MSG-RF10-01
+    exitRegistered: (name: string, time: string) => `Salida registrada: ${name}, ${time}`, // MSG-RF10-02
+    noActiveEntry: 'Este visitante no tiene una entrada activa. No se puede registrar la salida.', // MSG-RF10-03
+    documentInvalid: 'Ingresa un número de documento válido.', // MSG-RF10-04
+    unitRequired: 'Selecciona la unidad que autoriza el ingreso.', // MSG-RF10-05
+    plateInvalid: 'La placa debe tener el formato AAA123 (carro) o AAA12A (moto).', // MSG-RF10-06
+    // Propuestos (no están en el documento):
+    nameInvalid: 'Ingresa el nombre completo: de 3 a 80 caracteres, solo letras y espacios.',
+    alreadyInside: 'Este visitante ya tiene una entrada activa. Registra su salida antes de una nueva entrada.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    empty: 'No hay visitantes dentro del conjunto.',
+  },
+  // RF19 es una propuesta: ninguno de sus mensajes está todavía en el documento.
+  RF19: {
+    published: 'Comunicado publicado. Se notificó a las personas del conjunto.',
+    updated: 'Comunicado actualizado.',
+    deleted: 'Comunicado eliminado.',
+    deleteTitle: '¿Eliminar el comunicado?',
+    deleteMessage: 'Dejará de verse en Inicio. Esta acción no se puede deshacer.',
+    discardTitle: '¿Descartar los cambios?',
+    discardMessage: 'Los datos ingresados se perderán.',
+    titleInvalid: 'El título debe tener entre 5 y 60 caracteres.',
+    bodyInvalid: 'El mensaje debe tener entre 10 y 2.000 caracteres.',
+    visibleUntilPast: 'La fecha y hora deben ser posteriores a este momento.',
+    visibleUntilHourRequired: 'Selecciona la hora hasta la que se verá.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    notFound: 'Este comunicado ya no está disponible.',
+    empty: 'Aún no hay comunicados.',
+    emptyActive: 'No hay comunicados vigentes. Los anteriores están en el histórico.',
+    loadFailed: 'No pudimos cargar las noticias.',
+  },
+  // RF20 es una propuesta: ninguno de sus mensajes está todavía en el documento.
+  RF20: {
+    unitSaved: 'Unidad guardada.',
+    personPreregistered: (email: string) =>
+      `Persona pre-registrada. Cuando entre con ${email} creará su contraseña.`,
+    personUpdated: 'Datos actualizados.',
+    preregistrationDeleted: 'Pre-registro eliminado.',
+    deleteTitle: '¿Eliminar el pre-registro?',
+    deleteMessage: 'La persona ya no podrá crear su cuenta con este correo.',
+    discardTitle: '¿Descartar los cambios?',
+    discardMessage: 'Los datos ingresados se perderán.',
+    unitNameInvalid: 'El nombre de la unidad debe tener entre 1 y 40 caracteres.',
+    unitAddressInvalid: 'La dirección puede tener hasta 120 caracteres.',
+    unitDuplicate: 'Ya existe una unidad con ese nombre.',
+    personNameInvalid: 'El nombre debe tener entre 3 y 80 caracteres.',
+    emailInvalid: 'Ingresa un correo válido, por ejemplo nombre@dominio.com.',
+    emailDuplicate: 'Este correo ya está registrado.',
+    emailLocked: 'El correo no se puede cambiar porque la persona ya creó su cuenta.',
+    roleRequired: 'Selecciona el rol.',
+    unitRequired: 'Selecciona la unidad de la persona.',
+    ownRole: 'No puedes cambiar tu propio rol.',
+    lastAdmin: 'El conjunto debe tener al menos un administrador.',
+    hasAccount: 'Esta persona ya creó su cuenta: su registro no se puede eliminar.',
+    forbidden: 'No tienes permisos para realizar esta acción.',
+    notFound: 'Este registro ya no está disponible.',
+    emptyUnits: 'Aún no hay unidades registradas.',
+    emptyPeople: 'Aún no hay personas registradas.',
+  },
   RF11: {
     conceptRequired: 'Selecciona un concepto de pago.', // MSG-RF11-01
     amountInvalid: 'El valor debe ser mayor a $ 0.', // MSG-RF11-02
@@ -117,6 +205,20 @@ export const MSG = {
     cancelledTitle: 'Pago cancelado',
     receiptFailed: 'No pudimos generar el comprobante. Intenta de nuevo.',
     notFound: 'No encontramos este pago.',
+  },
+  RF14: {
+    noMovements: 'No hay movimientos en el periodo seleccionado.', // MSG-RF14-01
+    startAfterEnd: 'La fecha inicial no puede ser mayor que la fecha final.', // MSG-RF14-02
+    loadFailed: 'No pudimos cargar el resumen financiero.', // MSG-RF14-03 (con «Reintentar»)
+    // Propuestos (no están en el documento):
+    endAfterToday: 'La fecha final no puede ser posterior a hoy.',
+    rangeTooLong: 'El rango máximo de consulta es de 12 meses.',
+    noPqrs: 'No hay PQRS radicadas en el periodo seleccionado.',
+    noReservations: 'No hay reservas en el periodo seleccionado.',
+    initialBalanceHelp:
+      'Dinero que tenía el conjunto al empezar a usar Convive. Se suma a los ingresos y egresos para calcular el saldo actual general.',
+    initialBalanceInvalid: 'Ingresa un valor de $ 0 a $ 999.999.999,99.',
+    initialBalanceSaved: 'Saldo inicial actualizado.',
   },
   RF15: {
     // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web) o en

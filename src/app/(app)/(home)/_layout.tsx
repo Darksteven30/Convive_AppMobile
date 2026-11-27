@@ -18,6 +18,12 @@ export default function HomeLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="inicio" options={sectionOptions} />
       <Stack.Screen name="reservas" options={sectionOptions} />
+      <Stack.Screen name="pqrs/index" options={sectionOptions} />
+      <Stack.Screen name="pqrs/[id]" />
+      <Stack.Screen name="noticias/index" />
+      {/* RF19: el comunicado se abre como ventana centrada sobre Inicio; sigue siendo una ruta
+          para que la notificación push de RF09 lo pueda abrir. */}
+      <Stack.Screen name="noticias/[id]" options={{ presentation: 'transparentModal', animation: 'fade' }} />
 
       {/* Guards por rol: ver src/constants/permissions.ts */}
       <Stack.Protected guard={hasPermission(role, 'pagos')}>
@@ -32,12 +38,29 @@ export default function HomeLayout() {
       <Stack.Protected guard={hasPermission(role, 'panel')}>
         <Stack.Screen name="panel" options={sectionOptions} />
       </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'gestionPqrs')}>
+        <Stack.Screen name="gestion-pqrs/index" options={sectionOptions} />
+        <Stack.Screen name="gestion-pqrs/[id]" />
+      </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'finanzas')}>
         <Stack.Screen name="finanzas/index" />
         <Stack.Screen name="finanzas/nuevo" />
       </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'reportes')}>
         <Stack.Screen name="reportes" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'gestionNoticias')}>
+        <Stack.Screen name="gestion-noticias/index" />
+        <Stack.Screen name="gestion-noticias/nuevo" />
+        <Stack.Screen name="gestion-noticias/[id]" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasPermission(role, 'gestionUsuarios')}>
+        <Stack.Screen name="gestion-usuarios/index" />
+        <Stack.Screen name="gestion-usuarios/nuevo" />
+        <Stack.Screen name="gestion-usuarios/[id]" />
+        <Stack.Screen name="gestion-unidades/index" />
+        <Stack.Screen name="gestion-unidades/nueva" />
+        <Stack.Screen name="gestion-unidades/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={hasPermission(role, 'visitantes')}>
         <Stack.Screen name="visitantes" options={sectionOptions} />

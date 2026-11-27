@@ -58,6 +58,11 @@ export function resetMockReservationsState() {
 }
 resetMockReservationsState();
 
+/** Copia de las reservas simuladas (la usa el resumen de General, RF14). */
+export function mockReservations(): Reservation[] {
+  return reservations.map((reservation) => ({ ...reservation }));
+}
+
 const busyOf = (zoneId: string): BusySlot[] =>
   reservations
     .filter((item) => item.zoneId === zoneId)

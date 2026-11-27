@@ -181,3 +181,100 @@ select c.id, z.id, u.id, p.id, (now() at time zone 'America/Bogota')::date + r.d
       and x.fecha = (now() at time zone 'America/Bogota')::date + r.dias
       and x.hora_inicio = r.inicio::time
  );
+-- ---------------------------------------------------------------------------------------------
+-- RF07 · PQRS de ejemplo (requiere 20261022000000_pqrs.sql)
+-- Las mismas del modo simulado (pqrs.mock.ts): tres PQRS de la casa 56 (monica@gmail.com), una
+-- resuelta y otra en proceso con respuestas de la administración, y un reporte de daño pendiente.
+-- La siguiente que se radique en el conjunto será la #0004. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.pqrs (conjunto_id, radicado, radicado_por, unidad_id, tipo, descripcion, estado, created_at, updated_at)
+select c.id, q.radicado, p.id, p.unidad_id, q.tipo::public.tipo_pqrs, q.descripcion, q.estado::public.estado_pqrs,
+       q.creada::timestamptz, q.creada::timestamptz
+  from (values
+         (1, 'reclamo', 'Fuga de agua en el techo del parqueadero, frente a la casa 56.', 'resuelto', '2026-08-20 09:10-05'),
+         (2, 'queja', 'Ruido de música después de las 11 p. m. en la torre 4 casi todos los fines de semana.', 'en_proceso', '2026-09-17 21:40-05'),
+         (3, 'reporte_dano', 'El portón vehicular no cierra completamente y queda abierto unos centímetros.', 'pendiente', '2026-10-05 07:15-05')
+       ) as q (radicado, tipo, descripcion, estado, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles p on p.email = 'monica@gmail.com'
+on conflict (conjunto_id, radicado) do nothing;
+
+insert into public.pqrs_respuestas (pqrs_id, autor_id, mensaje, estado, created_at)
+select q.id, a.id, r.mensaje, r.estado::public.estado_pqrs, r.creada::timestamptz
+  from (values
+         (1, 'Recibimos tu reclamo. El plomero revisa la fuga el viernes.', 'en_proceso', '2026-08-21 10:00-05'),
+         (1, 'Se cambió el tubo dañado y se selló el techo. Gracias por avisar.', 'resuelto', '2026-08-23 12:30-05'),
+         (2, 'Enviamos un llamado de atención a la unidad y la vigilancia hará rondas los sábados.', 'en_proceso', '2026-09-19 08:00-05')
+       ) as r (radicado, mensaje, estado, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.pqrs q on q.conjunto_id = c.id and q.radicado = r.radicado
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.pqrs_respuestas x where x.pqrs_id = q.id and x.mensaje = r.mensaje
+ );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF10 · Visitas de ejemplo (requiere 20261030000000_visitantes.sql)
+-- Las mismas del modo simulado (visitors.mock.ts), registradas por la portería
+-- (vigilancia@convive.com): Ana María Restrepo (CC 1012345678) ya salió de la casa 56, así que al
+-- escribir su documento se autocompleta el nombre; Carlos Mejía (CC 79876543) sigue dentro con el
+-- carro ABC123 en la casa 12. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.visitas (conjunto_id, nombre, tipo_documento, numero_documento, unidad_id, placa, entrada, salida, entrada_por, salida_por)
+select c.id, v.nombre, 'CC'::public.tipo_documento, v.documento, u.id, v.placa, v.entrada::timestamptz, v.salida::timestamptz, g.id,
+       case when v.salida is not null then g.id end
+  from (values
+         ('Ana María Restrepo', '1012345678', '56', null, '2026-10-28 10:00-05', '2026-10-28 12:30-05'),
+         ('Carlos Mejía', '79876543', '12', 'ABC123', '2026-10-29 08:20-05', null)
+       ) as v (nombre, documento, unidad, placa, entrada, salida)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.unidades u on u.conjunto_id = c.id and u.nombre = v.unidad
+  join public.perfiles g on g.email = 'vigilancia@convive.com'
+ where not exists (
+   select 1 from public.visitas x
+    where x.conjunto_id = c.id and x.numero_documento = v.documento and x.entrada = v.entrada::timestamptz
+ );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF19 · Comunicados de ejemplo (requiere 20261102000000_noticias.sql)
+-- Los mismos del modo simulado (news.mock.ts), publicados por la administración
+-- (admin@convive.com) para todo el conjunto. Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.noticias (conjunto_id, titulo, cuerpo, publicada_por, created_at)
+select c.id, n.titulo, n.cuerpo, a.id, n.creada::timestamptz
+  from (values
+         ('Mantenimiento de ascensor',
+          'El jueves 5 de noviembre, de 8:00 a. m. a 12:00 m., se hará el mantenimiento preventivo del ascensor. Durante ese horario usen las escaleras.',
+          '2026-10-30 09:00-05'),
+         ('Asamblea general',
+          'Los invitamos a la asamblea general de propietarios el sábado 14 de noviembre a las 9:00 a. m. en el salón social. Se revisará el presupuesto de 2027.',
+          '2026-10-27 18:00-05'),
+         ('Cambio horario piscina',
+          'Desde el lunes 2 de noviembre la piscina abre de martes a domingo, de 9:00 a. m. a 7:00 p. m. Los lunes se cierra por mantenimiento.',
+          '2026-10-24 10:00-05')
+       ) as n (titulo, cuerpo, creada)
+  join public.conjuntos c on c.nombre = 'Conjunto Residencial Convive'
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where not exists (
+   select 1 from public.noticias x where x.conjunto_id = c.id and x.titulo = n.titulo
+ );
+
+-- ---------------------------------------------------------------------------------------------
+-- RF19 · Comunicado vencido de ejemplo (requiere 20261103000000_vigencia_noticias.sql)
+-- «Piscina cerrada este fin de semana» fue visible hasta el lunes 2 de noviembre a las 6:00 a. m.:
+-- ya no sale en Inicio, pero sí en «Histórico de noticias». Se puede repetir sin duplicar.
+-- ---------------------------------------------------------------------------------------------
+
+insert into public.noticias (conjunto_id, titulo, cuerpo, publicada_por, created_at, visible_hasta)
+select c.id, 'Piscina cerrada este fin de semana',
+       'El sábado 31 de octubre y el domingo 1 de noviembre la piscina estará cerrada por mantenimiento. El lunes vuelve a abrir en su horario normal.',
+       a.id, '2026-10-29 17:00-05'::timestamptz, '2026-11-02 06:00-05'::timestamptz
+  from public.conjuntos c
+  join public.perfiles a on a.email = 'admin@convive.com'
+ where c.nombre = 'Conjunto Residencial Convive'
+   and not exists (
+     select 1 from public.noticias x where x.conjunto_id = c.id and x.titulo = 'Piscina cerrada este fin de semana'
+   );

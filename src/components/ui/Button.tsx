@@ -17,6 +17,8 @@ type Props = {
   block?: boolean;
   /** Bordes completamente redondeados. */
   pill?: boolean;
+  /** Nombre para lectores de pantalla cuando la etiqueta se repite (p. ej. «Registrar salida de …»). */
+  accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -38,6 +40,7 @@ export function Button({
   loading,
   block,
   pill,
+  accessibilityLabel,
   style,
 }: Props) {
   const v = variantStyles[variant];
@@ -45,6 +48,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: inactive, busy: loading }}
       onPress={onPress}
       disabled={inactive}

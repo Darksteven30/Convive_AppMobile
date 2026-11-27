@@ -23,13 +23,15 @@ export default function RecuperarContrasenaScreen() {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const matches = password === confirmation;
   const mismatchError = confirmation.length > 0 && !matches ? MSG.RF01.passwordsDontMatch : null;
   const canSubmit = code.length === RESET_CODE_LENGTH && meetsPasswordRules(password) && matches;
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || loading) return;
+    setPasswordError(null);
     setLoading(true);
     try {
       await resetPassword(email, code, password);
@@ -39,6 +41,12 @@ export default function RecuperarContrasenaScreen() {
       setLoading(false);
       if (e instanceof AuthError && e.code === 'invalid_code') {
         setCodeError(MSG.RF01.resetCodeInvalid);
+      } else if (e instanceof AuthError && e.code === 'same_password') {
+        // El código ya se gastó al verificarlo: hay que pedir otro.
+        setCode('');
+        setPasswordError(MSG.RF01.resetSamePassword);
+      } else if (e instanceof AuthError && e.code === 'weak_password') {
+        setPasswordError(MSG.RF17.weak);
       } else {
         showToast('error', MSG.general.unexpected);
       }
@@ -68,7 +76,10 @@ export default function RecuperarContrasenaScreen() {
         accessibilityLabel="Nueva contraseña"
         placeholder="Nueva contraseña"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(value) => {
+          setPassword(value);
+          setPasswordError(null);
+        }}
         autoComplete="new-password"
       />
       <PasswordField
@@ -80,7 +91,7 @@ export default function RecuperarContrasenaScreen() {
         error={mismatchError}
         autoComplete="new-password"
       />
-      <PasswordRules password={password} />
+      <PasswordRules password={password} error={passwordError} />
       <Button label="Guardar contraseña" onPress={submit} disabled={!canSubmit} loading={loading} block />
       <TextLink label="Reenviar código" onPress={resendCode} disabled={sending} />
     </AuthScreen>
