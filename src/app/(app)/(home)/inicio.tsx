@@ -89,7 +89,12 @@ export default function InicioScreen() {
         )}
         <View style={styles.row}>
           <Button label="Histórico de noticias" variant="outline" pill onPress={() => router.push('/noticias')} />
-          <Button label="Informar novedad" variant="outline" pill onPress={() => router.push('/pqrs')} />
+          <Button
+            label="Informar novedad"
+            variant="outline"
+            pill
+            onPress={() => router.push({ pathname: '/pqrs', params: { tipo: 'reporte_dano' } })}
+          />
         </View>
       </Card>
     </Screen>
