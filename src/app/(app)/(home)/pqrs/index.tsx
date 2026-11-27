@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -34,13 +34,17 @@ import {
 /**
  * RF07 · PQRS: lista de las solicitudes del usuario con su estado y formulario para radicar una
  * petición, queja, reclamo, sugerencia o reporte de daño con hasta 3 fotos.
+ * «Informar novedad» de Inicio (RF18) la abre con ?tipo=reporte_dano para preseleccionar el tipo.
  */
 export default function PqrsScreen() {
   const { user } = useSession();
   const { showDialog, showToast } = useFeedback();
 
   const [items, setItems] = useState<PqrsSummary[] | null>(null);
-  const [type, setType] = useState<PqrsType | null>(null);
+  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+  const [type, setType] = useState<PqrsType | null>(
+    () => PQRS_TYPES.find((item) => item.value === tipo)?.value ?? null,
+  );
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [errors, setErrors] = useState<PqrsErrors>({});

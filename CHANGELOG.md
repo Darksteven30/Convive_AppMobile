@@ -10,6 +10,7 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF18 – Inicio y navegación:** «Informar novedad» abre PQRS con «Reporte de daño» ya elegido.
 - **RF09 – Notificaciones push:**
   - Después de iniciar sesión la app pide el permiso y registra el celular (`dispositivos_push`); al cerrar sesión lo quita. Si el celular era de otra persona, pasa a quien inició sesión.
   - Migración `20261127000000_notificaciones_push.sql`: cada notificación nueva se envía como push al servicio de Expo desde la base de datos (`pg_net`), una sola vez y sin bloquear el evento que la originó si falla. Nuevos avisos de pago aprobado o rechazado y de reserva confirmada, además de los de PQRS y comunicados que ya existían. Pruebas en `supabase/tests/rf09_notificaciones_push_test.sql`.
@@ -87,6 +88,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
   - «Recuperar contraseña» valida las reglas antes de verificar el código, así una contraseña débil ya no lo gasta.
   - Si la nueva contraseña es igual a la anterior, la app lo explica y pide un código nuevo, en lugar de mostrar «Ocurrió un error inesperado». Ya no se envía dos veces al pulsar «Enter» mientras se guarda.
   - Supabase exige ahora un mínimo de 8 caracteres en el servidor (ver el README). La mayúscula y el número o símbolo los sigue validando la app, porque los requisitos de Supabase no admiten la regla de RF17.
+
+### Eliminado
+
+- **RF18:** la barra de pestañas inferior con Buscar, Movimientos y Billetera, que solo mostraban «Próximamente» y no tienen un requisito en el documento. Las secciones se recorren con la barra superior. Las pantallas ahora respetan el borde inferior del celular.
 
 ## [0.3.0] - 2026-10-18
 

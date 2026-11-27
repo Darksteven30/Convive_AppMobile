@@ -298,12 +298,21 @@ describe('RF07 · radicar', () => {
     expect(screen.queryByText('Foto 1 de 2')).toBeNull();
   });
 
-  it('«Informar novedad» en Inicio también abre PQRS', async () => {
+  it('«Informar novedad» en Inicio abre PQRS con «Reporte de daño» ya elegido (RF18)', async () => {
     // Vigilancia entra a Visitantes; «Informar novedad» está en Inicio.
     const app = await renderSignedIn('vigilancia@convive.com', 'Vigilancia123');
     await navigate('/inicio');
 
     await press(screen.getByText('Informar novedad'));
     expect(app.getPathname()).toBe('/pqrs');
+    expect(screen.getByText('Reporte de daño')).toBeTruthy();
+  });
+
+  it('«Radicar PQRS» abre el formulario sin tipo elegido', async () => {
+    await renderSignedIn('monica@gmail.com', 'Residente123');
+    await press(screen.getByText('Radicar PQRS'));
+
+    expect(screen.getByText('Selecciona el tipo')).toBeTruthy();
+    expect(screen.queryByText('Reporte de daño')).toBeNull();
   });
 });
