@@ -17,6 +17,27 @@ npm run typecheck  # verificación de tipos
 npm run lint       # revisión de estilo y errores comunes (ESLint)
 ```
 
+## App instalable (EAS Build)
+
+La app se compila en la nube con [EAS Build](https://docs.expo.dev/build/setup/) (no hace falta Android Studio). La configuración está en `eas.json`; el identificador de la app es `com.darksteven30.convive` (Android y iOS) y no se puede cambiar después de publicarla en Play Store.
+
+| Perfil | Para qué | Resultado |
+|---|---|---|
+| `preview` | Probar en celulares Android sin Play Store | APK que se instala con un enlace |
+| `development` | Desarrollo con módulos nativos que Expo Go no trae (p. ej. notificaciones push, RF09) | APK con el cliente de desarrollo |
+| `production` | Publicar en Google Play | AAB; el número de versión lo sube EAS en cada build |
+
+Las variables `EXPO_PUBLIC_*` no se toman de `.env.local` (no se sube al repositorio): se configuran en EAS para cada ambiente, con los mismos valores de `.env.local`:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest env:set --name EXPO_PUBLIC_SUPABASE_URL --value <url> --environment preview --visibility plaintext
+npx eas-cli@latest env:set --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value <publishable key> --environment preview --visibility plaintext
+npx eas-cli@latest build --platform android --profile preview
+```
+
+Al terminar, EAS muestra un enlace (también en expo.dev → Builds). Se abre en el celular Android, se descarga el APK y se instala aceptando la advertencia de «app de origen desconocido». Cualquiera con el enlace puede descargarlo.
+
 ## Pruebas
 
 Pruebas automatizadas con Jest, React Native Testing Library y `expo-router/testing-library`:
