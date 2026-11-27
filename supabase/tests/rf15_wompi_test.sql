@@ -4,9 +4,9 @@
 -- Cómo ejecutarlas: Supabase → SQL Editor → pegar este archivo → Run.
 -- No dejan datos: todo corre dentro de un bloque que termina con un error a propósito, así
 -- PostgreSQL deshace (rollback) el conjunto, las llaves y los pagos de prueba.
---   · Si todo pasa, el resultado es el «error»:  RF15 OK: 16 pruebas pasaron (se deshicieron los datos de prueba).
+--   · Si todo pasa, el resultado es el «error»:  RF15 OK: 19 pruebas pasaron (se deshicieron los datos de prueba).
 --   · Si algo falla, el error dice qué prueba falló.
--- Requiere: las migraciones del RF11, RF12 y RF15.
+-- Requiere: las migraciones del RF11, RF12 y RF15, y 20261129000000_estados_finales_wompi.sql.
 -- =============================================================================================
 
 do $$
@@ -20,6 +20,7 @@ declare
   v_saldo numeric;
   v_n integer := 0;
   v_evento jsonb;
+  v_unidad_b uuid;
 begin
   -- ------------------------------------------------------------------------------------------
   -- Datos de prueba: un conjunto, una unidad con saldo y un perfil
@@ -176,6 +177,44 @@ begin
   perform public.cancelar_pago_abandonado('RF15-NUEVO');
   assert (select estado from public.transacciones_pago where referencia = 'RF15-NUEVO') = 'PENDIENTE',
     'FALLÓ 16: canceló un pago que Wompi ya tenía';
+  v_n := v_n + 1;
+
+  -- ------------------------------------------------------------------------------------------
+  -- 17-19 · Estados finales: eventos tardíos o fuera de orden (20261129000000_estados_finales_wompi.sql)
+  -- Otra unidad, para no chocar con el pago PENDIENTE de la prueba 16.
+  -- ------------------------------------------------------------------------------------------
+  insert into public.unidades (conjunto_id, nombre) values (v_conjunto, 'T15-B') returning id into v_unidad_b;
+  insert into public.cartera (unidad_id, concepto_id, saldo) values (v_unidad_b, 'administracion', 20000);
+
+  -- 17 · Aprobado y después un DECLINED tardío de otro intento, o un VOIDED de otra transacción de
+  --      Wompi: se ignoran (sigue APROBADA, con su wompi_id y el saldo descontado).
+  insert into public.transacciones_pago (unidad_id, concepto_id, monto, monto_centavos, referencia, firma, creada_por)
+  values (v_unidad_b, 'administracion', 15000, 1500000, 'RF15-DESORDEN', 'firma', v_perfil);
+  perform public.aplicar_estado_wompi('RF15-DESORDEN', 'w-10', 'APPROVED', 'CARD');
+  v_estado := public.aplicar_estado_wompi('RF15-DESORDEN', 'w-9', 'DECLINED', 'CARD');
+  assert v_estado = 'APROBADA', format('FALLÓ 17: un DECLINED tardío lo dejó en %s', v_estado);
+  v_estado := public.aplicar_estado_wompi('RF15-DESORDEN', 'w-9', 'VOIDED', 'CARD');
+  select saldo into v_saldo from public.cartera where unidad_id = v_unidad_b and concepto_id = 'administracion';
+  assert v_estado = 'APROBADA' and v_saldo = 5000, format('FALLÓ 17: un VOIDED de otra transacción lo dejó en %s con saldo %s', v_estado, v_saldo);
+  assert (select wompi_id from public.transacciones_pago where referencia = 'RF15-DESORDEN') = 'w-10',
+    'FALLÓ 17: un evento ignorado cambió el wompi_id';
+  v_n := v_n + 1;
+
+  -- 18 · Anulado es final: un APPROVED repetido no lo vuelve a aprobar ni toca el saldo.
+  perform public.aplicar_estado_wompi('RF15-DESORDEN', 'w-10', 'VOIDED', 'CARD');
+  v_estado := public.aplicar_estado_wompi('RF15-DESORDEN', 'w-10', 'APPROVED', 'CARD');
+  select saldo into v_saldo from public.cartera where unidad_id = v_unidad_b and concepto_id = 'administracion';
+  assert v_estado = 'ANULADA' and v_saldo = 20000, format('FALLÓ 18: quedó %s con saldo %s', v_estado, v_saldo);
+  v_n := v_n + 1;
+
+  -- 19 · Rechazado y después aprobado (otro intento con la misma referencia que Wompi sí cobró):
+  --      pasa a APROBADA y descuenta el saldo.
+  insert into public.transacciones_pago (unidad_id, concepto_id, monto, monto_centavos, referencia, firma, creada_por)
+  values (v_unidad_b, 'administracion', 8000, 800000, 'RF15-REINTENTO', 'firma', v_perfil);
+  perform public.aplicar_estado_wompi('RF15-REINTENTO', 'w-20', 'DECLINED', 'CARD');
+  v_estado := public.aplicar_estado_wompi('RF15-REINTENTO', 'w-21', 'APPROVED', 'CARD');
+  select saldo into v_saldo from public.cartera where unidad_id = v_unidad_b and concepto_id = 'administracion';
+  assert v_estado = 'APROBADA' and v_saldo = 12000, format('FALLÓ 19: quedó %s con saldo %s', v_estado, v_saldo);
   v_n := v_n + 1;
 
   -- La tarea programada existe y corre cada 15 minutos.
