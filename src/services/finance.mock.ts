@@ -94,6 +94,11 @@ export function resetMockFinanceState() {
 }
 resetMockFinanceState();
 
+/** Copia de los movimientos simulados (la usa el resumen de General, RF14). */
+export function mockMovements(): Movement[] {
+  return movements.map((movement) => ({ ...movement }));
+}
+
 async function listCategories(type: MovementType): Promise<Category[]> {
   await simulateNetwork(0.5);
   return MOCK_CATEGORIES.filter((category) => category.active && category.type === type).sort(byName);

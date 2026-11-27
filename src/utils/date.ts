@@ -47,6 +47,12 @@ export function addMonthsISO(value: string, months: number): string {
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
+/** Mes corto para las gráficas (RF14): «2026-11» → «Nov». */
+export function formatShortMonth(month: string): string {
+  const name = MONTHS[Number(month.slice(5, 7)) - 1] ?? '';
+  return `${name.slice(0, 1).toUpperCase()}${name.slice(1)}`;
+}
+
 /** Periodo del historial de pagos (RF02, «mmm aaaa»): «Ago 2026». */
 export function formatMonthYear(date: Date): string {
   const month = MONTHS[date.getMonth()];
