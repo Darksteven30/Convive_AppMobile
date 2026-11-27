@@ -8,6 +8,15 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+## [0.4.0] - 2026-11-27
+
+Con esta versión quedan los 20 requisitos funcionales: PQRS y su gestión (RF07 y RF08), visitantes
+(RF10), notificaciones push con el aviso de pago por vencer (RF09), el resumen financiero de General
+con datos reales (RF14), Inicio y navegación (RF18), noticias y comunicados (RF19, propuesto) y la
+administración de usuarios y unidades (RF20, propuesto). La app se puede instalar en Android con EAS
+Build (APK de prueba) y tiene configurado el perfil para generar el paquete de Google Play. Sin configurar Supabase,
+la app sigue funcionando con datos simulados. 851 pruebas automatizadas.
+
 ### Agregado
 
 - **RF18 – Inicio y navegación:** «Informar novedad» abre PQRS con «Reporte de daño» ya elegido.
@@ -92,6 +101,15 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 ### Eliminado
 
 - **RF18:** la barra de pestañas inferior con Buscar, Movimientos y Billetera, que solo mostraban «Próximamente» y no tienen un requisito en el documento. Las secciones se recorren con la barra superior. Las pantallas ahora respetan el borde inferior del celular.
+
+### Limitaciones conocidas
+
+- Wompi está en modo Sandbox (pagos de prueba, sin dinero real).
+- Las notificaciones push requieren el build `development` o un APK de EAS: no funcionan en Expo Go en Android ni en la web. En iPhone faltan las credenciales de Apple (cuenta de Apple Developer).
+- Los comunicados son para todo el conjunto: la segmentación por torre/bloque queda pendiente hasta que las unidades tengan ese dato (RF19).
+- Inicio de sesión con Google y Apple pendiente.
+- Errores conocidos por corregir: un pago aprobado puede cambiar después a rechazado si llegan eventos de Wompi fuera de orden (RF15); un saldo menor a $ 1.500 no se puede pagar (RF11); «hoy» se toma de la hora del dispositivo y no de la de Colombia (RF03/RF04); cerrar sesión sin conexión deja la sesión guardada en el dispositivo (RF16).
+- El plan gratuito de Supabase pausa el proyecto tras 7 días sin uso; hay que reactivarlo antes de cada demo.
 
 ## [0.3.0] - 2026-10-18
 
@@ -270,7 +288,8 @@ registro de ingresos y egresos (RF03). Los datos y la autenticación son simulad
 - Sin integración con Wompi ni notificaciones.
 - RF02, RF04 a RF18 pendientes o parciales.
 
-[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.3.0...develop
+[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.4.0...develop
+[0.4.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.1.0
