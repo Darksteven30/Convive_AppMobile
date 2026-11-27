@@ -10,6 +10,7 @@ import {
   SUMMARY_ROLES,
   SummaryError,
   type FinancialSummary,
+  type PanelSummary,
   type SummaryBackend,
   type SummaryRange,
 } from '@/services/summary.types';
@@ -82,9 +83,28 @@ async function setInitialBalance(amount: number, user: User): Promise<number> {
   return Number(data);
 }
 
+type PanelRow = { cartera: Amount; unidades_en_mora: number; total_unidades: number; pqrs_pendientes: number };
+
+/** Panel del administrador (20261130000000_panel_administrador.sql). */
+async function getPanelSummary(user: User): Promise<PanelSummary> {
+  if (user.role !== 'administrador') throw new SummaryError('forbidden');
+  // resumen_panel() devuelve una tabla de una sola fila.
+  const { data, error } = await getSupabase().rpc('resumen_panel');
+  if (error) throw toSummaryError(error);
+  const row = (Array.isArray(data) ? data[0] : data) as PanelRow | null | undefined;
+  if (!row) throw new SummaryError('failed');
+  return {
+    portfolioDue: Number(row.cartera),
+    unitsInArrears: Number(row.unidades_en_mora),
+    totalUnits: Number(row.total_unidades),
+    pendingPqrs: Number(row.pqrs_pendientes),
+  };
+}
+
 /** Implementación del contrato SummaryBackend que usa summary.service.ts. */
 export const summaryBackend = {
   getSummary,
   getInitialBalance,
   setInitialBalance,
+  getPanelSummary,
 } satisfies SummaryBackend;

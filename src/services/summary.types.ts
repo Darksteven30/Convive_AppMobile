@@ -70,4 +70,17 @@ export type SummaryBackend = {
   getInitialBalance(user: User): Promise<number>;
   /** Cambia el saldo inicial del conjunto (solo el administrador). Devuelve el valor guardado. */
   setInitialBalance(amount: number, user: User): Promise<number>;
+  /** Indicadores del Panel del administrador con los datos de su conjunto (solo el administrador). */
+  getPanelSummary(user: User): Promise<PanelSummary>;
+};
+
+/** Panel del administrador: cartera por cobrar, unidades en mora y PQRS sin responder. */
+export type PanelSummary = {
+  /** Suma de los saldos pendientes de todas las unidades del conjunto. */
+  portfolioDue: number;
+  /** Unidades con algún saldo pendiente mayor que $ 0. */
+  unitsInArrears: number;
+  totalUnits: number;
+  /** PQRS del conjunto en estado «Pendiente». */
+  pendingPqrs: number;
 };

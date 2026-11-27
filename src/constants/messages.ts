@@ -264,5 +264,7 @@ export const MSG = {
     sessionExpired: 'Tu sesión expiró. Vuelve a iniciar sesión para continuar.',
     // Propuesto (no está en el documento): opciones del menú que aún no existen.
     comingSoon: 'Esta sección estará disponible próximamente.',
+    // Propuesto (no está en el documento): indicadores del Panel del administrador (con «Reintentar»).
+    panelLoadFailed: 'No pudimos cargar los indicadores del panel.',
   },
 } as const;
