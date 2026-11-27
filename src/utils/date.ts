@@ -1,7 +1,10 @@
-// Fechas de calendario (sin hora) como texto ISO «aaaa-mm-dd» en la zona horaria del dispositivo.
-// Se comparan como texto porque el formato ISO ordena igual que las fechas.
+// Fechas de calendario (sin hora) como texto ISO «aaaa-mm-dd». Se comparan como texto porque el
+// formato ISO ordena igual que las fechas. «Hoy» es el de Colombia (todayISO), como en el servidor.
 
 const pad = (value: number) => String(value).padStart(2, '0');
+
+/** Colombia está siempre en UTC−5 (no tiene horario de verano). */
+const COLOMBIA_OFFSET_MS = -5 * 60 * 60 * 1000;
 
 export function toISODate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -12,8 +15,14 @@ export function fromISODate(value: string): Date {
   return new Date(year, month - 1, day);
 }
 
-export function todayISO(): string {
-  return toISODate(new Date());
+/**
+ * Fecha de hoy en Colombia, sin importar la zona horaria del dispositivo (un emulador en UTC, un
+ * navegador en otro país…). El servidor usa la misma: (now() at time zone 'America/Bogota')::date.
+ * Así, a las 9:00 p. m. de Colombia un dispositivo en UTC no cree que ya es mañana.
+ */
+export function todayISO(now: Date = new Date()): string {
+  const colombia = new Date(now.getTime() + COLOMBIA_OFFSET_MS);
+  return `${colombia.getUTCFullYear()}-${pad(colombia.getUTCMonth() + 1)}-${pad(colombia.getUTCDate())}`;
 }
 
 /** «2026-10-02» → «02/10/2026» (formato de formularios del documento). */
@@ -38,11 +47,17 @@ export function addDaysISO(value: string, days: number): string {
   return toISODate(date);
 }
 
-/** Suma meses a una fecha; si el día no existe en el mes destino, pasa al siguiente (31 ene + 1 → 3 mar). */
+/**
+ * Suma meses a una fecha. Si el día no existe en el mes destino, queda en el último día de ese mes
+ * (31 ene + 1 → 28 feb; 29 feb 2024 + 12 → 28 feb 2025), igual que `fecha + interval 'n months'`
+ * en PostgreSQL, para que la app y el servidor apliquen el mismo límite de 12 meses.
+ */
 export function addMonthsISO(value: string, months: number): string {
-  const date = fromISODate(value);
-  date.setMonth(date.getMonth() + months);
-  return toISODate(date);
+  const [year, month, day] = value.split('-').map(Number);
+  const target = new Date(year, month - 1 + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, lastDay));
+  return toISODate(target);
 }
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
