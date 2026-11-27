@@ -18,11 +18,24 @@ const profileRow = {
 
 let rpcResults: Record<string, unknown> = {};
 let profile: typeof profileRow | null = profileRow;
+/** Error al consultar mi_perfil() (p. ej. sin señal). */
+let profileError: { message: string; code?: string } | null = null;
+
+// localStorage del dispositivo (en el celular lo instala expo-sqlite; en Jest no existe).
+const storage = new Map<string, string>();
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => storage.set(key, value),
+    removeItem: (key: string) => storage.delete(key),
+  },
+});
 let authListener: ((event: string) => void) | null = null;
 
 const mockRpc = jest.fn((name: string, _args?: unknown) => {
   if (name === 'mi_perfil') {
-    return { maybeSingle: async () => ({ data: profile, error: null }) };
+    return { maybeSingle: async () => (profileError ? { data: null, error: profileError } : { data: profile, error: null }) };
   }
   const result = rpcResults[name];
   return Promise.resolve(result instanceof Error ? { data: null, error: result } : { data: result ?? null, error: null });
@@ -58,6 +71,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   rpcResults = { minutos_bloqueo: 0, registrar_intento_fallido: 5, estado_correo: 'registered' };
   profile = profileRow;
+  profileError = null;
+  storage.clear();
   authListener = null;
   mockAuth.signInWithPassword.mockImplementation(() => ok());
   mockAuth.updateUser.mockImplementation(() => ok());
@@ -276,6 +291,46 @@ describe('sesión guardada', () => {
     profile = null;
     await expect(supabaseAuth.getCurrentUser()).resolves.toBeNull();
     expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  describe('sin señal (bug de RF16)', () => {
+    const network = { message: 'TypeError: Network request failed', code: '' };
+
+    it('no expulsa a la persona: entra con el último perfil guardado', async () => {
+      mockAuth.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } });
+      // Primera apertura con señal: el perfil queda guardado en el dispositivo.
+      await supabaseAuth.getCurrentUser();
+
+      profileError = network;
+      await expect(supabaseAuth.getCurrentUser()).resolves.toMatchObject({ name: 'Monica Galvis', role: 'residente' });
+      expect(mockAuth.signOut).not.toHaveBeenCalled();
+    });
+
+    it('sin perfil guardado falla, pero no borra la sesión (se reintenta al volver a abrir)', async () => {
+      mockAuth.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } });
+      profileError = network;
+
+      await expect(supabaseAuth.getCurrentUser()).rejects.toMatchObject(network);
+      expect(mockAuth.signOut).not.toHaveBeenCalled();
+    });
+
+    it('un token inválido sí cierra la sesión', async () => {
+      mockAuth.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } });
+      await supabaseAuth.getCurrentUser();
+      profileError = { message: 'JWT expired', code: 'PGRST303' };
+
+      await expect(supabaseAuth.getCurrentUser()).resolves.toBeNull();
+      expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    });
+
+    it('al cerrar sesión se borra el perfil guardado', async () => {
+      mockAuth.getSession.mockResolvedValue({ data: { session: { access_token: 't' } } });
+      await supabaseAuth.getCurrentUser();
+
+      await supabaseAuth.signOut();
+      profileError = network;
+      await expect(supabaseAuth.getCurrentUser()).rejects.toMatchObject(network);
+    });
   });
 });
 

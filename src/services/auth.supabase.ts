@@ -4,6 +4,7 @@
 
 import { isAuthApiError } from '@supabase/supabase-js';
 
+import { clearCachedProfile, readCachedProfile, saveCachedProfile } from '@/lib/profileCache';
 import { getSupabase } from '@/lib/supabase';
 import { AuthError, initialsFor, type AuthBackend, type EmailStatus, type Role, type User } from '@/services/auth.types';
 import { formatPhone, isValidPhone, meetsPasswordRules, normalizeEmail, normalizePhone } from '@/utils/validation';
@@ -45,12 +46,24 @@ function toUser(row: ProfileRow): User {
   };
 }
 
-/** Perfil (nombre, unidad y rol) del usuario con sesión iniciada. */
+/** Perfil (nombre, unidad y rol) del usuario con sesión iniciada. Queda guardado para abrir sin señal. */
 async function loadProfile(): Promise<User> {
   const { data, error } = await getSupabase().rpc('mi_perfil').maybeSingle<ProfileRow>();
   if (error) throw error;
   if (!data) throw new AuthError('not_found');
-  return toUser(data);
+  const user = toUser(data);
+  saveCachedProfile(user);
+  return user;
+}
+
+/**
+ * true si el error dice que la sesión ya no sirve (el perfil no existe o el token es inválido).
+ * Un error de red, un timeout o un 5xx no: la sesión guardada sigue siendo válida.
+ */
+function isInvalidSession(error: unknown): boolean {
+  if (error instanceof AuthError) return error.code === 'not_found';
+  const { code = '', message = '' } = (error ?? {}) as { code?: string; message?: string };
+  return code.startsWith('PGRST30') || /jwt/i.test(message);
 }
 
 async function signOutWith(scope: 'local' | 'others') {
@@ -201,7 +214,12 @@ export async function updatePhone(_email: string, phone: string): Promise<User> 
   return loadProfile();
 }
 
+/**
+ * La librería borra la sesión del dispositivo antes de avisar al servidor (scope «local»), así que
+ * cerrar sesión sin señal también saca a la persona (RF16, celular compartido de portería).
+ */
 export async function signOut(): Promise<void> {
+  clearCachedProfile();
   await signOutWith('local');
 }
 
@@ -210,10 +228,18 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!data.session) return null;
   try {
     return await loadProfile();
-  } catch {
-    // Sesión guardada pero sin perfil (p. ej. el perfil se borró): se descarta.
-    await signOutWith('local');
-    return null;
+  } catch (error) {
+    if (isInvalidSession(error)) {
+      // Sesión guardada pero sin perfil (p. ej. el perfil se borró) o con un token inválido: se descarta.
+      clearCachedProfile();
+      await signOutWith('local');
+      return null;
+    }
+    // Sin señal (o el servidor no responde): la sesión sigue guardada. Se entra con el último perfil
+    // conocido; si no hay, se muestra el inicio de sesión y la próxima vez se vuelve a intentar.
+    const cached = readCachedProfile();
+    if (cached) return cached;
+    throw error;
   }
 }
 
