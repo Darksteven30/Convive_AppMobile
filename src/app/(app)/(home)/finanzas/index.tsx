@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 
+import { InitialBalanceCard } from '@/components/finance/InitialBalanceCard';
 import { MovementRow } from '@/components/finance/MovementRow';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Screen } from '@/components/layout/Screen';
@@ -12,7 +13,10 @@ import { colors, spacing, typography } from '@/constants/theme';
 import { useFeedback } from '@/context/FeedbackContext';
 import { listMovements, type Movement } from '@/services/finance.service';
 
-/** Finanzas (administrador): movimientos registrados y acceso a «Nuevo movimiento» (RF03). */
+/**
+ * Finanzas (administrador): saldo inicial del conjunto (RF14), movimientos registrados y acceso a
+ * «Nuevo movimiento» (RF03).
+ */
 export default function FinanzasScreen() {
   const [movements, setMovements] = useState<Movement[] | null>(null);
   const { showToast } = useFeedback();
@@ -48,6 +52,8 @@ export default function FinanzasScreen() {
         />
       }
     >
+      <InitialBalanceCard />
+
       <Text accessibilityRole="header" style={typography.subtitle}>
         Movimientos registrados
       </Text>
