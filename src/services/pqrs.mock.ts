@@ -111,6 +111,11 @@ export function resetMockPqrsState() {
 }
 resetMockPqrsState();
 
+/** Tipo, estado y fecha de las PQRS simuladas (lo usa el resumen de General, RF14). */
+export function mockPqrsTotals(): Pick<PqrsDetail, 'type' | 'status' | 'createdAt'>[] {
+  return pqrs.map(({ type, status, createdAt }) => ({ type, status, createdAt }));
+}
+
 /** Avisos creados (solo para las pruebas). */
 export function mockNotifications(): MockNotification[] {
   return [...notifications];

@@ -10,6 +10,13 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF14 – Resumen financiero (General) con datos reales:**
+  - Selector de periodo: «Este mes» (por defecto), «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado» con fecha inicial y final (máximo 12 meses; MSG-RF14-02 si la inicial es mayor que la final).
+  - «Saldo actual general» = saldo inicial del conjunto + ingresos − egresos registrados hasta hoy (no depende del periodo). «Total ingresos» y «Total egresos» del periodo.
+  - Gráficas con datos reales: movimiento de fondos por mes, egresos por categoría, PQRS radicadas por tipo (con el conteo por estado) y reservas hechas por zona (confirmadas y pendientes). Sin datos, cada gráfica muestra su estado vacío (MSG-RF14-01); si no se puede cargar, MSG-RF14-03 con «Reintentar».
+  - Saldo inicial del conjunto: lo define el administrador en Panel → Finanzas (empieza en $ 0).
+  - Migración `20261126000000_resumen_general.sql`: columna `saldo_inicial` en `conjuntos`, `resumen_general()` (solo totales agregados del conjunto: el residente no ve movimientos ni datos de otras unidades; vigilancia no tiene acceso), `saldo_inicial_conjunto()` y `configurar_saldo_inicial()` (solo el administrador). Pruebas en `supabase/tests/rf14_resumen_general_test.sql`.
+  - Se quitan los datos de ejemplo de General de `src/data/mock.ts`.
 - **RF20 – Administración de usuarios y unidades (propuesto):**
   - Panel → «Usuarios y unidades», solo para el administrador. Atiende la precondición de RF01 (la administración pre-registra cada correo con su unidad y su rol) y la regla de RF16 (el correo y la unidad solo los cambia la administración), que antes se hacían a mano con `seed.sql`.
   - **Personas:** lista del conjunto con rol, unidad y quién aún no crea su cuenta («Sin cuenta»). «Pre-registrar persona» con nombre, correo, teléfono opcional, rol y unidad (obligatoria para residentes y junta directiva). Al editar, el correo solo cambia mientras la persona no tenga cuenta; el administrador no cambia su propio rol y el conjunto no se queda sin administrador. Un pre-registro sin cuenta se puede eliminar, con confirmación.

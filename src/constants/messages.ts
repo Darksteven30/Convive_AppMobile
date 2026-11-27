@@ -206,6 +206,20 @@ export const MSG = {
     receiptFailed: 'No pudimos generar el comprobante. Intenta de nuevo.',
     notFound: 'No encontramos este pago.',
   },
+  RF14: {
+    noMovements: 'No hay movimientos en el periodo seleccionado.', // MSG-RF14-01
+    startAfterEnd: 'La fecha inicial no puede ser mayor que la fecha final.', // MSG-RF14-02
+    loadFailed: 'No pudimos cargar el resumen financiero.', // MSG-RF14-03 (con «Reintentar»)
+    // Propuestos (no están en el documento):
+    endAfterToday: 'La fecha final no puede ser posterior a hoy.',
+    rangeTooLong: 'El rango máximo de consulta es de 12 meses.',
+    noPqrs: 'No hay PQRS radicadas en el periodo seleccionado.',
+    noReservations: 'No hay reservas en el periodo seleccionado.',
+    initialBalanceHelp:
+      'Dinero que tenía el conjunto al empezar a usar Convive. Se suma a los ingresos y egresos para calcular el saldo actual general.',
+    initialBalanceInvalid: 'Ingresa un valor de $ 0 a $ 999.999.999,99.',
+    initialBalanceSaved: 'Saldo inicial actualizado.',
+  },
   RF15: {
     // Propuestos (no están en el documento): el checkout real de Wompi se abre en otra pestaña (web) o en
     // el navegador del celular.
