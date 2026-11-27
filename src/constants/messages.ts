@@ -103,6 +103,9 @@ export const MSG = {
     finalStatus: 'Esta solicitud está resuelta: es un estado final y no admite más cambios.',
     empty: 'Aún no hay PQRS radicadas en el conjunto.',
   },
+  RF09: {
+    disabled: 'Las notificaciones están desactivadas.', // Regla de RF09 (con «Activar»)
+  },
   RF10: {
     entryRegistered: (name: string, unit: string, time: string) => `Entrada registrada: ${name} → ${unit}, ${time}`, // MSG-RF10-01
     exitRegistered: (name: string, time: string) => `Salida registrada: ${name}, ${time}`, // MSG-RF10-02
