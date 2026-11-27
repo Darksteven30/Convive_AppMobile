@@ -10,6 +10,7 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **App instalable con EAS Build:** `eas.json` con los perfiles `development` (cliente de desarrollo), `preview` (APK para probar en celulares Android) y `production` (AAB para Google Play, con número de versión automático). Identificador de la app: `com.darksteven30.convive` (Android y iOS). El README explica cómo configurar las variables de Supabase en EAS y cómo instalar el APK.
 - **RF14 – Resumen financiero (General) con datos reales:**
   - Selector de periodo: «Este mes» (por defecto), «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado» con fecha inicial y final (máximo 12 meses; MSG-RF14-02 si la inicial es mayor que la final).
   - «Saldo actual general» = saldo inicial del conjunto + ingresos − egresos registrados hasta hoy (no depende del periodo). «Total ingresos» y «Total egresos» del periodo.
@@ -67,6 +68,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
   - Las fotos se comprimen antes de subirlas (máx. 1600 px por lado, JPEG al 70 %) con `expo-image-manipulator`; si la PQRS no se radica, se borran las fotos subidas.
   - `seed.sql`: tres PQRS de ejemplo de la casa 56 con respuestas de la administración.
   - Pruebas: pantalla, reglas, compresión y servicios (simulado y Supabase) con Jest, y pruebas de base de datos en `supabase/tests/rf07_pqrs_test.sql`.
+
+### Cambiado
+
+- Paquetes de Expo actualizados a las versiones del SDK 57 (`npx expo install --fix`): `expo` 57.0.34, `expo-router` 57.0.32 y otros. `react-native-reanimated` (4.5.1) y `react-native-worklets` (0.10.1) quedan declarados en las versiones del SDK: `expo-router` instalaba una versión de reanimated que exige React Native 0.87. `expo-doctor` pasa 21/21.
 
 ### Corregido
 
