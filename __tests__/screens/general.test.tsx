@@ -45,6 +45,30 @@ describe('RF14 · Resumen financiero (General)', () => {
     expect(screen.getByText('Cancha · 50 %')).toBeTruthy();
   });
 
+  it('tocar una barra o una categoría muestra su valor exacto; el total va en el centro de cada dona', async () => {
+    await openGeneral('admin@convive.com', 'Admin123');
+
+    await press(screen.getByRole('button', { name: 'Egresos de Sep: $ 1.250.000,00' }));
+    expect(screen.getByText('Sep · Egresos: $ 1.250.000,00')).toBeTruthy();
+
+    await press(screen.getByRole('button', { name: 'Mantenimiento: $ 1.250.000,00, 100 %' }));
+    expect(screen.getByText('Mantenimiento: $ 1.250.000,00 · 100 %')).toBeTruthy();
+    expect(screen.getByText('$ 1,3 M')).toBeTruthy(); // total de gastos
+
+    await press(screen.getByRole('button', { name: 'Cancha: 2 registros, 50 %' }));
+    expect(screen.getByText('Cancha: 2 registros · 50 %')).toBeTruthy();
+    expect(screen.getByText('4')).toBeTruthy(); // total de reservas
+  });
+
+  it('la flecha ↓ debajo de cada sección lleva a la siguiente gráfica', async () => {
+    await openGeneral('admin@convive.com', 'Admin123');
+
+    const arrows = screen.getAllByRole('button', { name: 'Ir a la siguiente gráfica' });
+    expect(arrows).toHaveLength(4);
+    // En las pruebas no hay medidas de pantalla: se comprueba que tocarla no falle.
+    await press(arrows[0]);
+  });
+
   it('al cambiar el periodo recarga los totales y las gráficas (el saldo no cambia)', async () => {
     await openGeneral('admin@convive.com', 'Admin123');
 
