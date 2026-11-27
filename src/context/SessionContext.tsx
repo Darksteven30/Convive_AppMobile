@@ -2,6 +2,7 @@ import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, 
 
 import * as authService from '@/services/auth.service';
 import type { Role, User } from '@/services/auth.service';
+import { unregisterDevice } from '@/services/push.service';
 
 type SessionContextValue = {
   user: User | null;
@@ -93,6 +94,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // RF09: el celular deja de recibir los avisos de esta cuenta (antes de perder la sesión).
+    await unregisterDevice().catch(() => undefined);
     await authService.signOut();
     setUser(null);
   }, []);

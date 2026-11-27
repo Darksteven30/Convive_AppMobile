@@ -7,6 +7,7 @@ import Tabs from 'expo-router/js-tabs';
 import { homeRouteFor } from '@/constants/permissions';
 import { colors } from '@/constants/theme';
 import { useSession } from '@/context/SessionContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 // Pantalla a la que llegan los guards al iniciar sesión (primera de la pila de Inicio).
 const DEFAULT_LANDING = '/inicio';
@@ -43,6 +44,8 @@ function useRedirectToRoleHome() {
 /** Barra de navegación inferior presente en toda la app autenticada. */
 export default function AppLayout() {
   useRedirectToRoleHome();
+  // RF09: registra el celular para las push y abre la pantalla de la notificación tocada.
+  usePushNotifications();
 
   return (
     <Tabs
