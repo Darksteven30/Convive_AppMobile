@@ -233,7 +233,13 @@ async function getFinancialReport(filters: ReportFilters, user: User): Promise<F
     p_categoria_id: allCategories ? null : filters.categoryId,
   });
   if (error) {
-    if ((error as RpcError).message?.includes('sin_permiso')) throw new FinanceError('forbidden');
+    const message = (error as RpcError).message ?? '';
+    if (message.includes('sin_permiso')) throw new FinanceError('forbidden');
+    // La app ya validó el rango con las mismas reglas; si el servidor lo rechaza, casi siempre es
+    // porque «hoy» no coincide (p. ej. un dispositivo con otra zona horaria).
+    if (message.includes('rango_invalido')) {
+      throw new FinanceError<ReportErrors>('validation', { to: MSG.RF04.endAfterToday });
+    }
     throw error;
   }
 
