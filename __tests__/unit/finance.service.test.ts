@@ -5,12 +5,15 @@ import {
   ATTACHMENT_MAX_BYTES,
   computeTotals,
   createMovement,
+  getDueDay,
   getFinancialReport,
   isAllowedAttachment,
+  isValidDueDay,
   listCategories,
   listMovements,
   listReportCategories,
   resetMockFinanceState,
+  setDueDay,
   validateMovement,
   validateReportFilters,
   type MovementInput,
@@ -283,5 +286,30 @@ describe('getFinancialReport', () => {
     ).rejects.toMatchObject({ code: 'validation', fieldErrors: { from: MSG.RF04.startAfterEnd } });
     await jest.runAllTimersAsync();
     await assertion;
+  });
+});
+
+describe('RF09 · día de vencimiento (modo simulado)', () => {
+  it('solo acepta días del 1 al 28, o vacío para quitarlo', () => {
+    expect(isValidDueDay(1)).toBe(true);
+    expect(isValidDueDay(28)).toBe(true);
+    expect(isValidDueDay(null)).toBe(true);
+    expect(isValidDueDay(0)).toBe(false);
+    expect(isValidDueDay(29)).toBe(false);
+    expect(isValidDueDay(10.5)).toBe(false);
+    expect(isValidDueDay(Number.NaN)).toBe(false);
+  });
+
+  it('empieza sin definir; el administrador lo cambia y otros roles no', async () => {
+    expect(await run(getDueDay(admin))).toBeNull();
+    expect(await run(setDueDay(10, admin))).toBe(10);
+    expect(await run(getDueDay(admin))).toBe(10);
+
+    const resident = { ...admin, role: 'residente' as const };
+    const forbidden = expect(setDueDay(5, resident)).rejects.toMatchObject({ code: 'forbidden' });
+    const invalid = expect(setDueDay(30, admin)).rejects.toMatchObject({ code: 'validation' });
+    await jest.runAllTimersAsync();
+    await forbidden;
+    await invalid;
   });
 });

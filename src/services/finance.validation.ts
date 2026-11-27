@@ -8,6 +8,8 @@ import {
   ATTACHMENT_MIME_TYPES,
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  DUE_DAY_MAX,
+  DUE_DAY_MIN,
   REPORT_MAX_MONTHS,
   type Attachment,
   type Category,
@@ -84,4 +86,9 @@ export function computeTotals(items: Movement[]): ReportTotals {
   const income = items.filter((item) => item.type === 'ingreso').reduce((sum, item) => sum + item.amount, 0);
   const expenses = items.filter((item) => item.type === 'egreso').reduce((sum, item) => sum + item.amount, 0);
   return { income, expenses, balance: income - expenses };
+}
+
+/** RF09: día de vencimiento válido (entero del 1 al 28) o null para quitarlo. */
+export function isValidDueDay(day: number | null): boolean {
+  return day === null || (Number.isInteger(day) && day >= DUE_DAY_MIN && day <= DUE_DAY_MAX);
 }
