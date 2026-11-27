@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 
@@ -30,13 +30,19 @@ import {
   type SummaryRange,
 } from '@/services/summary.service';
 import { formatShortMonth, todayISO } from '@/utils/date';
-import { formatAmount } from '@/utils/money';
+import { formatAmount, formatCompactAmount } from '@/utils/money';
 
 /** Colores de las donas, en orden: el segmento más grande toma el primero. */
 const CHART_COLORS = ['#1E3A8A', '#38BDF8', '#16A34A', '#DC2626', '#F97316', '#7C3AED', '#0F766E', '#CA8A04'];
 
 const withColors = (items: { label: string; value: number }[]): Category[] =>
   items.map((item, index) => ({ ...item, color: CHART_COLORS[index % CHART_COLORS.length] }));
+
+/** Las gráficas de General: la flecha ↓ lleva a la siguiente. */
+type ChartKey = 'fondos' | 'gastos' | 'pqrs' | 'reservas';
+
+const sumOf = (values: number[]) => values.reduce((total, value) => total + value, 0);
+const countLabel = (count: number) => `${count} ${count === 1 ? 'registro' : 'registros'}`;
 
 /** RF14 · Resumen financiero del conjunto (solo lectura para la junta y el residente). */
 export default function GeneralScreen() {
@@ -46,6 +52,17 @@ export default function GeneralScreen() {
   const [custom, setCustom] = useState<SummaryRange>(() => rangeForPeriod('este_mes', today));
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [failed, setFailed] = useState(false);
+  // Posición vertical de cada gráfica dentro del área desplazable (para la flecha ↓).
+  const scrollRef = useRef<ScrollView>(null);
+  const chartY = useRef<Partial<Record<ChartKey, number>>>({});
+
+  const saveChartY = (key: ChartKey) => (y: number) => {
+    chartY.current[key] = y;
+  };
+  const scrollTo = (key: ChartKey) => {
+    const y = chartY.current[key];
+    if (y !== undefined) scrollRef.current?.scrollTo({ y, animated: true });
+  };
 
   // «Personalizado» usa las fechas elegidas; si no son válidas no se consulta (MSG-RF14-02).
   const range = period === 'personalizado' ? custom : rangeForPeriod(period, today);
@@ -74,6 +91,7 @@ export default function GeneralScreen() {
 
   return (
     <Screen
+      scrollRef={scrollRef}
       header={
         <>
           <AppHeader />
@@ -138,50 +156,73 @@ export default function GeneralScreen() {
             </Card>
           </View>
 
-          <Card title="Movimiento de fondos" style={hasMovements ? styles.chartCard : undefined}>
-            {hasMovements ? (
-              <BarChart
-                data={summary.monthly.map((m) => ({
-                  label: formatShortMonth(m.month),
-                  income: m.income,
-                  expenses: m.expenses,
-                }))}
-              />
-            ) : (
-              <Text style={styles.muted}>{MSG.RF14.noMovements}</Text>
-            )}
-          </Card>
+          <ScrollArrow onPress={() => scrollTo('fondos')} />
 
-          <Card title="Categorías de gasto">
-            {summary.expenseCategories.length > 0 ? (
-              <DonutChart data={withColors(summary.expenseCategories.map((c) => ({ label: c.name, value: c.total })))} />
-            ) : (
-              <Text style={styles.muted}>{MSG.RF14.noMovements}</Text>
-            )}
-          </Card>
-
-          <Card title="Categorías de PQRS">
-            {summary.pqrsByType.length > 0 ? (
-              <>
-                <DonutChart
-                  data={withColors(summary.pqrsByType.map((p) => ({ label: pqrsTypeLabel(p.type), value: p.count })))}
+          <View onLayout={(e) => saveChartY('fondos')(e.nativeEvent.layout.y)}>
+            <Card title="Movimiento de fondos" style={hasMovements ? styles.chartCard : undefined}>
+              {hasMovements ? (
+                <BarChart
+                  data={summary.monthly.map((m) => ({
+                    label: formatShortMonth(m.month),
+                    income: m.income,
+                    expenses: m.expenses,
+                  }))}
                 />
-                <Text style={styles.muted}>
-                  {summary.pqrsByStatus.map((s) => `${PQRS_STATUS_LABELS[s.status]}: ${s.count}`).join(' · ')}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.muted}>{MSG.RF14.noPqrs}</Text>
-            )}
-          </Card>
+              ) : (
+                <Text style={styles.muted}>{MSG.RF14.noMovements}</Text>
+              )}
+            </Card>
+          </View>
+          <ScrollArrow onPress={() => scrollTo('gastos')} />
 
-          <Card title="Categorías de reservas">
-            {summary.reservationsByZone.length > 0 ? (
-              <DonutChart data={withColors(summary.reservationsByZone.map((r) => ({ label: r.zone, value: r.count })))} />
-            ) : (
-              <Text style={styles.muted}>{MSG.RF14.noReservations}</Text>
-            )}
-          </Card>
+          <View onLayout={(e) => saveChartY('gastos')(e.nativeEvent.layout.y)}>
+            <Card title="Categorías de gasto">
+              {summary.expenseCategories.length > 0 ? (
+                <DonutChart
+                  data={withColors(summary.expenseCategories.map((c) => ({ label: c.name, value: c.total })))}
+                  formatValue={formatAmount}
+                  centerLabel={formatCompactAmount(sumOf(summary.expenseCategories.map((c) => c.total)))}
+                />
+              ) : (
+                <Text style={styles.muted}>{MSG.RF14.noMovements}</Text>
+              )}
+            </Card>
+          </View>
+          <ScrollArrow onPress={() => scrollTo('pqrs')} />
+
+          <View onLayout={(e) => saveChartY('pqrs')(e.nativeEvent.layout.y)}>
+            <Card title="Categorías de PQRS">
+              {summary.pqrsByType.length > 0 ? (
+                <>
+                  <DonutChart
+                    data={withColors(summary.pqrsByType.map((p) => ({ label: pqrsTypeLabel(p.type), value: p.count })))}
+                    formatValue={countLabel}
+                    centerLabel={String(sumOf(summary.pqrsByType.map((p) => p.count)))}
+                  />
+                  <Text style={styles.muted}>
+                    {summary.pqrsByStatus.map((s) => `${PQRS_STATUS_LABELS[s.status]}: ${s.count}`).join(' · ')}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.muted}>{MSG.RF14.noPqrs}</Text>
+              )}
+            </Card>
+          </View>
+          <ScrollArrow onPress={() => scrollTo('reservas')} />
+
+          <View onLayout={(e) => saveChartY('reservas')(e.nativeEvent.layout.y)}>
+            <Card title="Categorías de reservas">
+              {summary.reservationsByZone.length > 0 ? (
+                <DonutChart
+                  data={withColors(summary.reservationsByZone.map((r) => ({ label: r.zone, value: r.count })))}
+                  formatValue={countLabel}
+                  centerLabel={String(sumOf(summary.reservationsByZone.map((r) => r.count)))}
+                />
+              ) : (
+                <Text style={styles.muted}>{MSG.RF14.noReservations}</Text>
+              )}
+            </Card>
+          </View>
         </>
       )}
 
@@ -196,6 +237,21 @@ export default function GeneralScreen() {
         />
       )}
     </Screen>
+  );
+}
+
+/** RF14 · Flecha ↓: indica que hay más contenido abajo y, al tocarla, desplaza a la siguiente gráfica. */
+function ScrollArrow({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Ir a la siguiente gráfica"
+      hitSlop={8}
+      onPress={onPress}
+      style={styles.arrow}
+    >
+      <Ionicons name="chevron-down" size={22} color={colors.textMuted} />
+    </Pressable>
   );
 }
 
@@ -220,6 +276,9 @@ const styles = StyleSheet.create({
   muted: {
     fontSize: 13,
     color: colors.textMuted,
+  },
+  arrow: {
+    alignSelf: 'center',
   },
   chartCard: {
     paddingBottom: spacing.xxl,
