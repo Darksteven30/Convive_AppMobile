@@ -361,6 +361,15 @@ describe('Finanzas con Supabase · reportes (RF04)', () => {
     await expect(supabaseFinance.getFinancialReport(filters, admin)).rejects.toMatchObject({ code: 'forbidden' });
   });
 
+  it('rango_invalido del servidor se muestra en el campo «Hasta» y no como error inesperado', async () => {
+    rpcResults.movimientos_financieros = { data: null, error: { message: 'rango_invalido' } };
+
+    await expect(supabaseFinance.getFinancialReport(filters, admin)).rejects.toMatchObject({
+      code: 'validation',
+      fieldErrors: { to: MSG.RF04.endAfterToday },
+    });
+  });
+
   it('valida el rango en la app antes de consultar (MSG-RF04-02)', async () => {
     await expect(
       supabaseFinance.getFinancialReport({ ...filters, from: '2026-09-30', to: '2026-07-01' }, admin),
