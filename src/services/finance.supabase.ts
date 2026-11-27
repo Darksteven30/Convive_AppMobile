@@ -28,7 +28,7 @@ import {
   type ReportErrors,
   type ReportFilters,
 } from '@/services/finance.types';
-import { computeTotals, validateMovement, validateReportFilters } from '@/services/finance.validation';
+import { computeTotals, isValidDueDay, validateMovement, validateReportFilters } from '@/services/finance.validation';
 
 /** Bucket privado de los soportes; cada conjunto tiene su carpeta. */
 export const ATTACHMENTS_BUCKET = 'soportes-financieros';
@@ -259,10 +259,32 @@ async function findCategoryName(id: string): Promise<string> {
   return (data as { nombre: string } | null)?.nombre ?? 'Sin categoría';
 }
 
+// RF09 · Día de vencimiento (20261128000000_pago_por_vencer.sql). El servidor repite las reglas.
+async function getDueDay(user: User): Promise<number | null> {
+  if (!MOVEMENT_ROLES.includes(user.role)) throw new FinanceError('forbidden');
+  const { data, error } = await getSupabase().rpc('dia_vencimiento_conjunto');
+  if (error) throw error.message?.includes('sin_permiso') ? new FinanceError('forbidden') : error;
+  return data === null || data === undefined ? null : Number(data);
+}
+
+async function setDueDay(day: number | null, user: User): Promise<number | null> {
+  if (!MOVEMENT_ROLES.includes(user.role)) throw new FinanceError('forbidden');
+  if (!isValidDueDay(day)) throw new FinanceError('validation');
+  const { data, error } = await getSupabase().rpc('configurar_dia_vencimiento', { p_dia: day });
+  if (error) {
+    if (error.message?.includes('sin_permiso')) throw new FinanceError('forbidden');
+    if (error.message?.includes('dia_invalido')) throw new FinanceError('validation');
+    throw error;
+  }
+  return data === null || data === undefined ? null : Number(data);
+}
+
 export const financeBackend = {
   listCategories,
   listReportCategories,
   listMovements,
   createMovement,
   getFinancialReport,
+  getDueDay,
+  setDueDay,
 } satisfies FinanceBackend;

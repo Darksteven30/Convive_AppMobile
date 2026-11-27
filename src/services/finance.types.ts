@@ -110,7 +110,21 @@ export type FinanceBackend = {
   createMovement(input: MovementInput, user: User): Promise<Movement>;
   /** RF04: reporte del periodo y la categoría elegidos. Falla con FinanceError. */
   getFinancialReport(filters: ReportFilters, user: User): Promise<FinancialReport>;
+  /** RF09: día del mes en que vence la cuota (null = sin definir: no se envían avisos). Solo el administrador. */
+  getDueDay(user: User): Promise<number | null>;
+  /** RF09: cambia el día de vencimiento (1 a 28, o null para quitarlo). Falla con FinanceError. */
+  setDueDay(day: number | null, user: User): Promise<number | null>;
 };
+
+// ---------------------------------------------------------------------------------------------
+// RF09 · Día de vencimiento de la cuota (aviso «Tu pago vence pronto»)
+// ---------------------------------------------------------------------------------------------
+
+/** Del 1 al 28 para que el día exista en todos los meses. */
+export const DUE_DAY_MIN = 1;
+export const DUE_DAY_MAX = 28;
+/** Días antes del vencimiento en que llega el primer aviso. */
+export const DUE_NOTICE_DAYS = 5;
 
 /** Del más reciente al más antiguo (por fecha y luego por registro). */
 export const newestFirst = (a: Movement, b: Movement) =>

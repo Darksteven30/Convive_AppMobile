@@ -8,8 +8,25 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+## [0.4.0] - 2026-11-27
+
+Con esta versión quedan los 20 requisitos funcionales: PQRS y su gestión (RF07 y RF08), visitantes
+(RF10), notificaciones push con el aviso de pago por vencer (RF09), el resumen financiero de General
+con datos reales (RF14), Inicio y navegación (RF18), noticias y comunicados (RF19, propuesto) y la
+administración de usuarios y unidades (RF20, propuesto). La app se puede instalar en Android con EAS
+Build (APK de prueba) y tiene configurado el perfil para generar el paquete de Google Play. Sin configurar Supabase,
+la app sigue funcionando con datos simulados. 851 pruebas automatizadas.
+
 ### Agregado
 
+- **RF18 – Inicio y navegación:** «Informar novedad» abre PQRS con «Reporte de daño» ya elegido.
+- **RF09 – Notificaciones push:**
+  - Después de iniciar sesión la app pide el permiso y registra el celular (`dispositivos_push`); al cerrar sesión lo quita. Si el celular era de otra persona, pasa a quien inició sesión.
+  - Migración `20261127000000_notificaciones_push.sql`: cada notificación nueva se envía como push al servicio de Expo desde la base de datos (`pg_net`), una sola vez y sin bloquear el evento que la originó si falla. Nuevos avisos de pago aprobado o rechazado y de reserva confirmada, además de los de PQRS y comunicados que ya existían. Pruebas en `supabase/tests/rf09_notificaciones_push_test.sql`.
+  - Al tocar una notificación se abre su pantalla (PQRS, comunicado, comprobante de pago o reservas), también si la app estaba cerrada.
+  - Perfil muestra «Las notificaciones están desactivadas. [Activar]» si se negó el permiso; abre los ajustes del celular.
+  - Aviso «Tu pago vence pronto»: el administrador define el día de vencimiento de la cuota en Panel → Finanzas (1 a 28, o vacío para no avisar). Una tarea diaria (pg_cron, 8:00 a. m.) avisa a las unidades con saldo pendiente 5 días antes y el mismo día; al tocarlo se abre la pantalla de pago. Migración `20261128000000_pago_por_vencer.sql` y pruebas en `supabase/tests/rf09_pago_por_vencer_test.sql`.
+  - Paquetes `expo-notifications` y `expo-dev-client` (build de desarrollo: las push no funcionan en Expo Go en Android).
 - **App instalable con EAS Build:** `eas.json` con los perfiles `development` (cliente de desarrollo), `preview` (APK para probar en celulares Android) y `production` (AAB para Google Play, con número de versión automático). Identificador de la app: `com.darksteven30.convive` (Android y iOS). El README explica cómo configurar las variables de Supabase en EAS y cómo instalar el APK.
 - **RF14 – Resumen financiero (General) con datos reales:**
   - Selector de periodo: «Este mes» (por defecto), «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado» con fecha inicial y final (máximo 12 meses; MSG-RF14-02 si la inicial es mayor que la final).
@@ -80,6 +97,19 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
   - «Recuperar contraseña» valida las reglas antes de verificar el código, así una contraseña débil ya no lo gasta.
   - Si la nueva contraseña es igual a la anterior, la app lo explica y pide un código nuevo, en lugar de mostrar «Ocurrió un error inesperado». Ya no se envía dos veces al pulsar «Enter» mientras se guarda.
   - Supabase exige ahora un mínimo de 8 caracteres en el servidor (ver el README). La mayúscula y el número o símbolo los sigue validando la app, porque los requisitos de Supabase no admiten la regla de RF17.
+
+### Eliminado
+
+- **RF18:** la barra de pestañas inferior con Buscar, Movimientos y Billetera, que solo mostraban «Próximamente» y no tienen un requisito en el documento. Las secciones se recorren con la barra superior. Las pantallas ahora respetan el borde inferior del celular.
+
+### Limitaciones conocidas
+
+- Wompi está en modo Sandbox (pagos de prueba, sin dinero real).
+- Las notificaciones push requieren el build `development` o un APK de EAS: no funcionan en Expo Go en Android ni en la web. En iPhone faltan las credenciales de Apple (cuenta de Apple Developer).
+- Los comunicados son para todo el conjunto: la segmentación por torre/bloque queda pendiente hasta que las unidades tengan ese dato (RF19).
+- Inicio de sesión con Google y Apple pendiente.
+- Errores conocidos por corregir: un pago aprobado puede cambiar después a rechazado si llegan eventos de Wompi fuera de orden (RF15); un saldo menor a $ 1.500 no se puede pagar (RF11); «hoy» se toma de la hora del dispositivo y no de la de Colombia (RF03/RF04); cerrar sesión sin conexión deja la sesión guardada en el dispositivo (RF16).
+- El plan gratuito de Supabase pausa el proyecto tras 7 días sin uso; hay que reactivarlo antes de cada demo.
 
 ## [0.3.0] - 2026-10-18
 
@@ -258,7 +288,8 @@ registro de ingresos y egresos (RF03). Los datos y la autenticación son simulad
 - Sin integración con Wompi ni notificaciones.
 - RF02, RF04 a RF18 pendientes o parciales.
 
-[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.3.0...develop
+[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.4.0...develop
+[0.4.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.1.0

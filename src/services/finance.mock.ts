@@ -22,7 +22,7 @@ import {
   type ReportErrors,
   type ReportFilters,
 } from '@/services/finance.types';
-import { computeTotals, validateMovement, validateReportFilters } from '@/services/finance.validation';
+import { computeTotals, isValidDueDay, validateMovement, validateReportFilters } from '@/services/finance.validation';
 
 /** Catálogo de categorías: el mismo de la migración 20261012000000_finanzas.sql. */
 export const MOCK_CATEGORIES: Category[] = [
@@ -86,11 +86,14 @@ const seedMovements: Movement[] = [
 
 let movements: Movement[] = [];
 let nextId = 1;
+/** RF09: día de vencimiento de la cuota del conjunto (sin definir al empezar). */
+let dueDay: number | null = null;
 
 /** Restaura los datos simulados (lo usan las pruebas para empezar cada caso desde cero). */
 export function resetMockFinanceState() {
   movements = seedMovements.map((movement) => ({ ...movement }));
   nextId = seedMovements.length + 1;
+  dueDay = null;
 }
 resetMockFinanceState();
 
@@ -160,10 +163,26 @@ async function getFinancialReport(filters: ReportFilters, user: User): Promise<F
   };
 }
 
+async function getDueDay(user: User): Promise<number | null> {
+  await simulateNetwork(0.5);
+  if (!MOVEMENT_ROLES.includes(user.role)) throw new FinanceError('forbidden');
+  return dueDay;
+}
+
+async function setDueDay(day: number | null, user: User): Promise<number | null> {
+  await simulateNetwork();
+  if (!MOVEMENT_ROLES.includes(user.role)) throw new FinanceError('forbidden');
+  if (!isValidDueDay(day)) throw new FinanceError('validation');
+  dueDay = day;
+  return dueDay;
+}
+
 export const financeBackend = {
   listCategories,
   listReportCategories,
   listMovements,
   createMovement,
   getFinancialReport,
+  getDueDay,
+  setDueDay,
 } satisfies FinanceBackend;

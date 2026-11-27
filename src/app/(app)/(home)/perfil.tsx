@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BrandLogo } from '@/components/layout/BrandLogo';
@@ -15,6 +15,7 @@ import { colors, radius, spacing } from '@/constants/theme';
 import { useFeedback } from '@/context/FeedbackContext';
 import { useSession } from '@/context/SessionContext';
 import { useConfirmSignOut } from '@/hooks/useConfirmSignOut';
+import { notificationsDenied, openNotificationSettings } from '@/lib/pushNotifications';
 import { AuthError } from '@/services/auth.service';
 import { PHONE_LENGTH, isValidPhone, normalizePhone } from '@/utils/validation';
 
@@ -50,7 +51,35 @@ export default function PerfilScreen() {
         onPress={() => router.push('/cambiar-contrasena')}
       />
       <OptionRow icon="log-out-outline" label="Cerrar sesión" onPress={confirmSignOut} />
+
+      <NotificationsNotice />
     </Screen>
+  );
+}
+
+/**
+ * RF09: si la persona negó el permiso, «Las notificaciones están desactivadas. [Activar]» abre los
+ * ajustes del celular. Se revisa cada vez que vuelve a Perfil (p. ej. después de activarlas).
+ */
+function NotificationsNotice() {
+  const [denied, setDenied] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      notificationsDenied().then((value) => active && setDenied(value));
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
+  if (!denied) return null;
+  return (
+    <View style={styles.notice}>
+      <Text style={styles.noticeText}>{MSG.RF09.disabled}</Text>
+      <Button label="Activar" variant="outline" pill onPress={openNotificationSettings} />
+    </View>
   );
 }
 
@@ -159,6 +188,20 @@ function PhoneRow({ phone }: { phone: string }) {
 }
 
 const styles = StyleSheet.create({
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+  },
   identity: {
     alignItems: 'center',
     gap: spacing.xs,

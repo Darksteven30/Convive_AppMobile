@@ -46,3 +46,6 @@ coverage/
 # Supabase CLI (archivos locales de la conexión con el proyecto)
 supabase/.temp/
 supabase/.branches/
+
+# RF09 · Llave privada de la cuenta de servicio de Firebase (se sube solo a EAS, nunca al repositorio)
+*-firebase-adminsdk-*.json

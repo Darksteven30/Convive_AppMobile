@@ -2,7 +2,7 @@
   "expo": {
     "name": "Convive",
     "slug": "convive",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.darksteven30.convive",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -35,7 +36,14 @@
       ],
       "expo-sharing",
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#0F766E",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "scheme": "convive",
     "extra": {
