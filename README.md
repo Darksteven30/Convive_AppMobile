@@ -38,6 +38,30 @@ npx eas-cli@latest build --platform android --profile preview
 
 Al terminar, EAS muestra un enlace (también en expo.dev → Builds). Se abre en el celular Android, se descarga el APK y se instala aceptando la advertencia de «app de origen desconocido». Cualquiera con el enlace puede descargarlo.
 
+### Notificaciones push (RF09)
+
+Las push no funcionan en Expo Go en Android (desde el SDK 53) ni en la web: hace falta el build `development` o un APK `preview`. Al iniciar sesión, la app pide el permiso (después del primer inicio de sesión, no al abrirla) y registra el celular en `dispositivos_push`; al cerrar sesión lo quita. Cada fila nueva de `notificaciones` se envía como push desde la base de datos al servicio de Expo (`pg_net`, sin una Edge Function aparte), una sola vez. Eventos: cambio de estado de una PQRS, PQRS radicada (al administrador), nuevo comunicado, pago aprobado o rechazado y reserva confirmada. Al tocar una notificación se abre su pantalla. Si la persona negó el permiso, Perfil muestra «Las notificaciones están desactivadas. [Activar]».
+
+Configuración para Android (una vez):
+
+1. [Firebase Console](https://console.firebase.google.com) → crear un proyecto → agregar una app Android con el paquete `com.darksteven30.convive` → descargar `google-services.json` a la raíz del proyecto (solo tiene identificadores públicos; va en el repositorio).
+2. Firebase → Configuración del proyecto → Cuentas de servicio → «Generar nueva clave privada». Ese JSON es secreto: no va en el repositorio.
+3. `npx eas-cli@latest credentials` → Android → `development` → Google Service Account → «Manage your Google Service Account Key for Push Notifications (FCM V1)» → subir el JSON del paso 2.
+4. Cargar las variables de Supabase en el ambiente `development` (como en `preview`) y compilar: `npx eas-cli@latest build --platform android --profile development`.
+5. Instalar el build, correr `npx expo start --dev-client` (celular y PC en la misma red), iniciar sesión y aceptar el permiso. Comprobar el registro y enviar una push de prueba desde el SQL Editor:
+
+   ```sql
+   select p.nombre, d.plataforma, d.token from public.dispositivos_push d join public.perfiles p on p.id = d.perfil_id;
+
+   insert into public.notificaciones (perfil_id, tipo, titulo, mensaje)
+   select perfil_id, 'prueba', 'Prueba de Convive', 'Si ves esto, las notificaciones push funcionan'
+   from public.dispositivos_push order by updated_at desc limit 1;
+   ```
+
+   Si no llega, la respuesta de Expo queda en `select status_code, content from net._http_response order by created desc limit 3;` (`InvalidCredentials` = falta la clave FCM V1 del paso 3). En desarrollo, los fallos al obtener o registrar el token salen en la terminal de Metro con el prefijo `[RF09]`.
+
+**Pruebas de base de datos de notificaciones push (RF09):** en el SQL Editor, ejecutar `supabase/tests/rf09_notificaciones_push_test.sql`. Prueba el registro del celular (y que pase a otra persona si inicia sesión en él), que cada notificación nueva se envíe una vez y no sin celulares, el destino al tocarla, el formato de moneda, los avisos de pago aprobado (una sola vez) y de reserva confirmada (no la pendiente) y los permisos. Deshace sus datos al final y no envía push; si todo pasa, responde con «RF09 OK: 9 pruebas pasaron».
+
 ## Pruebas
 
 Pruebas automatizadas con Jest, React Native Testing Library y `expo-router/testing-library`:
@@ -65,7 +89,7 @@ La app funciona en dos modos:
 Para conectar un proyecto:
 
 1. Crear una cuenta en [supabase.com](https://supabase.com) → **New project** (región *South America (São Paulo)*). Guardar la contraseña de la base de datos.
-2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql`, `supabase/migrations/20261015000000_reservas.sql`, `supabase/migrations/20261016000000_verificar_correo.sql`, `supabase/migrations/20261017000000_bloqueo_intentos.sql`, `supabase/migrations/20261022000000_pqrs.sql`, `supabase/migrations/20261023000000_cambio_estado_pqrs.sql`, `supabase/migrations/20261030000000_visitantes.sql`, `supabase/migrations/20261102000000_noticias.sql`, `supabase/migrations/20261103000000_vigencia_noticias.sql`, `supabase/migrations/20261120000000_usuarios_unidades.sql`, `supabase/migrations/20261126000000_resumen_general.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo», «RF05 · Zonas comunes y reservas de ejemplo», «RF07 · PQRS de ejemplo», «RF10 · Visitas de ejemplo», «RF19 · Comunicados de ejemplo», «RF19 · Comunicado vencido de ejemplo»).
+2. **SQL Editor** → pegar y ejecutar, en orden, `supabase/migrations/20261003000000_autenticacion.sql`, `supabase/migrations/20261004000000_seleccion_concepto_pago.sql`, `supabase/migrations/20261005000000_pago_wompi.sql`, `supabase/migrations/20261006000000_integracion_wompi.sql`, `supabase/migrations/20261008000000_monto_minimo_wompi.sql`, `supabase/migrations/20261009000000_estado_cuenta.sql`, `supabase/migrations/20261012000000_finanzas.sql`, `supabase/migrations/20261015000000_reservas.sql`, `supabase/migrations/20261016000000_verificar_correo.sql`, `supabase/migrations/20261017000000_bloqueo_intentos.sql`, `supabase/migrations/20261022000000_pqrs.sql`, `supabase/migrations/20261023000000_cambio_estado_pqrs.sql`, `supabase/migrations/20261030000000_visitantes.sql`, `supabase/migrations/20261102000000_noticias.sql`, `supabase/migrations/20261103000000_vigencia_noticias.sql`, `supabase/migrations/20261120000000_usuarios_unidades.sql`, `supabase/migrations/20261126000000_resumen_general.sql`, `supabase/migrations/20261127000000_notificaciones_push.sql` y después `supabase/seed.sql`. Si el proyecto ya tenía las anteriores, basta con ejecutar la migración nueva y su bloque del final de `seed.sql` («RF11 · Saldos pendientes», «RF12 · Cuenta Wompi del conjunto», «RF02 · Historial de pagos de ejemplo», «RF03 / RF04 · Movimientos de ejemplo», «RF05 · Zonas comunes y reservas de ejemplo», «RF07 · PQRS de ejemplo», «RF10 · Visitas de ejemplo», «RF19 · Comunicados de ejemplo», «RF19 · Comunicado vencido de ejemplo»).
 3. **Authentication → Emails → SMTP Settings**: activar **Custom SMTP** con una cuenta de correo propia (por ejemplo Brevo o Gmail con contraseña de aplicación). El servicio de correo incluido en Supabase es solo para pruebas y no envía los códigos a los usuarios. La contraseña del SMTP se escribe solo en Supabase, nunca en el repositorio.
 4. **Authentication → Sign In / Providers → Email**: dejar **Confirm email** activado, con el código (OTP) de 6 dígitos y vencimiento de **600** segundos. Así nadie puede crear la cuenta de un correo pre-registrado sin el código que llega a ese correo. En la misma sección, poner **Minimum password length** en **8** y dejar **Password Requirements** en *No required characters*: los requisitos de Supabase no admiten la regla «un número o un símbolo» de RF17, así que la mayúscula y el número o símbolo los valida la app y el servidor exige el mínimo de 8 caracteres.
 5. **Authentication → Emails**: cambiar las plantillas **Confirm signup**, **Magic Link** y **Reset Password** para que envíen el código `{{ .Token }}` en lugar del enlace (la app pide el código de 6 dígitos para crear la contraseña y para recuperarla).

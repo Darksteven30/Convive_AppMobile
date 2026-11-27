@@ -10,6 +10,12 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ### Agregado
 
+- **RF09 – Notificaciones push:**
+  - Después de iniciar sesión la app pide el permiso y registra el celular (`dispositivos_push`); al cerrar sesión lo quita. Si el celular era de otra persona, pasa a quien inició sesión.
+  - Migración `20261127000000_notificaciones_push.sql`: cada notificación nueva se envía como push al servicio de Expo desde la base de datos (`pg_net`), una sola vez y sin bloquear el evento que la originó si falla. Nuevos avisos de pago aprobado o rechazado y de reserva confirmada, además de los de PQRS y comunicados que ya existían. Pruebas en `supabase/tests/rf09_notificaciones_push_test.sql`.
+  - Al tocar una notificación se abre su pantalla (PQRS, comunicado, comprobante de pago o reservas), también si la app estaba cerrada.
+  - Perfil muestra «Las notificaciones están desactivadas. [Activar]» si se negó el permiso; abre los ajustes del celular.
+  - Paquetes `expo-notifications` y `expo-dev-client` (build de desarrollo: las push no funcionan en Expo Go en Android).
 - **App instalable con EAS Build:** `eas.json` con los perfiles `development` (cliente de desarrollo), `preview` (APK para probar en celulares Android) y `production` (AAB para Google Play, con número de versión automático). Identificador de la app: `com.darksteven30.convive` (Android y iOS). El README explica cómo configurar las variables de Supabase en EAS y cómo instalar el APK.
 - **RF14 – Resumen financiero (General) con datos reales:**
   - Selector de periodo: «Este mes» (por defecto), «Mes anterior», «Últimos 3 meses», «Últimos 6 meses», «Este año» y «Personalizado» con fecha inicial y final (máximo 12 meses; MSG-RF14-02 si la inicial es mayor que la final).
