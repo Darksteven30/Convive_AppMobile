@@ -19,7 +19,8 @@ type Props = {
 /** Contenedor base de cada pantalla: área segura, encabezado y contenido desplazable. */
 export function Screen({ header, footer, onRefresh, refreshing = false, scrollRef, children }: Props) {
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    // Sin barra de pestañas inferior (RF18), la pantalla también respeta el borde inferior del celular.
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.column}>
         {header ? <View style={styles.header}>{header}</View> : null}
         <ScrollView
