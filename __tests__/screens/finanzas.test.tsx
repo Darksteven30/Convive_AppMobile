@@ -269,3 +269,30 @@ describe('RF03 · soporte', () => {
     expect(screen.queryByText(MSG.RF03.invalidFile)).toBeNull();
   });
 });
+
+describe('RF09 · día de vencimiento de la cuota', () => {
+  it('el administrador lo define en Finanzas, lo valida y lo puede quitar', async () => {
+    await renderSignedIn('admin@convive.com', 'Admin123');
+    await navigate('/finanzas');
+
+    expect(screen.getByText('Vencimiento de la cuota')).toBeTruthy();
+    expect(screen.getByText(MSG.RF09.dueDayNone)).toBeTruthy();
+
+    // Un día que no existe en todos los meses se rechaza.
+    await press(screen.getByRole('button', { name: 'Editar día de vencimiento' }));
+    await fireEvent.changeText(screen.getByLabelText('Día de vencimiento'), '31');
+    await press(guardar());
+    expect(screen.getByText(MSG.RF09.dueDayInvalid)).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText('Día de vencimiento'), '10');
+    await press(guardar());
+    expect(screen.getByText(MSG.RF09.dueDaySaved)).toBeTruthy();
+    expect(screen.getByText(MSG.RF09.dueDayValue(10))).toBeTruthy();
+
+    // Vacío = sin avisos.
+    await press(screen.getByRole('button', { name: 'Editar día de vencimiento' }));
+    await fireEvent.changeText(screen.getByLabelText('Día de vencimiento'), '');
+    await press(guardar());
+    expect(screen.getByText(MSG.RF09.dueDayNone)).toBeTruthy();
+  });
+});

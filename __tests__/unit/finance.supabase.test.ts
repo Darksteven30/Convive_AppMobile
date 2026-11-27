@@ -368,3 +368,33 @@ describe('Finanzas con Supabase · reportes (RF04)', () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 });
+
+describe('Finanzas con Supabase · día de vencimiento (RF09)', () => {
+  it('lee y guarda el día con las funciones de 20261128000000_pago_por_vencer.sql', async () => {
+    rpcResults.dia_vencimiento_conjunto = { data: 10, error: null };
+    expect(await supabaseFinance.getDueDay(admin)).toBe(10);
+
+    rpcResults.configurar_dia_vencimiento = { data: 15, error: null };
+    expect(await supabaseFinance.setDueDay(15, admin)).toBe(15);
+    expect(mockRpc).toHaveBeenCalledWith('configurar_dia_vencimiento', { p_dia: 15 });
+  });
+
+  it('sin día definido devuelve null, y null lo quita', async () => {
+    expect(await supabaseFinance.getDueDay(admin)).toBeNull();
+    expect(await supabaseFinance.setDueDay(null, admin)).toBeNull();
+    expect(mockRpc).toHaveBeenCalledWith('configurar_dia_vencimiento', { p_dia: null });
+  });
+
+  it('no envía un día inválido ni de otro rol, y traduce los errores del servidor', async () => {
+    await expect(supabaseFinance.setDueDay(29, admin)).rejects.toMatchObject({ code: 'validation' });
+    await expect(supabaseFinance.getDueDay({ ...admin, role: 'residente' })).rejects.toMatchObject({
+      code: 'forbidden',
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+
+    rpcResults.configurar_dia_vencimiento = { data: null, error: { message: 'dia_invalido' } };
+    await expect(supabaseFinance.setDueDay(5, admin)).rejects.toMatchObject({ code: 'validation' });
+    rpcResults.configurar_dia_vencimiento = { data: null, error: { message: 'sin_permiso' } };
+    await expect(supabaseFinance.setDueDay(5, admin)).rejects.toMatchObject({ code: 'forbidden' });
+  });
+});

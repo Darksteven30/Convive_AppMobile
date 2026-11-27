@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 
+import { DueDayCard } from '@/components/finance/DueDayCard';
 import { InitialBalanceCard } from '@/components/finance/InitialBalanceCard';
 import { MovementRow } from '@/components/finance/MovementRow';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -14,8 +15,8 @@ import { useFeedback } from '@/context/FeedbackContext';
 import { listMovements, type Movement } from '@/services/finance.service';
 
 /**
- * Finanzas (administrador): saldo inicial del conjunto (RF14), movimientos registrados y acceso a
- * «Nuevo movimiento» (RF03).
+ * Finanzas (administrador): saldo inicial del conjunto (RF14), día de vencimiento de la cuota (RF09),
+ * movimientos registrados y acceso a «Nuevo movimiento» (RF03).
  */
 export default function FinanzasScreen() {
   const [movements, setMovements] = useState<Movement[] | null>(null);
@@ -53,6 +54,7 @@ export default function FinanzasScreen() {
       }
     >
       <InitialBalanceCard />
+      <DueDayCard />
 
       <Text accessibilityRole="header" style={typography.subtitle}>
         Movimientos registrados

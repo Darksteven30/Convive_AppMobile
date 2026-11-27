@@ -14,6 +14,9 @@ export {
   ATTACHMENT_MIME_TYPES,
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  DUE_DAY_MAX,
+  DUE_DAY_MIN,
+  DUE_NOTICE_DAYS,
   FinanceError,
   REPORT_MAX_MONTHS,
   type Attachment,
@@ -28,7 +31,7 @@ export {
   type ReportFilters,
   type ReportTotals,
 } from '@/services/finance.types';
-export { computeTotals, isAllowedAttachment, validateReportFilters } from '@/services/finance.validation';
+export { computeTotals, isAllowedAttachment, isValidDueDay, validateReportFilters } from '@/services/finance.validation';
 // Solo para las pruebas y el modo simulado.
 export { findCategory, resetMockFinanceState } from '@/services/finance.mock';
 
@@ -53,3 +56,5 @@ export const listMovements: FinanceBackend['listMovements'] = (...args) => backe
 export const createMovement: FinanceBackend['createMovement'] = (...args) => backend.createMovement(...args);
 export const getFinancialReport: FinanceBackend['getFinancialReport'] = (...args) =>
   backend.getFinancialReport(...args);
+export const getDueDay: FinanceBackend['getDueDay'] = (...args) => backend.getDueDay(...args);
+export const setDueDay: FinanceBackend['setDueDay'] = (...args) => backend.setDueDay(...args);

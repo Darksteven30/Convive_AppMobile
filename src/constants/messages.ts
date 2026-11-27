@@ -105,6 +105,13 @@ export const MSG = {
   },
   RF09: {
     disabled: 'Las notificaciones están desactivadas.', // Regla de RF09 (con «Activar»)
+    // Propuestos (no están en el documento): día de vencimiento de la cuota, en Finanzas.
+    dueDayHelp:
+      'Las personas con saldo pendiente reciben el aviso «Tu pago vence pronto» 5 días antes y otro el mismo día. Déjalo vacío para no enviar avisos.',
+    dueDayInvalid: 'Ingresa un día del 1 al 28.',
+    dueDaySaved: 'Día de vencimiento actualizado.',
+    dueDayNone: 'Sin definir',
+    dueDayValue: (day: number) => `Día ${day} de cada mes`,
   },
   RF10: {
     entryRegistered: (name: string, unit: string, time: string) => `Entrada registrada: ${name} → ${unit}, ${time}`, // MSG-RF10-01
