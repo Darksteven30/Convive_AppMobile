@@ -19,6 +19,8 @@ import {
   startPayment,
   toCents,
   validateHistoryFilters,
+  maxPartialPayment,
+  payableOnlyAtOffice,
   validatePaymentSelection,
   WOMPI_MIN_AMOUNT,
   type MockWompiStatus,
@@ -117,6 +119,36 @@ describe('validatePaymentSelection (RF11)', () => {
       MSG.RF11.amountBelowMinimum('$ 1.500,00'),
     );
     expect(validate({ amount: 1500 })).toEqual({});
+  });
+
+  describe('ningún saldo queda imposible de pagar (bug de RF11)', () => {
+    const withBalance = (balance: number) => [{ id: 'administracion', name: 'Cuota administración', requiresDescription: false, balance }];
+    const check = (balance: number, amount: number) =>
+      validatePaymentSelection({ conceptId: 'administracion', amount, description: '' }, withBalance(balance)).amount;
+
+    it('un abono no puede dejar un saldo menor a $ 1.500: se ofrece el máximo abono o el total', () => {
+      // $ 35.000: abonar $ 34.000 dejaría $ 1.000.
+      expect(check(35000, 34000)).toBe(MSG.RF11.remainderBelowMinimum('$ 33.500,00', '$ 35.000,00'));
+      expect(check(35000, 33500)).toBeUndefined();
+      expect(check(35000, 35000)).toBeUndefined();
+      expect(maxPartialPayment({ balance: 35000 })).toBe(33500);
+    });
+
+    it('un saldo de $ 1.500 a $ 2.999,99 solo se paga completo', () => {
+      // El caso del documento: $ 2.000 y un abono de $ 1.500 dejaba $ 500 imposibles de pagar.
+      expect(check(2000, 1500)).toBe(MSG.RF11.fullPaymentRequired('$ 2.000,00'));
+      expect(check(2000, 2000)).toBeUndefined();
+      expect(maxPartialPayment({ balance: 2000 })).toBe(0);
+      expect(maxPartialPayment({ balance: 3000 })).toBe(1500);
+    });
+
+    it('un saldo menor a $ 1.500 no se paga en línea: se paga en la administración', () => {
+      expect(payableOnlyAtOffice({ balance: 500 })).toBe(true);
+      expect(payableOnlyAtOffice({ balance: 1500 })).toBe(false);
+      expect(payableOnlyAtOffice({ balance: 0 })).toBe(false);
+      expect(check(500, 500)).toBe(MSG.RF11.payAtOffice('$ 1.500,00'));
+      expect(check(500, 1500)).toBe(MSG.RF11.payAtOffice('$ 1.500,00'));
+    });
   });
 
   it('un concepto sin saldo acepta cualquier valor desde el mínimo', () => {

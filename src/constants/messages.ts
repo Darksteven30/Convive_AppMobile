@@ -186,6 +186,15 @@ export const MSG = {
     partialHint: 'Puedes disminuir el valor para hacer un abono parcial.',
     descriptionLength: 'La descripción debe tener entre 5 y 100 caracteres.',
     amountBelowMinimum: (minimum: string) => `El valor mínimo para pagar en línea es ${minimum}.`,
+    // Saldos menores al mínimo de Wompi (bug de RF11, regla decidida el 2026-11-27):
+    payAtOffice: (minimum: string) =>
+      `Este saldo es menor al mínimo para pagar en línea (${minimum}). Págalo directamente en la administración.`,
+    payAtOfficeShort: 'Págalo en la administración',
+    remainderBelowMinimum: (maxPartial: string, balance: string) =>
+      `Un abono debe dejar un saldo de al menos $ 1.500,00: abona hasta ${maxPartial} o paga el total (${balance}).`,
+    fullPaymentRequired: (balance: string) =>
+      `Este saldo se paga completo (${balance}): un abono dejaría un saldo menor al mínimo para pagar en línea.`,
+    fullPaymentHint: 'Este saldo se paga completo: un abono dejaría un saldo menor al mínimo para pagar en línea.',
   },
   RF12: {
     startFailed: 'No pudimos iniciar el pago. Intenta de nuevo en unos minutos.', // MSG-RF12-01

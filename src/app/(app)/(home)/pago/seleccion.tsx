@@ -14,7 +14,14 @@ import { TextField } from '@/components/ui/TextField';
 import { MSG } from '@/constants/messages';
 import { colors, spacing } from '@/constants/theme';
 import { useAccountStatus } from '@/hooks/useAccountStatus';
-import { DESCRIPTION_MAX, validatePaymentSelection, type PaymentConcept } from '@/services/payments.service';
+import {
+  DESCRIPTION_MAX,
+  WOMPI_MIN_AMOUNT,
+  maxPartialPayment,
+  payableOnlyAtOffice,
+  validatePaymentSelection,
+  type PaymentConcept,
+} from '@/services/payments.service';
 import { amountInputFrom, formatAmount, formatAmountInput } from '@/utils/money';
 
 /**
@@ -110,7 +117,13 @@ export default function PagoSeleccionScreen() {
               key={item.id}
               icon="document-text-outline"
               label={item.name}
-              description={item.balance > 0 ? `Saldo pendiente: ${formatAmount(item.balance)}` : 'Sin saldo pendiente'}
+              description={
+                item.balance <= 0
+                  ? 'Sin saldo pendiente'
+                  : payableOnlyAtOffice(item)
+                    ? `Saldo pendiente: ${formatAmount(item.balance)} · ${MSG.RF11.payAtOfficeShort}`
+                    : `Saldo pendiente: ${formatAmount(item.balance)}`
+              }
               selected={item.id === conceptId}
               onPress={() => selectConcept(item)}
             />
@@ -121,7 +134,14 @@ export default function PagoSeleccionScreen() {
             </Text>
           ) : null}
 
-          {concept ? (
+          {concept && payableOnlyAtOffice(concept) ? (
+            // RF11: Wompi no acepta pagos menores al mínimo; este saldo se paga en la administración.
+            <Card>
+              <Text accessibilityRole="alert" style={styles.text}>
+                {MSG.RF11.payAtOffice(formatAmount(WOMPI_MIN_AMOUNT))}
+              </Text>
+            </Card>
+          ) : concept ? (
             <Card>
               <TextField
                 label="Valor a pagar"
@@ -133,7 +153,13 @@ export default function PagoSeleccionScreen() {
                 keyboardType="decimal-pad"
               />
               {amountError ? null : (
-                <Text style={styles.hint}>{concept.balance > 0 ? MSG.RF11.partialHint : MSG.RF11.noBalanceHint}</Text>
+                <Text style={styles.hint}>
+                  {concept.balance <= 0
+                    ? MSG.RF11.noBalanceHint
+                    : maxPartialPayment(concept) > 0
+                      ? MSG.RF11.partialHint
+                      : MSG.RF11.fullPaymentHint}
+                </Text>
               )}
               {concept.requiresDescription ? (
                 <TextField
