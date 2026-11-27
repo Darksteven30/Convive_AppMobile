@@ -8,6 +8,10 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+### Corregido
+
+- **Pagos con Wompi (RF15):** un pago aprobado ya no cambia con eventos tardíos o fuera de orden. Antes, un DECLINED de otro intento que llegaba después de la aprobación lo dejaba «Rechazado» con el saldo ya descontado, y un APPROVED repetido después de una anulación lo volvía a mostrar como pagado aunque el saldo ya se había devuelto. Ahora la anulación es final y un pago aprobado solo puede anularse con el evento de su misma transacción de Wompi; un pago rechazado sí pasa a aprobado si Wompi cobró otro intento con la misma referencia. Migración `20261129000000_estados_finales_wompi.sql` y 3 pruebas nuevas en `supabase/tests/rf15_wompi_test.sql`.
+
 ## [0.4.0] - 2026-11-27
 
 Con esta versión quedan los 20 requisitos funcionales: PQRS y su gestión (RF07 y RF08), visitantes
