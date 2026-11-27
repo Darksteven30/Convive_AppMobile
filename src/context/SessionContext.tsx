@@ -96,8 +96,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     // RF09: el celular deja de recibir los avisos de esta cuenta (antes de perder la sesión).
     await unregisterDevice().catch(() => undefined);
-    await authService.signOut();
-    setUser(null);
+    try {
+      await authService.signOut();
+    } finally {
+      // RF16: aunque falle la llamada (p. ej. sin señal), la app vuelve al inicio de sesión.
+      setUser(null);
+    }
   }, []);
 
   const value = useMemo(
