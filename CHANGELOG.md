@@ -8,9 +8,30 @@ versiones serán `0.x.y`; la `1.0.0` corresponde a la primera publicación con b
 
 ## [Sin publicar]
 
+## [0.4.1] - 2026-11-27
+
+Versión de correcciones sobre la 0.4.0: los cuatro errores conocidos de la revisión de código
+(pagos con Wompi, saldos que no se podían pagar, «hoy» con la hora de Colombia y la sesión sin
+conexión) y los indicadores del Panel del administrador, que mostraban valores fijos. Tres
+migraciones nuevas en Supabase. 867 pruebas automatizadas.
+
 ### Corregido
 
+- **Saldos imposibles de pagar (RF11):** Wompi no acepta pagos de menos de $ 1.500 y no se puede pagar más que el saldo, así que un abono que dejaba, por ejemplo, $ 500 pendientes dejaba esa deuda sin forma de pagarse. Ahora un abono parcial debe dejar al menos $ 1.500 pendientes (si no, se paga el total) y un saldo menor a $ 1.500 se indica pagarlo en la administración. La app y el servidor aplican la misma regla (migración `20261201000000_saldo_minimo_pago.sql`, pruebas en `supabase/tests/rf11_saldo_minimo_test.sql`).
+- **Sesión sin conexión (RF16):** al abrir la app sin señal, cualquier error al cargar el perfil se tomaba como «perfil borrado» y se cerraba la sesión. Ahora solo se cierra si el perfil no existe o el token es inválido; sin señal se entra con el último perfil guardado en el dispositivo (o, si no hay, se vuelve a intentar al abrir de nuevo). Al cerrar sesión, la app vuelve siempre al inicio de sesión aunque falle la llamada, y se borra el perfil guardado. La sesión del dispositivo ya se borraba sin señal desde la actualización de `@supabase/auth-js` (2.119), que la elimina antes de avisar al servidor.
+- **«Hoy» con la hora de Colombia (RF03/RF04):** la app tomaba la fecha del dispositivo, así que un celular, emulador o navegador en otra zona horaria (p. ej. UTC) creía entre las 7:00 p. m. y las 11:59 p. m. que ya era mañana: «Nuevo movimiento» proponía una fecha futura que el servidor rechazaba y el reporte por defecto fallaba con «error inesperado». Ahora «hoy» es siempre el de Colombia, como en el servidor; si el servidor rechaza el rango del reporte, la app muestra el motivo. Además, sumar meses a un 29, 30 o 31 queda en el último día del mes destino (29/02/2024 + 12 meses = 28/02/2025), igual que en PostgreSQL.
+- **Panel del administrador:** «Cartera por cobrar» ($ 12.450.000, 8 de 120 unidades en mora) y «PQRS pendientes» (3) eran valores fijos de la maqueta y no cambiaban con los datos reales. Ahora se calculan con los saldos de la cartera y las PQRS del conjunto (migración `20261130000000_panel_administrador.sql`, función `resumen_panel()` solo para el administrador) y se actualizan al volver al Panel. Pruebas en `supabase/tests/panel_administrador_test.sql`. Reportado por Mónica.
 - **Pagos con Wompi (RF15):** un pago aprobado ya no cambia con eventos tardíos o fuera de orden. Antes, un DECLINED de otro intento que llegaba después de la aprobación lo dejaba «Rechazado» con el saldo ya descontado, y un APPROVED repetido después de una anulación lo volvía a mostrar como pagado aunque el saldo ya se había devuelto. Ahora la anulación es final y un pago aprobado solo puede anularse con el evento de su misma transacción de Wompi; un pago rechazado sí pasa a aprobado si Wompi cobró otro intento con la misma referencia. Migración `20261129000000_estados_finales_wompi.sql` y 3 pruebas nuevas en `supabase/tests/rf15_wompi_test.sql`.
+
+### Limitaciones conocidas
+
+- Wompi está en modo Sandbox (pagos de prueba, sin dinero real).
+- Las notificaciones push requieren el build `development` o un APK de EAS: no funcionan en Expo Go en Android ni en la web. En iPhone faltan las credenciales de Apple.
+- «Visitantes esperados» (vigilancia) muestra una lista fija de la maqueta: falta decidir si se quita o se cambia por las visitas de hoy (RF10).
+- Los comunicados son para todo el conjunto (sin segmentar por torre/bloque).
+- Inicio de sesión con Google y Apple pendiente.
+- Quedan correcciones menores de la revisión de código (pagos, finanzas e inicio de sesión), de baja severidad.
+- El plan gratuito de Supabase pausa el proyecto tras 7 días sin uso; hay que reactivarlo antes de cada demo.
 
 ## [0.4.0] - 2026-11-27
 
@@ -292,7 +313,8 @@ registro de ingresos y egresos (RF03). Los datos y la autenticación son simulad
 - Sin integración con Wompi ni notificaciones.
 - RF02, RF04 a RF18 pendientes o parciales.
 
-[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.4.0...develop
+[Sin publicar]: https://github.com/Darksteven30/Convive_AppMobile/compare/v0.4.1...develop
+[0.4.1]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.4.1
 [0.4.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Darksteven30/Convive_AppMobile/releases/tag/v0.2.0

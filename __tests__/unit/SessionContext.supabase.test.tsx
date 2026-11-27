@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 
 import { SessionProvider, useSession } from '@/context/SessionContext';
+import * as authService from '@/services/auth.service';
 import type { User } from '@/services/auth.types';
 
 // Simula auth.service en modo Supabase: la sesión se restaura al abrir la app y puede vencer.
@@ -81,5 +82,18 @@ describe('SessionContext con Supabase', () => {
 
     await act(async () => mockSessionEnd?.());
     expect(result.current.sessionExpired).toBe(false);
+  });
+
+  it('RF16: si cerrar sesión falla (p. ej. sin señal), igual vuelve al inicio de sesión', async () => {
+    mockGetCurrentUser.mockResolvedValue(mockUser);
+    (authService.signOut as jest.Mock).mockRejectedValueOnce(new Error('Network request failed'));
+    const { result } = await renderHook(() => useSession(), { wrapper });
+    await act(async () => {});
+    expect(result.current.user).not.toBeNull();
+
+    await act(async () => {
+      await result.current.signOut().catch(() => undefined);
+    });
+    expect(result.current.user).toBeNull();
   });
 });

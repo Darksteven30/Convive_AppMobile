@@ -25,7 +25,10 @@ export type SelectionErrors = Partial<Record<'concept' | 'amount' | 'description
 /**
  * Reglas de RF11: concepto obligatorio y del catálogo; valor > 0 y, si el concepto tiene saldo
  * pendiente, ≤ saldo. Un concepto sin saldo acepta cualquier valor > 0 (p. ej. una cuota extra).
- * En todos los casos, al menos WOMPI_MIN_AMOUNT: la pasarela no acepta menos.
+ * En todos los casos, al menos WOMPI_MIN_AMOUNT: la pasarela no acepta menos. Para que ningún saldo
+ * quede imposible de pagar (iniciar_pago() en 20261201000000_saldo_minimo_pago.sql):
+ * - un saldo menor a WOMPI_MIN_AMOUNT no se paga en línea, sino en la administración;
+ * - un abono parcial debe dejar un saldo de al menos WOMPI_MIN_AMOUNT (si no, se paga el total).
  */
 export function validatePaymentSelection(input: PaymentSelection, concepts: PaymentConcept[]): SelectionErrors {
   const concept = concepts.find((item) => item.id === input.conceptId);
@@ -34,18 +37,44 @@ export function validatePaymentSelection(input: PaymentSelection, concepts: Paym
   }
 
   const errors: SelectionErrors = {};
-  if (input.amount == null || !(input.amount > 0)) {
+  if (payableOnlyAtOffice(concept)) {
+    errors.amount = MSG.RF11.payAtOffice(formatAmount(WOMPI_MIN_AMOUNT));
+  } else if (input.amount == null || !(input.amount > 0)) {
     errors.amount = MSG.RF11.amountInvalid;
   } else if (toCents(input.amount) < toCents(WOMPI_MIN_AMOUNT)) {
     errors.amount = MSG.RF11.amountBelowMinimum(formatAmount(WOMPI_MIN_AMOUNT));
   } else if (concept.balance > 0 && toCents(input.amount) > toCents(concept.balance)) {
     errors.amount = MSG.RF11.amountAboveBalance(formatAmount(concept.balance));
+  } else if (
+    concept.balance > 0 &&
+    toCents(input.amount) < toCents(concept.balance) &&
+    toCents(concept.balance) - toCents(input.amount) < toCents(WOMPI_MIN_AMOUNT)
+  ) {
+    const maxPartial = maxPartialPayment(concept);
+    errors.amount =
+      maxPartial > 0
+        ? MSG.RF11.remainderBelowMinimum(formatAmount(maxPartial), formatAmount(concept.balance))
+        : MSG.RF11.fullPaymentRequired(formatAmount(concept.balance));
   }
   const description = input.description.trim();
   if (concept.requiresDescription && (description.length < DESCRIPTION_MIN || description.length > DESCRIPTION_MAX)) {
     errors.description = MSG.RF11.descriptionLength;
   }
   return errors;
+}
+
+/** Saldo mayor que 0 pero menor al mínimo de Wompi: solo se puede pagar en la administración. */
+export function payableOnlyAtOffice(concept: Pick<PaymentConcept, 'balance'>): boolean {
+  return concept.balance > 0 && toCents(concept.balance) < toCents(WOMPI_MIN_AMOUNT);
+}
+
+/**
+ * Mayor abono parcial posible (deja WOMPI_MIN_AMOUNT pendiente). Si es menor que el mínimo, el
+ * saldo solo se puede pagar completo (p. ej. con $ 2.000 de saldo), y se devuelve 0.
+ */
+export function maxPartialPayment(concept: Pick<PaymentConcept, 'balance'>): number {
+  const max = (toCents(concept.balance) - toCents(WOMPI_MIN_AMOUNT)) / 100;
+  return max >= WOMPI_MIN_AMOUNT ? max : 0;
 }
 
 /** RF02: el historial muestra 12 pagos por página y «Ver más» agrega los siguientes. */

@@ -82,6 +82,10 @@ export default function ReportesScreen() {
     } catch (e) {
       if (e instanceof FinanceError && e.code === 'forbidden') {
         showDialog({ message: MSG.RF04.forbidden, actions: [{ label: 'Aceptar', primary: true }] });
+      } else if (e instanceof FinanceError && e.code === 'validation') {
+        // El servidor rechazó el rango aunque la app lo validó (p. ej. «hoy» distinto): se explica el motivo.
+        const [message] = Object.values(e.fieldErrors as Record<string, string>);
+        showToast('error', message ?? MSG.general.unexpected);
       } else {
         showToast('error', MSG.general.unexpected);
       }

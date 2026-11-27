@@ -3,8 +3,10 @@
 // de finanzas, PQRS y reservas, y cumple el mismo contrato que summary.supabase.ts.
 
 import type { User } from '@/services/auth.types';
+import { mockUnitNames } from '@/services/community.mock';
 import { mockMovements } from '@/services/finance.mock';
 import { simulateNetwork } from '@/services/mockNetwork';
+import { mockPortfolio } from '@/services/payments.mock';
 import { mockPqrsTotals } from '@/services/pqrs.mock';
 import type { PqrsStatus, PqrsType } from '@/services/pqrs.types';
 import { mockReservations } from '@/services/reservations.mock';
@@ -13,6 +15,7 @@ import {
   SummaryError,
   type FinancialSummary,
   type MonthTotals,
+  type PanelSummary,
   type SummaryBackend,
   type SummaryRange,
 } from '@/services/summary.types';
@@ -106,9 +109,26 @@ async function setInitialBalance(amount: number, user: User): Promise<number> {
   return initialBalance;
 }
 
+/** Panel del administrador: los mismos cálculos que resumen_panel() con los datos simulados. */
+async function getPanelSummary(user: User): Promise<PanelSummary> {
+  await simulateNetwork(0.5);
+  if (user.role !== 'administrador') throw new SummaryError('forbidden');
+  const portfolio = mockPortfolio();
+  const unitTotals = mockUnitNames().map((name) =>
+    roundMoney(Object.values(portfolio[name] ?? {}).reduce((total, balance) => total + balance, 0)),
+  );
+  return {
+    portfolioDue: roundMoney(unitTotals.reduce((total, balance) => total + balance, 0)),
+    unitsInArrears: unitTotals.filter((balance) => balance > 0).length,
+    totalUnits: unitTotals.length,
+    pendingPqrs: mockPqrsTotals().filter((item) => item.status === 'pendiente').length,
+  };
+}
+
 /** Implementación del contrato SummaryBackend que usa summary.service.ts. */
 export const summaryBackend = {
   getSummary,
   getInitialBalance,
   setInitialBalance,
+  getPanelSummary,
 } satisfies SummaryBackend;

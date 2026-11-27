@@ -127,3 +127,31 @@ describe('Resumen de General con Supabase', () => {
     });
   });
 });
+
+describe('Panel del administrador con Supabase', () => {
+  it('convierte la fila de resumen_panel() (20261130000000_panel_administrador.sql)', async () => {
+    rpcResults.resumen_panel = {
+      data: [{ cartera: '150678.90', unidades_en_mora: 3, total_unidades: 5, pqrs_pendientes: 1 }],
+      error: null,
+    };
+
+    expect(await supabaseSummary.getPanelSummary(user('administrador'))).toEqual({
+      portfolioDue: 150678.9,
+      unitsInArrears: 3,
+      totalUnits: 5,
+      pendingPqrs: 1,
+    });
+    expect(mockRpc).toHaveBeenCalledWith('resumen_panel');
+  });
+
+  it('solo el administrador lo consulta, y los errores del servidor se traducen', async () => {
+    await expect(supabaseSummary.getPanelSummary(user('junta_directiva'))).rejects.toMatchObject({ code: 'forbidden' });
+    expect(mockRpc).not.toHaveBeenCalled();
+
+    rpcResults.resumen_panel = { data: null, error: { message: 'sin_permiso' } };
+    await expect(supabaseSummary.getPanelSummary(user('administrador'))).rejects.toMatchObject({ code: 'forbidden' });
+
+    rpcResults.resumen_panel = { data: [], error: null };
+    await expect(supabaseSummary.getPanelSummary(user('administrador'))).rejects.toMatchObject({ code: 'failed' });
+  });
+});

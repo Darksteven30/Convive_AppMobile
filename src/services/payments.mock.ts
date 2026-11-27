@@ -141,6 +141,11 @@ export function resetMockPaymentsState() {
   nextId = 1;
 }
 
+/** Copia de los saldos pendientes por unidad y concepto (la usa el Panel del administrador). */
+export function mockPortfolio(): Record<string, Record<string, number>> {
+  return Object.fromEntries(Object.entries(portfolio).map(([house, balances]) => [house, { ...balances }]));
+}
+
 /** Solo para las pruebas: cambia el saldo de una unidad en un concepto. */
 export function setMockBalance(house: string, conceptId: string, balance: number) {
   portfolio[house] = { ...portfolio[house], [conceptId]: balance };

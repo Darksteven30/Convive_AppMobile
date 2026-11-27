@@ -28,6 +28,8 @@ export {
   WOMPI_MIN_AMOUNT,
   defaultHistoryFilters,
   validateHistoryFilters,
+  maxPartialPayment,
+  payableOnlyAtOffice,
   validatePaymentSelection,
   type HistoryFilterErrors,
   type PaymentSelection,

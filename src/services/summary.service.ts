@@ -14,6 +14,7 @@ export {
   SummaryError,
   type FinancialSummary,
   type MonthTotals,
+  type PanelSummary,
   type SummaryPeriod,
   type SummaryRange,
   type SummaryRangeErrors,
@@ -27,3 +28,4 @@ const backend: SummaryBackend = isSupabaseEnabled ? supabaseBackend : mockBacken
 export const getSummary: SummaryBackend['getSummary'] = (...args) => backend.getSummary(...args);
 export const getInitialBalance: SummaryBackend['getInitialBalance'] = (...args) => backend.getInitialBalance(...args);
 export const setInitialBalance: SummaryBackend['setInitialBalance'] = (...args) => backend.setInitialBalance(...args);
+export const getPanelSummary: SummaryBackend['getPanelSummary'] = (...args) => backend.getPanelSummary(...args);
