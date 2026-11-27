@@ -42,6 +42,11 @@ let units: MockUnit[] = [];
 let people: Omit<Person, 'unit'>[] = [];
 let nextId = 1;
 
+/** Nombres de las unidades del conjunto simulado (los usa el Panel del administrador). */
+export function mockUnitNames(): string[] {
+  return units.map((unit) => unit.name);
+}
+
 /** Restaura los datos simulados (lo usan las pruebas para empezar cada caso desde cero). */
 export function resetMockCommunityState() {
   units = seedUnits.map((unit) => ({ ...unit }));
